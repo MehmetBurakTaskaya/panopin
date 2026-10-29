@@ -50,6 +50,7 @@ src-tauri/src
     admission.rs         privacy markers, excluded apps, pause, self-copy, whitespace rule
   store/
     mod.rs               open the database (WAL) and apply migrations
+    library.rs           Library data, folders, tags, notes, Trash (D-053)
     migrations/          0001_init.sql, ... applied via PRAGMA user_version (D-012)
     models.rs            Item, Folder, Tag, ... (exported to TS with ts-rs, D-013)
     identity.rs          text and image identity hashes (D-016)
@@ -135,9 +136,9 @@ items        id, kind(image|text|link|video), identity BLOB, created_at, last_co
              source_app, source_path, text_body, url, width, height, byte_size,
              duration_ms, ocr_state, ocr_text, link_meta JSON, edit_layer JSON
              UNIQUE(kind, identity)
-folders      id, parent_id, name, sort_key
+folders      id, parent_id (deleting a folder deletes its subfolders), name, created_at
 item_folders item_id, folder_id
-tags         id, name, name_key UNIQUE   -- name_key = Turkish-folded name
+tags         id, name, name_key UNIQUE   -- name_key: Turkish i forms unified, lower case
 item_tags    item_id, tag_id
 settings     key PRIMARY KEY, value JSON
 search_fts   FTS5(title, body, note, tags, link_title, domain, ocr,
@@ -185,6 +186,9 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
   tested with scenario tests in vitest; React components only dispatch to it.
 - `src/edit/` holds the edit layer model, the geometry shared with Rust, the Canvas 2D drawing and
   the undo history; the preview and its editors live in `src/windows/shelf/preview/`.
+- `src/library/` holds the Library's sections, filters and sorting; `src/windows/library/` the
+  window (sidebar, grid and list, details); the name, folder and tag pickers in
+  `src/components/pickers/` serve the shelf and the Library.
 - Memoised cards so unchanged cards do not re-render; the Library grid is virtualised
   (`@tanstack/react-virtual`), the shelf rows are capped at 300 cards instead (D-044).
 - Sounds: the Web Audio synthesis module proven in `docs/concept/mockup/sound.js`.

@@ -18,8 +18,8 @@ pub struct Staging {
 pub enum Staged {
     /// A copy of a stored file, keeping its format.
     Copy(PathBuf),
-    /// A picture made for this hand-out, such as an edited image.
-    Png(Vec<u8>),
+    /// Content made for this hand-out (an edited picture, a text, a shortcut) with its extension.
+    Bytes(Vec<u8>, &'static str),
 }
 
 impl Staging {
@@ -37,36 +37,42 @@ impl Staging {
 
     /// Writes each item under a fresh neutral name and returns the paths in the same order.
     pub fn stage(&self, items: &[Staged]) -> Result<Vec<PathBuf>> {
-        if items.is_empty() {
-            return Ok(Vec::new());
-        }
-        fs::create_dir_all(&self.dir)?;
-        let date = local_date();
-        let mut paths = Vec::with_capacity(items.len());
-        let mut n = 0u32;
-        for item in items {
-            let ext = match item {
-                Staged::Copy(source) => source
-                    .extension()
-                    .map(|ext| ext.to_string_lossy().into_owned())
-                    .unwrap_or_default(),
-                Staged::Png(_) => "png".to_owned(),
-            };
-            let path = loop {
-                n += 1;
-                let candidate = self.dir.join(format!("Panopin-{date}-{n:03}.{ext}"));
-                if !candidate.exists() {
-                    break candidate;
-                }
-            };
-            match item {
-                Staged::Copy(source) => copy_atomically(source, &path)?,
-                Staged::Png(bytes) => write_atomically(&path, bytes)?,
-            }
-            paths.push(path);
-        }
-        Ok(paths)
+        write_neutral(&self.dir, items)
     }
+}
+
+/// Writes items into `dir` as `Panopin-<date>-<n>.<ext>`, never overwriting a file that is there
+/// already. Used for the staging folder and for exports.
+pub fn write_neutral(dir: &Path, items: &[Staged]) -> Result<Vec<PathBuf>> {
+    if items.is_empty() {
+        return Ok(Vec::new());
+    }
+    fs::create_dir_all(dir)?;
+    let date = local_date();
+    let mut paths = Vec::with_capacity(items.len());
+    let mut n = 0u32;
+    for item in items {
+        let ext = match item {
+            Staged::Copy(source) => source
+                .extension()
+                .map(|ext| ext.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            Staged::Bytes(_, ext) => (*ext).to_owned(),
+        };
+        let path = loop {
+            n += 1;
+            let candidate = dir.join(format!("Panopin-{date}-{n:03}.{ext}"));
+            if !candidate.exists() {
+                break candidate;
+            }
+        };
+        match item {
+            Staged::Copy(source) => copy_atomically(source, &path)?,
+            Staged::Bytes(bytes, _) => write_atomically(&path, bytes)?,
+        }
+        paths.push(path);
+    }
+    Ok(paths)
 }
 
 fn tmp_of(path: &Path) -> PathBuf {
@@ -133,7 +139,7 @@ mod tests {
         };
         let (a, c) = (source("a.png"), source("c.jpg"));
         let first = staging
-            .stage(&[Staged::Copy(a.clone()), Staged::Png(vec![1, 2])])
+            .stage(&[Staged::Copy(a.clone()), Staged::Bytes(vec![1, 2], "png")])
             .unwrap();
         let second = staging.stage(&[Staged::Copy(c)]).unwrap();
         assert_eq!(fs::read(&first[1]).unwrap(), vec![1, 2]);

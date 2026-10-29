@@ -23,6 +23,10 @@ pub enum AppError {
     InvalidEdit(&'static str),
     #[error("this item cannot be edited that way")]
     NotEditable,
+    #[error("a name must not be empty or longer than 200 characters")]
+    InvalidName,
+    #[error("that name is already used")]
+    NameTaken,
     #[cfg(windows)]
     #[error("Windows error: {0}")]
     Windows(#[from] windows::core::Error),

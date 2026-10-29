@@ -46,6 +46,7 @@ fn on_menu(app: &AppHandle, event: MenuEvent) {
     let minutes = |n: i64| Some(now_ms() + n * 60_000);
     let result = match event.id().as_ref() {
         "show" => shelf::open(app, false),
+        "library" => windows::open_library(app),
         "pause-5m" => capture::set_pause(app, minutes(5)),
         "pause-1h" => capture::set_pause(app, minutes(60)),
         "pause-forever" => capture::set_pause(app, Some(PAUSED_UNTIL_RESUMED)),
@@ -130,11 +131,19 @@ fn menu(app: &AppHandle) -> Result<Menu<Wry>> {
             ],
         )?)
     };
+    let library = item("library", "tray.library")?;
     let settings = item("settings", "tray.settings")?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = item("quit", "tray.quit")?;
     Ok(Menu::with_items(
         app,
-        &[&show, pause.as_ref(), &settings, &separator, &quit],
+        &[
+            &show,
+            &library,
+            pause.as_ref(),
+            &settings,
+            &separator,
+            &quit,
+        ],
     )?)
 }

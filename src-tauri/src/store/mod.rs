@@ -1,6 +1,7 @@
 pub mod edits;
 pub mod identity;
 pub mod items;
+pub mod library;
 pub mod migrations;
 pub mod retention;
 pub mod shelf;

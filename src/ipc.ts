@@ -7,6 +7,18 @@ import type { LanguageSetting, MessageKey } from './i18n';
 export type Theme = 'system' | 'light' | 'dark';
 export type CardSize = 's' | 'm' | 'l';
 export type ShelfEdge = 'top' | 'bottom';
+export type LibraryView = 'grid' | 'list';
+export type SortKey = 'lastCopied' | 'added' | 'title' | 'kind' | 'tags';
+
+/** How the Library opens: view, sorting, panel and column widths (pixels). */
+export interface LibraryLayout {
+  view: LibraryView;
+  sort: SortKey;
+  descending: boolean;
+  sidebarWidth: number;
+  inspectorWidth: number;
+  columns: { title: number; kind: number; tags: number; added: number };
+}
 
 export interface Shortcuts {
   shelf: string | null;
@@ -48,6 +60,7 @@ export interface Settings {
   cardSize: CardSize;
   shelfEdge: ShelfEdge;
   sounds: Sounds;
+  library: LibraryLayout;
 }
 
 /** UI sounds; `volume` is 0–100. */
@@ -69,6 +82,7 @@ export type SettingsPatch = {
   cardSize?: CardSize;
   shelfEdge?: ShelfEdge;
   sounds?: Partial<Sounds>;
+  library?: Partial<Omit<LibraryLayout, 'columns'>> & { columns?: Partial<LibraryLayout['columns']> };
 };
 
 export interface Counts {
@@ -115,6 +129,43 @@ export interface ShelfItem {
 
 export type Shelf = Record<ShelfKind, ShelfItem[]>;
 
+/** A Library item: a shelf item plus everything the inspector shows. */
+export interface LibraryItem extends Omit<ShelfItem, 'kind'> {
+  kind: ShelfKind | 'video';
+  note: string | null;
+  saved: boolean;
+  createdAt: number;
+  trashedAt: number | null;
+  source: 'clipboard' | 'folder' | 'import' | 'manual';
+  sourceApp: string | null;
+  sourcePath: string | null;
+  byteSize: number | null;
+  folders: number[];
+  tags: number[];
+}
+
+export interface Folder {
+  id: number;
+  parentId: number | null;
+  name: string;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+}
+
+export interface LibraryData {
+  items: LibraryItem[];
+  folders: Folder[];
+  tags: Tag[];
+}
+
+export interface Exported {
+  count: number;
+  folder: string;
+}
+
 export const getSettings = () => invoke<Settings>('get_settings');
 export const updateSettings = (patch: SettingsPatch) => invoke<Settings>('update_settings', { patch });
 export const closeShelf = () => invoke<void>('close_shelf');
@@ -139,7 +190,29 @@ export interface BoardRect {
 
 /** Runs a native drag of the items; letting go over `board` cancels. Resolves with whether they
  * were dropped somewhere. */
-export const startDrag = (ids: number[], board: BoardRect) => invoke<boolean>('start_drag', { ids, board });
+export const startDrag = (ids: number[], board: BoardRect | null, files = false) =>
+  invoke<boolean>('start_drag', { ids, board, files });
+
+export const libraryData = () => invoke<LibraryData>('library_data');
+export const libraryGroups = () => invoke<Pick<LibraryData, 'folders' | 'tags'>>('library_groups');
+export const setTitle = (ids: number[], title: string | null) => invoke<void>('set_title', { ids, title });
+export const setNote = (id: number, note: string | null) => invoke<void>('set_note', { id, note });
+export const createFolder = (name: string, parent: number | null) => invoke<number>('create_folder', { name, parent });
+export const renameFolder = (id: number, name: string) => invoke<void>('rename_folder', { id, name });
+export const deleteFolder = (id: number) => invoke<void>('delete_folder', { id });
+export const addToFolder = (ids: number[], folder: number) => invoke<void>('add_to_folder', { ids, folder });
+export const removeFromFolder = (ids: number[], folder: number) => invoke<void>('remove_from_folder', { ids, folder });
+export const tagItems = (ids: number[], name: string) => invoke<number>('tag_items', { ids, name });
+export const untagItems = (ids: number[], tag: number) => invoke<void>('untag_items', { ids, tag });
+export const renameTag = (id: number, name: string) => invoke<void>('rename_tag', { id, name });
+export const deleteTag = (id: number) => invoke<void>('delete_tag', { id });
+export const restoreItems = (ids: number[]) => invoke<void>('restore_items', { ids });
+export const deleteForever = (ids: number[]) => invoke<number>('delete_forever', { ids });
+export const emptyTrash = () => invoke<number>('empty_trash');
+export const newNote = () => invoke<number>('new_note');
+/** Asks for a folder; null when the user cancels. */
+export const exportItems = (ids: number[]) => invoke<Exported | null>('export_items', { ids });
+export const openLibrary = () => invoke<void>('open_library');
 
 export const getText = (id: number) => invoke<string>('get_text', { id });
 export const updateText = (id: number, body: string) => invoke<void>('update_text', { id, body });

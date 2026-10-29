@@ -32,6 +32,8 @@ pub struct ShelfGate {
     /// Losing focus closes the shelf only after it really had focus: a shelf shown by a
     /// background launch may never get it.
     focused: bool,
+    /// Open dialogs of the shelf's own (the export folder picker) that have taken the focus.
+    held: u32,
 }
 
 impl ShelfGate {
@@ -74,6 +76,36 @@ impl ShelfGate {
         self.closed_at
             .is_some_and(|at| now.saturating_duration_since(at) < REOPEN_GUARD)
     }
+
+    /// Notes a focus change; true when losing focus should close the shelf.
+    pub fn focus(&mut self, focused: bool) -> bool {
+        if focused && self.open {
+            self.focused = true;
+        }
+        !focused && self.open && self.focused && self.held == 0
+    }
+}
+
+/// Focus events from a modal dialog can arrive after it has closed; the hold outlives it by this.
+const HOLD_GRACE: Duration = Duration::from_millis(600);
+
+/// Keeps the shelf open while one of its own dialogs has the focus. Dropping it lets focus
+/// loss close the shelf again, a moment later.
+pub struct HoldOpen(AppHandle);
+
+impl Drop for HoldOpen {
+    fn drop(&mut self) {
+        let app = self.0.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(HOLD_GRACE);
+            with_gate(&app, |gate| gate.held = gate.held.saturating_sub(1));
+        });
+    }
+}
+
+pub fn hold_open(app: &AppHandle) -> HoldOpen {
+    with_gate(app, |gate| gate.held += 1);
+    HoldOpen(app.clone())
 }
 
 #[derive(Default)]
@@ -203,13 +235,7 @@ pub fn previous_window(app: &AppHandle) -> Option<Target> {
 
 /// Clicking anywhere outside Panopin closes the shelf, once it has had focus.
 pub fn focus_changed(app: &AppHandle, focused: bool) -> Result<()> {
-    let close = with_gate(app, |gate| {
-        if focused && gate.open {
-            gate.focused = true;
-        }
-        !focused && gate.open && gate.focused
-    });
-    if close {
+    if with_gate(app, |gate| gate.focus(focused)) {
         request_close(app, false)
     } else {
         Ok(())
@@ -293,5 +319,18 @@ mod tests {
         gate.close(start);
         assert!(gate.closed_recently(start + Duration::from_millis(100)));
         assert!(!gate.closed_recently(start + REOPEN_GUARD));
+    }
+
+    #[test]
+    fn focus_loss_closes_only_after_focus_and_not_during_own_dialogs() {
+        let mut gate = ShelfGate::default();
+        gate.open();
+        // Shown without ever getting focus: losing it means nothing.
+        assert!(!gate.focus(false));
+        assert!(!gate.focus(true));
+        gate.held = 1;
+        assert!(!gate.focus(false));
+        gate.held = 0;
+        assert!(gate.focus(false));
     }
 }

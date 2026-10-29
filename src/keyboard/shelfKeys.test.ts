@@ -61,8 +61,18 @@ describe('shelf keys', () => {
     expect(commandFor(press('p', { code: 'KeyP' }))).toEqual({ type: 'pin' });
     expect(commandFor(press('s', { code: 'KeyS' }))).toEqual({ type: 'takeDown' });
     expect(commandFor(press('f', { code: 'KeyF' }))).toEqual({ type: 'pinnedOnly' });
-    expect(commandFor(press('p', { code: 'KeyP', altKey: true }))).toBeNull();
     expect(commandFor(press('S', { code: 'KeyS', shiftKey: true }))).toBeNull();
+  });
+
+  it('names, files, tags and exports items and opens the Library', () => {
+    expect(commandFor(press('p', { code: 'KeyP', altKey: true }))).toEqual({ type: 'name' });
+    expect(commandFor(press('P', { code: 'KeyP', shiftKey: true }))).toEqual({ type: 'folder' });
+    expect(commandFor(press('T', { code: 'KeyT', ctrlKey: true, shiftKey: true }))).toEqual({ type: 'tag' });
+    expect(commandFor(press('E', { code: 'KeyE', ctrlKey: true, shiftKey: true }))).toEqual({ type: 'export' });
+    expect(commandFor(press('l', { code: 'KeyL' }))).toEqual({ type: 'library' });
+    // The row toggles keep Shift+T and Shift+L.
+    expect(commandFor(press('T', { code: 'KeyT', shiftKey: true }))).toEqual({ type: 'toggleRow', kind: 'text' });
+    expect(commandFor(press('p', { code: 'KeyP', altKey: true, ctrlKey: true }))).toBeNull();
   });
 
   it('opens the preview and its editors', () => {

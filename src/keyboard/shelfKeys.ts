@@ -17,6 +17,11 @@ export type Command =
   | { type: 'editText' }
   | { type: 'markup' }
   | { type: 'crop' }
+  | { type: 'name' }
+  | { type: 'folder' }
+  | { type: 'tag' }
+  | { type: 'export' }
+  | { type: 'library' }
   | { type: 'escape' };
 
 export interface KeyInput {
@@ -87,14 +92,20 @@ export function commandFor(event: KeyInput): Command | null {
   if (digit !== null && !ctrl && !alt) return model({ type: 'pick', n: digit });
 
   const letter = letterOf(event);
-  if (letter === null || alt) return null;
+  if (letter === null) return null;
+  if (alt) return !ctrl && !shift && letter === 'p' ? { type: 'name' } : null;
   if (ctrl) {
-    if (shift) return null;
+    if (shift) {
+      if (letter === 't') return { type: 'tag' };
+      if (letter === 'e') return { type: 'export' };
+      return null;
+    }
     if (letter === 'a') return model({ type: 'selectAll' });
     if (letter === 'c') return { type: 'copy' };
     return null;
   }
   if (shift) {
+    if (letter === 'p') return { type: 'folder' };
     const kind = ROW_LETTERS[letter];
     return kind ? { type: 'toggleRow', kind } : null;
   }
@@ -105,6 +116,7 @@ export function commandFor(event: KeyInput): Command | null {
     e: { type: 'editText' },
     m: { type: 'markup' },
     c: { type: 'crop' },
+    l: { type: 'library' },
   };
   return plain[letter] ?? null;
 }

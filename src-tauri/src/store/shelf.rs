@@ -5,7 +5,10 @@ use std::collections::VecDeque;
 use rusqlite::{params, Connection};
 use serde::Serialize;
 
-use crate::{error::Result, store::items::Kind};
+use crate::{
+    error::Result,
+    store::items::{Kind, SAVED},
+};
 
 /// Characters of a text sent to the shelf; the full text stays in the store.
 const PREVIEW_CHARS: usize = 400;
@@ -42,7 +45,7 @@ pub struct Shelf {
     pub link: Vec<ShelfItem>,
 }
 
-fn domain_of(url: &str) -> Option<String> {
+pub(crate) fn domain_of(url: &str) -> Option<String> {
     let host = url::Url::parse(url).ok()?.host_str()?.to_owned();
     Some(host.strip_prefix("www.").map(str::to_owned).unwrap_or(host))
 }
@@ -104,13 +107,14 @@ pub struct TakenDown {
     items: Vec<(i64, i64, Option<i64>)>,
 }
 
-/// Saved items (pinned or named) leave the shelf but stay in the Library; the rest go to Trash.
+/// Saved items (pinned, named, in a folder or tagged) leave the shelf but stay in the Library;
+/// the rest go to Trash.
 pub fn take_down(conn: &mut Connection, ids: &[i64], now: i64) -> Result<TakenDown> {
     let tx = conn.transaction()?;
     let mut items = Vec::new();
     for id in ids {
         let (shelved, trashed_at, saved): (i64, Option<i64>, bool) = tx.query_row(
-            "SELECT shelved, trashed_at, pinned = 1 OR title IS NOT NULL FROM items WHERE id = ?1",
+            &format!("SELECT shelved, trashed_at, {SAVED} FROM items WHERE id = ?1"),
             [id],
             |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )?;

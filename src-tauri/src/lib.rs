@@ -67,6 +67,9 @@ pub(crate) fn apply_settings(app: &AppHandle, patch: Value) -> Result<Settings> 
     if old.language != new.language {
         windows::retitle(app, i18n::resolve(new.language))?;
     }
+    if old.theme != new.theme {
+        windows::apply_theme(app)?;
+    }
     if old.language != new.language || old.paused_until != new.paused_until {
         tray::refresh(app)?;
     }
@@ -240,6 +243,25 @@ pub fn run() {
             commands::get_edit,
             commands::save_edit,
             commands::revert_edit,
+            commands::library_data,
+            commands::library_groups,
+            commands::set_title,
+            commands::set_note,
+            commands::create_folder,
+            commands::rename_folder,
+            commands::delete_folder,
+            commands::add_to_folder,
+            commands::remove_from_folder,
+            commands::tag_items,
+            commands::untag_items,
+            commands::rename_tag,
+            commands::delete_tag,
+            commands::restore_items,
+            commands::delete_forever,
+            commands::empty_trash,
+            commands::new_note,
+            commands::export_items,
+            commands::open_library,
             commands::close_shelf,
             commands::shelf_hidden,
         ])

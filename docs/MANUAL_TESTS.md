@@ -168,6 +168,41 @@ and a 4K flatten takes about 0.45 s in a release build. Everything below needs t
       card updates; copying the new text later moves the same card forward.
 - [ ] Taking down the last card while the preview is open leaves the empty preview with "Undo".
 
+## Library (Phase 5)
+
+Checked in a browser with the real Library and shelf components and a mocked backend
+(2026-10-29): sections and their counts; arrows, Home/End, Shift ranges and Ctrl+A in the grid and
+in the list; P; Alt+P, Shift+P and Ctrl+Shift+T in the Library and on the shelf; Delete with its
+question, Backspace undo, R and permanent delete in Trash; Ctrl+N (the note editor opens and the
+text saves); Ctrl+Shift+N, F2 and deleting a folder, with the focus back on the tree; deleting a
+tag; sorting the list by a column; the sidebar width kept in settings; a card dropped on a folder;
+the details saving a title; L and Ctrl+Shift+E on the shelf. No renders while idle. Automated:
+folders, tags (Turkish i forms), the saved rule, Trash and notes in Rust; filters, sorting and the
+keyboard model in vitest. Everything below needs the real app.
+
+- [ ] Tray → Open Library and L on the shelf (the shelf closes): one window, brought forward if open.
+- [ ] Mica on Windows 11; an opaque window on Windows 10; light, dark and high contrast.
+- [ ] After a restart the window keeps grid or list, sorting, panel widths and column widths.
+- [ ] Sections: Recent shows only unsaved items; Pinned; Unsorted (saved, without folder or tag);
+      nested folders and tags with counts; Trash.
+- [ ] Ctrl+0–3 kind filter, F pinned only, tag filters (all must match), date and site filters.
+- [ ] With 10 000 items the grid and the list scroll smoothly and typing in the details stays quick.
+- [ ] Enter and Ctrl+C copy and the window stays open; Space preview; E, M and C editors.
+- [ ] P, Alt+P (several items one after another; Esc stops), Shift+P (Ctrl+N makes a folder) and
+      Ctrl+Shift+T (new and existing tags; "İş" and "iş" are one tag), in the Library and on the shelf.
+- [ ] Details: title and note save on their own; when a save fails the typed text stays.
+- [ ] Ctrl+N note: pinned, the editor opens, it never expires; in a folder view it joins the folder.
+- [ ] Ctrl+Shift+N folder, F2 rename, Delete (asks; the items stay); renaming a tag to an existing
+      name shows an error; deleting a tag removes it from every item.
+- [ ] A card dropped on a folder joins it and keeps its pin; Alt+drag to Explorer gives .txt, .url
+      and .png files.
+- [ ] Delete → Trash; Backspace and Ctrl+Z bring it back; in Trash R restores, Delete asks and
+      deletes for good, Empty Trash asks.
+- [ ] Ctrl+Shift+E in the Library and on the shelf: the folder dialog, files named
+      Panopin-<date>-<n>, nothing overwritten; the shelf stays open behind the dialog.
+- [ ] F6 and Shift+F6 cycle sidebar, items and details; Tab moves between controls; Narrator reads
+      the tree, the items and the selection.
+
 ## Appearance and accessibility (Phase 3–5)
 
 - [ ] Mica on Windows 11; opaque fallback on Windows 10 22H2.

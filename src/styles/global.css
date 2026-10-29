@@ -12,6 +12,9 @@ body {
 html[data-window='shelf'], html[data-window='shelf'] body { background: transparent; overflow: hidden; }
 html[data-window='settings'] body,
 html[data-window='onboarding'] body { background: var(--ui-window); user-select: text; }
+/* The Library sits on Mica where Windows 11 provides it (the init script sets data-material). */
+html[data-window='library'] body { background: var(--ui-window); overflow: hidden; }
+html[data-window='library'][data-material='mica'] body { background: transparent; }
 
 kbd {
   font: 600 11px/1 var(--font);

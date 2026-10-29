@@ -36,3 +36,9 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - Arrow keys nudging the selected mark by one pixel.
 - More text styles in the markup text tool (size steps beyond three, a background box).
 - Flattening only the cropped part of very large pictures, to speed up copies.
+
+## Ideas from Phase 5
+
+- Folder counts that include their subfolders.
+- Remembering which folders are folded in the sidebar.
+- Ordering folders by hand.

@@ -11,23 +11,34 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { t } from '../../i18n';
+import { FolderPicker, NamePrompt, TagPicker } from '../../components/pickers/Pickers';
 import {
+  addToFolder,
   closeShelf,
   copyItems,
+  createFolder,
+  exportItems,
+  libraryGroups,
+  openLibrary,
   pasteItems,
   revertEdit,
   setPinned,
+  setTitle,
   shelfHidden,
   startDrag,
+  tagItems,
   takeDown,
   trashItems,
   undoTakeDown,
+  type Folder,
   type ShelfCloseEvent,
   type ShelfItem,
   type ShelfOpenEvent,
+  type Tag,
 } from '../../ipc';
 import { commandFor, type Command } from '../../keyboard/shelfKeys';
 import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type ShelfModel } from '../../keyboard/shelfModel';
+import { displayTitle } from '../../library/query';
 import { formatShortcut } from '../../shortcuts';
 import { configure, play, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
@@ -73,6 +84,14 @@ interface Toast {
   y: number;
 }
 
+/** Alt+P, Shift+P and Ctrl+Shift+T: the same pickers as in the Library. */
+interface Picker {
+  type: 'name' | 'folder' | 'tag';
+  ids: number[];
+  folders: Folder[];
+  tags: Tag[];
+}
+
 function CheckIcon() {
   return (
     <svg viewBox="0 0 16 16" aria-hidden="true">
@@ -97,6 +116,7 @@ export function ShelfApp() {
   const [notice, setNotice] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ at: MenuPlacement; ids: number[] } | null>(null);
   const [confirm, setConfirm] = useState<number[] | null>(null);
+  const [picker, setPicker] = useState<Picker | null>(null);
   // Space opens the preview of the card under the cursor; E, M and C open its editors.
   const [preview, setPreview] = useState<PreviewMode | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -134,9 +154,9 @@ export function ShelfApp() {
   }, []);
 
   // Event handlers read the newest state through this ref, so they can stay stable for memoised cards.
-  const latest = useRef({ model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, preview });
+  const latest = useRef({ model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, picker, preview });
   useLayoutEffect(() => {
-    latest.current = { model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, preview };
+    latest.current = { model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, picker, preview };
   });
 
   const current = useMemo(() => {
@@ -320,6 +340,43 @@ export function ShelfApp() {
     trackSave(revertEdit(id)).catch(fail);
   };
 
+  /** Naming or filing pins the items; the ones not pinned yet get the pin's knock. */
+  const pinEffect = (ids: number[]) => {
+    const fresh = itemsOf(ids)
+      .filter((item) => !item.pinned)
+      .map((item) => item.id);
+    if (fresh.length === 0) return;
+    play('pin', reducedMotion() ? 0 : 0.21);
+    flash(fresh, 'pinning', 560);
+  };
+
+  const openPicker = async (type: Picker['type'], ids: number[]) => {
+    if (ids.length === 0) return;
+    try {
+      const groups = type === 'name' ? { folders: [], tags: [] } : await libraryGroups();
+      setPicker({ type, ids, ...groups });
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  const closePicker = () => {
+    setPicker(null);
+    grid.current?.focus({ preventScroll: true });
+  };
+
+  /** Ctrl+Shift+E: asks for a folder and writes the items there as files; the shelf stays open. */
+  const exportSelection = async (ids: number[]) => {
+    if (ids.length === 0) return;
+    try {
+      await whenSaved();
+      const done = await exportItems(ids);
+      if (done) setNotice(t('library.exported', { count: done.count, folder: done.folder }));
+    } catch (err) {
+      fail(err);
+    }
+  };
+
   const run = (command: Command) => {
     setNotice(null);
     const ids = targetIds();
@@ -369,6 +426,17 @@ export function ShelfApp() {
       case 'menu':
         openMenuAtCursor();
         return;
+      case 'name':
+      case 'folder':
+      case 'tag':
+        void openPicker(command.type, ids);
+        return;
+      case 'export':
+        void exportSelection(ids);
+        return;
+      case 'library':
+        openLibrary().catch(fail);
+        return;
       case 'escape':
         // Esc closes the top layer first: the preview, then the board.
         if (latest.current.preview) setPreview(null);
@@ -397,6 +465,10 @@ export function ShelfApp() {
       { label: 'shelf.menu.preview', shortcut: 'Space', run: () => setPreview('view') },
       ...kindEntries,
       { label: allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', shortcut: 'P', run: () => void togglePin(ids) },
+      { label: 'library.action.name', shortcut: 'Alt+P', run: () => void openPicker('name', ids) },
+      { label: 'library.action.folder', shortcut: 'Shift+P', run: () => void openPicker('folder', ids) },
+      { label: 'library.action.tag', shortcut: `${ctrl}+Shift+T`, run: () => void openPicker('tag', ids) },
+      { label: 'library.action.export', shortcut: `${ctrl}+Shift+E`, run: () => void exportSelection(ids) },
       { label: 'shelf.menu.takeDown', shortcut: 'S', run: () => void remove(ids, false) },
       { label: 'shelf.menu.trash', shortcut: 'Delete', run: () => setConfirm(ids) },
       { label: 'shelf.menu.undo', shortcut: 'Backspace', run: () => void undo() },
@@ -417,6 +489,7 @@ export function ShelfApp() {
       setNow(Date.now());
       setMenu(null);
       setConfirm(null);
+      setPicker(null);
       setPreview(null);
       setNotice(payload.notice ? t(payload.notice) : null);
       dispatch({ type: 'reset', rows: latest.current.rows });
@@ -437,6 +510,7 @@ export function ShelfApp() {
       setPhase('closing');
       setMenu(null);
       setConfirm(null);
+      setPicker(null);
       setPreview(null);
       play('close');
       // Rust hides the window only if no newer open happened in the meantime.
@@ -452,8 +526,9 @@ export function ShelfApp() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const state = latest.current;
-      // Closed boards, the menu and the confirmation handle their own keys; typing in an IME too.
-      if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm) return;
+      // Closed boards, the menu, the confirmation and the pickers handle their own keys; typing in
+      // an IME too.
+      if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm || state.picker) return;
       // The text, markup and crop editors handle their own keys; typing never reaches the shelf.
       if ((state.preview && state.preview !== 'view') || isEditable(event.target)) return;
       if (event.isComposing) return;
@@ -596,6 +671,43 @@ export function ShelfApp() {
         <Preview item={current} mode={preview} onMode={setPreview} onClose={() => setPreview(null)} onUndo={() => void undo()} />
       )}
       {menu && <ContextMenu at={menu.at} entries={menuEntries(menu.ids)} onClose={() => setMenu(null)} />}
+      {picker?.type === 'name' && (
+        <NamePrompt
+          items={itemsOf(picker.ids).map((item) => ({ id: item.id, title: item.title, label: displayTitle(item) }))}
+          onSave={async (id, title) => {
+            await setTitle([id], title.trim() ? title : null);
+            pinEffect([id]);
+            await setPinned([id], true);
+          }}
+          onClose={closePicker}
+        />
+      )}
+      {picker?.type === 'folder' && (
+        <FolderPicker
+          folders={picker.folders}
+          onCreate={(name) => createFolder(name, null)}
+          onClose={closePicker}
+          onPick={(folder) => {
+            const ids = picker.ids;
+            closePicker();
+            pinEffect(ids);
+            addToFolder(ids, folder)
+              .then(() => setPinned(ids, true))
+              .catch(fail);
+          }}
+        />
+      )}
+      {picker?.type === 'tag' && (
+        <TagPicker
+          tags={picker.tags}
+          onClose={closePicker}
+          onPick={(name) => {
+            const ids = picker.ids;
+            closePicker();
+            tagItems(ids, name).catch(fail);
+          }}
+        />
+      )}
     </div>
   );
 }

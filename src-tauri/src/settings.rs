@@ -66,6 +66,87 @@ impl Default for Sounds {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum LibraryView {
+    #[default]
+    Grid,
+    List,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SortKey {
+    #[default]
+    LastCopied,
+    Added,
+    Title,
+    Kind,
+    Tags,
+}
+
+/// List column widths in pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Columns {
+    pub title: u32,
+    pub kind: u32,
+    pub tags: u32,
+    pub added: u32,
+}
+
+impl Default for Columns {
+    fn default() -> Self {
+        Self {
+            title: 360,
+            kind: 110,
+            tags: 200,
+            added: 160,
+        }
+    }
+}
+
+/// How the Library looks; kept so it opens the way it was left.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct LibraryLayout {
+    pub view: LibraryView,
+    pub sort: SortKey,
+    pub descending: bool,
+    pub sidebar_width: u32,
+    pub inspector_width: u32,
+    pub columns: Columns,
+}
+
+impl Default for LibraryLayout {
+    fn default() -> Self {
+        Self {
+            view: LibraryView::Grid,
+            sort: SortKey::LastCopied,
+            descending: true,
+            sidebar_width: 230,
+            inspector_width: 300,
+            columns: Columns::default(),
+        }
+    }
+}
+
+impl LibraryLayout {
+    fn widths_ok(&self) -> bool {
+        let c = self.columns;
+        [
+            self.sidebar_width,
+            self.inspector_width,
+            c.title,
+            c.kind,
+            c.tags,
+            c.added,
+        ]
+        .iter()
+        .all(|w| (60..=1600).contains(w))
+    }
+}
+
 /// Global shortcuts in Tauri accelerator syntax (`Super` is the Windows key); `None` means off.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -174,6 +255,7 @@ pub struct Settings {
     pub card_size: CardSize,
     pub shelf_edge: ShelfEdge,
     pub sounds: Sounds,
+    pub library: LibraryLayout,
 }
 
 impl Default for Settings {
@@ -199,6 +281,7 @@ impl Default for Settings {
             card_size: CardSize::default(),
             shelf_edge: ShelfEdge::default(),
             sounds: Sounds::default(),
+            library: LibraryLayout::default(),
         }
     }
 }
@@ -227,6 +310,11 @@ impl Settings {
         }
         if self.sounds.volume > 100 {
             return Err(AppError::InvalidSetting("volume is 0 to 100"));
+        }
+        if !self.library.widths_ok() {
+            return Err(AppError::InvalidSetting(
+                "panel and column widths are 60 to 1600 px",
+            ));
         }
         Ok(())
     }
@@ -354,6 +442,27 @@ mod tests {
         );
         assert!(apply_patch(&s, json!({ "sounds": { "volume": 101 } })).is_err());
         assert!(apply_patch(&s, json!({ "cardSize": "xl" })).is_err());
+    }
+
+    #[test]
+    fn library_layout_keeps_its_widths_in_range() {
+        let s = Settings::default();
+        assert_eq!(s.library.view, LibraryView::Grid);
+        let next = apply_patch(
+            &s,
+            json!({ "library": { "view": "list", "sort": "title", "descending": false, "columns": { "tags": 320 } } }),
+        )
+        .unwrap();
+        assert_eq!(
+            (
+                next.library.view,
+                next.library.sort,
+                next.library.columns.tags
+            ),
+            (LibraryView::List, SortKey::Title, 320)
+        );
+        assert_eq!(next.library.columns.title, 360, "other widths stay");
+        assert!(apply_patch(&s, json!({ "library": { "sidebarWidth": 5 } })).is_err());
     }
 
     #[test]

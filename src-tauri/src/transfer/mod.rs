@@ -13,6 +13,8 @@ mod clipboard_win;
 #[cfg(windows)]
 mod drag_win;
 #[cfg(windows)]
+mod folder_win;
+#[cfg(windows)]
 mod paste_win;
 pub mod staging;
 
@@ -25,7 +27,7 @@ use std::{
 use image::{ImageFormat, RgbaImage};
 use rusqlite::{Connection, OptionalExtension};
 use serde::Serialize;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, WebviewWindow};
 
 use crate::{
     error::{AppError, Result},
@@ -69,8 +71,27 @@ pub struct Selection {
     pub images: Vec<ImageSource>,
 }
 
+/// One selected item on its way out, in selection order.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Outgoing {
+    Text(String),
+    Link(String),
+    Image(ImageSource),
+}
+
 pub fn gather(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Selection> {
     let mut selection = Selection::default();
+    for item in gather_items(conn, media, ids)? {
+        match item {
+            Outgoing::Text(text) | Outgoing::Link(text) => selection.texts.push(text),
+            Outgoing::Image(image) => selection.images.push(image),
+        }
+    }
+    Ok(selection)
+}
+
+pub fn gather_items(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Vec<Outgoing>> {
+    let mut items = Vec::with_capacity(ids.len());
     let mut stmt = conn.prepare(
         "SELECT kind, text_body, url, media_ext, edit_width IS NOT NULL FROM items WHERE id = ?1",
     )?;
@@ -88,20 +109,38 @@ pub fn gather(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Sele
             .optional()?;
         match row {
             Some((kind, _, _, Some(ext), edited)) if kind == Kind::Image.as_str() => {
-                selection.images.push(ImageSource {
+                items.push(Outgoing::Image(ImageSource {
                     original: media.original(id, &ext),
                     edited,
-                })
+                }))
             }
             // A link goes back as its clean URL; a text exactly as it was last copied.
             Some((kind, body, url, _, _)) if kind == Kind::Link.as_str() => {
-                selection.texts.extend(url.or(body))
+                items.extend(url.or(body).map(Outgoing::Link))
             }
-            Some((_, body, _, _, _)) => selection.texts.extend(body),
+            Some((_, body, _, _, _)) => items.extend(body.map(Outgoing::Text)),
             None => {}
         }
     }
-    Ok(selection)
+    Ok(items)
+}
+
+/// The file an item becomes when it leaves as a file (export, Alt+drag): UTF-8 text, an
+/// Internet shortcut, or a PNG with any edits drawn in.
+pub fn as_file(item: &Outgoing) -> Result<Staged> {
+    Ok(match item {
+        Outgoing::Text(text) => Staged::Bytes(text.as_bytes().to_vec(), "txt"),
+        Outgoing::Link(url) => Staged::Bytes(
+            format!("[InternetShortcut]\r\nURL={url}\r\n").into_bytes(),
+            "url",
+        ),
+        Outgoing::Image(image)
+            if !image.edited && image.original.extension().is_some_and(|e| e == "png") =>
+        {
+            Staged::Copy(image.original.clone())
+        }
+        Outgoing::Image(image) => Staged::Bytes(encode_png(&image.pixels()?)?, "png"),
+    })
 }
 
 /// The clipboard formats for one copy, ready to be written.
@@ -151,7 +190,7 @@ pub fn stage_images(images: &[ImageSource], staging: &Staging) -> Result<Vec<Pat
     let mut items = Vec::with_capacity(images.len());
     for image in images {
         items.push(if image.edited {
-            Staged::Png(encode_png(&image.pixels()?)?)
+            Staged::Bytes(encode_png(&image.pixels()?)?, "png")
         } else {
             Staged::Copy(image.original.clone())
         });
@@ -242,59 +281,132 @@ pub struct BoardRect {
     pub bottom: f64,
 }
 
-/// Starts a drag of the items from the shelf (Windows: an OLE drag on the main thread). Returns
-/// whether something was dropped; the shelf then slides away without taking focus back.
-pub fn drag(app: &AppHandle, ids: &[i64], board: BoardRect) -> Result<bool> {
+/// Starts a drag of the items (Windows: an OLE drag on the main thread). From the shelf, `board`
+/// is where letting go cancels; `as_files` (Alt+drag in the Library) hands texts and links out as
+/// files too. Returns whether something was dropped; the shelf then slides away without taking
+/// focus back.
+pub fn drag(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    ids: &[i64],
+    board: Option<BoardRect>,
+    as_files: bool,
+) -> Result<bool> {
     let media = crate::capture::media(app).ok_or(AppError::NotReady)?;
+    let staging = app.state::<Staging>();
+    if as_files {
+        let items = app
+            .state::<crate::AppState>()
+            .with_db(|db| gather_items(db, &media, ids))?;
+        let files = items.iter().map(as_file).collect::<Result<Vec<_>>>()?;
+        let paths = staging.stage(&files)?;
+        return drag_now(app, window, board, None, paths);
+    }
     let selection = app
         .state::<crate::AppState>()
         .with_db(|db| gather(db, &media, ids))?;
-    let text = (!selection.texts.is_empty()).then(|| {
-        utf16z(&selection.texts.join(
-            "
-",
-        ))
-    });
-    let files = stage_images(&selection.images, &app.state::<Staging>())?;
+    let text = (!selection.texts.is_empty()).then(|| utf16z(&selection.texts.join("\r\n")));
+    let files = stage_images(&selection.images, &staging)?;
     if text.is_none() && files.is_empty() {
         return Ok(false);
     }
-    let dropped = drag_now(app, board, text, files)?;
-    if dropped {
+    let dropped = drag_now(app, window, board, text, files)?;
+    if dropped && window.label() == crate::shelf::LABEL {
         crate::shelf::request_close(app, false)?;
     }
     Ok(dropped)
 }
 
+/// Ctrl+Shift+E: asks for a folder, then writes one neutrally named file per item there.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Exported {
+    pub count: usize,
+    pub folder: String,
+}
+
+pub fn export(app: &AppHandle, window: &WebviewWindow, ids: &[i64]) -> Result<Option<Exported>> {
+    let media = crate::capture::media(app).ok_or(AppError::NotReady)?;
+    let items = app
+        .state::<crate::AppState>()
+        .with_db(|db| gather_items(db, &media, ids))?;
+    if items.is_empty() {
+        return Ok(None);
+    }
+    let title = crate::i18n::t(crate::current_lang(app), "library.export.pick");
+    // The folder dialog takes the focus from its window; the shelf must not close under it.
+    let hold = (window.label() == crate::shelf::LABEL).then(|| crate::shelf::hold_open(app));
+    let picked = pick_folder(app, window, title);
+    drop(hold);
+    let Some(folder) = picked? else {
+        return Ok(None);
+    };
+    let files = items.iter().map(as_file).collect::<Result<Vec<_>>>()?;
+    let written = staging::write_neutral(&folder, &files)?;
+    Ok(Some(Exported {
+        count: written.len(),
+        folder: folder.display().to_string(),
+    }))
+}
+
+#[cfg(windows)]
+fn pick_folder(app: &AppHandle, window: &WebviewWindow, title: String) -> Result<Option<PathBuf>> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    let owner = window.clone();
+    // The dialog runs on the UI thread, owned by the window that asked for it.
+    app.run_on_main_thread(move || {
+        let result = owner
+            .hwnd()
+            .map_err(AppError::from)
+            .and_then(|hwnd| folder_win::pick(hwnd.0 as isize, &title));
+        let _ = tx.send(result);
+    })?;
+    rx.recv().map_err(|_| AppError::Interrupted)?
+}
+
+#[cfg(not(windows))]
+fn pick_folder(
+    _app: &AppHandle,
+    _window: &WebviewWindow,
+    _title: String,
+) -> Result<Option<PathBuf>> {
+    Err(AppError::Unsupported)
+}
+
 #[cfg(windows)]
 fn drag_now(
     app: &AppHandle,
-    board: BoardRect,
+    window: &WebviewWindow,
+    board: Option<BoardRect>,
     text: Option<Vec<u16>>,
     files: Vec<PathBuf>,
 ) -> Result<bool> {
-    let window = app
-        .get_webview_window(crate::shelf::LABEL)
-        .ok_or(AppError::NotReady)?;
     let origin = window.inner_position()?;
     let scale = window.scale_factor()?;
     let screen = |x: f64, base: i32| base + (x * scale).round() as i32;
-    let board = [
-        screen(board.left, origin.x),
-        screen(board.top, origin.y),
-        screen(board.right, origin.x),
-        screen(board.bottom, origin.y),
-    ];
+    let overlay = board.is_some();
+    let board = board.map_or([0; 4], |board| {
+        [
+            screen(board.left, origin.x),
+            screen(board.top, origin.y),
+            screen(board.right, origin.x),
+            screen(board.bottom, origin.y),
+        ]
+    });
+    let window = window.clone();
     let (tx, rx) = std::sync::mpsc::channel();
     app.run_on_main_thread(move || {
-        // The board covers the screen; while dragging it lets the pointer through, so the
-        // drop reaches the app underneath.
-        let _ = window.set_ignore_cursor_events(true);
+        // The shelf covers the screen; while dragging it lets the pointer through, so the drop
+        // reaches the app underneath.
+        if overlay {
+            let _ = window.set_ignore_cursor_events(true);
+        }
         let result = window
             .hwnd()
             .map_err(AppError::from)
             .and_then(|hwnd| drag_win::run(hwnd.0 as isize, board, text.as_deref(), &files));
-        let _ = window.set_ignore_cursor_events(false);
+        if overlay {
+            let _ = window.set_ignore_cursor_events(false);
+        }
         let _ = tx.send(result);
     })?;
     rx.recv().map_err(|_| AppError::Interrupted)?
@@ -303,7 +415,8 @@ fn drag_now(
 #[cfg(not(windows))]
 fn drag_now(
     _app: &AppHandle,
-    _board: BoardRect,
+    _window: &WebviewWindow,
+    _board: Option<BoardRect>,
     _text: Option<Vec<u16>>,
     _files: Vec<PathBuf>,
 ) -> Result<bool> {

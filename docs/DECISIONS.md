@@ -331,3 +331,34 @@ A text saves about 300 ms after typing stops, and when editing ends or another c
 identity follows the new text, so copying that text again finds the same card. When another card
 already holds that text, the edited card gets an identity of its own and both stay, because merging
 them could lose a name or a pin.
+
+## D-053 Library data and window — Accepted
+Folders nest, and deleting one takes its subfolders but never their items. A tag name is unique
+by a key Rust folds from it: the four Turkish i forms (İ, I, ı, i) are one letter and case does not
+count, so "İş" and "IŞ" are one tag; the pickers match names the same way. Items join folders and
+tags through `item_folders` and `item_tags` (migration 0005). An item is saved when it is pinned,
+named, in a folder or tagged; that rule is one SQL expression shared by retention, taking down and
+the Library. The window gets every item once, Trash included, with texts cut to 400 characters, and
+filters, sorts and counts on its side with pure, tested functions; names sort with the collation of
+the UI language. The grid and the list are virtualised with `@tanstack/react-virtual` 3.14.20
+(MIT), pinned exactly because a newer release came out the same day. While idle the window renders
+nothing. View, sort, panel and column widths are settings. Windows 11 (build 22000 or later, read
+from the registry) gets Mica; Windows 10 gets the opaque window colour.
+
+## D-054 Library keys, dialogs and dragging — Accepted
+F6 and Shift+F6 move between the sidebar, the items and the details; Tab stays ordinary control
+navigation. The items use the shelf's keys where they mean the same thing: Enter and Ctrl+C copy
+and leave the window open; P, Alt+P, Shift+P, Ctrl+Shift+T, Space, E, M, C, Delete and Backspace
+work as on the shelf. In Trash, R restores and Delete deletes for good after a question. The name,
+folder and tag pickers are shared with the shelf, and every dialog hands the focus back to where it
+was opened. Cards are dragged onto sidebar folders with HTML drag and drop (the window turns off
+Tauri's file-drop handler for this) and keep their pin; Alt+drag hands them out as files.
+
+## D-055 Notes and export — Accepted
+Ctrl+N writes a new text note: pinned, so it never expires, with the source "manual" and an identity
+of its own, so empty notes never collide; in a folder view it joins that folder. Export asks for a
+folder with the Windows folder dialog and writes texts as UTF-8 `.txt`, links as `.url` Internet
+shortcuts and images as `.png` (edited images flattened), named like staged files
+(`Panopin-<date>-<n>.<ext>`) and never overwriting a file. Exporting from the shelf keeps the board
+open while the dialog has the focus and for 600 ms after it, because a late focus event would
+otherwise close it.

@@ -3,12 +3,12 @@
 
 use rusqlite::{params, Connection};
 
-use crate::{error::Result, store::items::Kind};
+use crate::{
+    error::Result,
+    store::items::{Kind, SAVED},
+};
 
 pub const DAY_MS: i64 = 86_400_000;
-
-/// Saved items (pinned or named; folders and tags join this in Phase 5) never expire.
-const UNSAVED: &str = "pinned = 0 AND title IS NULL";
 
 /// Retention in days per kind (`None` = keep forever) and for Trash (`None` = never empty).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,7 +46,7 @@ pub fn sweep(conn: &mut Connection, policy: &Policy, now: i64) -> Result<Sweep> 
             trashed += tx.execute(
                 &format!(
                     "UPDATE items SET trashed_at = ?1
-                     WHERE kind = ?2 AND trashed_at IS NULL AND {UNSAVED} AND last_copied_at < ?3"
+                     WHERE kind = ?2 AND trashed_at IS NULL AND NOT {SAVED} AND last_copied_at < ?3"
                 ),
                 params![now, kind.as_str(), now - i64::from(days) * DAY_MS],
             )?;
@@ -83,7 +83,7 @@ pub fn clearable(conn: &Connection, kinds: &[Kind], now: i64) -> Result<(usize, 
     let count: i64 = conn.query_row(
         &format!(
             "SELECT count(*) FROM items
-             WHERE kind IN ({}) AND trashed_at IS NULL AND {UNSAVED} AND last_copied_at <= ?1",
+             WHERE kind IN ({}) AND trashed_at IS NULL AND NOT {SAVED} AND last_copied_at <= ?1",
             kind_list(kinds)
         ),
         [now],
@@ -107,7 +107,7 @@ pub fn clear_history(
     let moved = tx.execute(
         &format!(
             "UPDATE items SET trashed_at = ?1
-             WHERE kind IN ({}) AND trashed_at IS NULL AND {UNSAVED} AND last_copied_at <= ?2",
+             WHERE kind IN ({}) AND trashed_at IS NULL AND NOT {SAVED} AND last_copied_at <= ?2",
             kind_list(kinds)
         ),
         params![now, cutoff],

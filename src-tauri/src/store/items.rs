@@ -5,6 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{error::Result, store::identity::Identity};
 
+/// D-042: a saved item (pinned, named, in a folder or tagged) never expires, and taking it off
+/// the shelf keeps it in the Library. A condition on the `items` table.
+pub const SAVED: &str = "(items.pinned = 1 OR items.title IS NOT NULL \
+     OR EXISTS (SELECT 1 FROM item_folders WHERE item_folders.item_id = items.id) \
+     OR EXISTS (SELECT 1 FROM item_tags WHERE item_tags.item_id = items.id))";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Kind {

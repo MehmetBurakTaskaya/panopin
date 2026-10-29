@@ -5,6 +5,7 @@ import { followSettingsChanges, useSettings } from './state/settings';
 import './styles/tokens.css';
 import './styles/global.css';
 import { applyTheme, followSystemTheme } from './theme';
+import { LibraryApp } from './windows/library/LibraryApp';
 import { OnboardingApp } from './windows/onboarding/OnboardingApp';
 import { SettingsApp } from './windows/settings/SettingsApp';
 import { ShelfApp } from './windows/shelf/ShelfApp';
@@ -16,6 +17,7 @@ document.documentElement.dataset.window = label;
 function View() {
   if (label === 'settings') return <SettingsApp />;
   if (label === 'onboarding') return <OnboardingApp />;
+  if (label === 'library') return <LibraryApp />;
   return <ShelfApp />;
 }
 

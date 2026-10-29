@@ -1,0 +1,735 @@
+import { listen } from '@tauri-apps/api/event';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import { ConfirmDialog, FolderPicker, NamePrompt, TagPicker } from '../../components/pickers/Pickers';
+import { getLanguage, t, type MessageKey } from '../../i18n';
+import {
+  addToFolder,
+  copyItems,
+  createFolder,
+  deleteFolder,
+  deleteForever,
+  deleteTag,
+  emptyTrash,
+  exportItems,
+  libraryData,
+  newNote,
+  renameFolder,
+  renameTag,
+  restoreItems,
+  setPinned,
+  setTitle,
+  startDrag,
+  tagItems,
+  trashItems,
+  undoTakeDown,
+  type LibraryData,
+  type LibraryLayout,
+  type ShelfItem,
+  type SortKey,
+} from '../../ipc';
+import { emptyModel, reduceLibrary, targets } from '../../keyboard/libraryModel';
+import { letterOf } from '../../keyboard/shelfKeys';
+import {
+  NO_FILTERS,
+  displayTitle,
+  domainsOf,
+  inSection,
+  matches,
+  sectionCounts,
+  sortItems,
+  type DateFilter,
+  type Filters,
+  type KindFilter,
+  type Section,
+} from '../../library/query';
+import { useSettings } from '../../state/settings';
+import { Preview, type PreviewMode } from '../shelf/preview/Preview';
+import { trackSave, whenSaved } from '../shelf/preview/saves';
+import { Inspector } from './Inspector';
+import { ItemGrid, ItemList } from './ItemViews';
+import styles from './Library.module.css';
+import { ITEMS_MIME, Sidebar, type Group } from './Sidebar';
+
+type Dialog =
+  | { type: 'folder' | 'tag' | 'name'; ids: number[] }
+  | { type: 'confirm'; title: string; confirm: string; run: () => void };
+
+const DEFAULT_LAYOUT: LibraryLayout = {
+  view: 'grid',
+  sort: 'lastCopied',
+  descending: true,
+  sidebarWidth: 230,
+  inspectorWidth: 300,
+  columns: { title: 360, kind: 110, tags: 200, added: 160 },
+};
+
+const KINDS: [KindFilter, MessageKey][] = [
+  ['all', 'library.kind.all'],
+  ['image', 'library.kind.images'],
+  ['text', 'library.kind.texts'],
+  ['link', 'library.kind.links'],
+];
+
+const DATES: [DateFilter, MessageKey][] = [
+  ['any', 'library.date.any'],
+  ['today', 'library.date.today'],
+  ['week', 'library.date.week'],
+  ['month', 'library.date.month'],
+  ['older', 'library.date.older'],
+];
+
+const SORTS: [string, MessageKey][] = [
+  ['lastCopied:desc', 'library.sort.lastCopied'],
+  ['added:desc', 'library.sort.added'],
+  ['title:asc', 'library.sort.titleAsc'],
+  ['title:desc', 'library.sort.titleDesc'],
+  ['kind:asc', 'library.sort.kind'],
+  ['tags:asc', 'library.sort.tags'],
+];
+
+const SECTION_NAME: Record<string, MessageKey> = {
+  all: 'library.section.all',
+  recent: 'library.section.recent',
+  pinned: 'library.section.pinned',
+  unsorted: 'library.section.unsorted',
+  trash: 'library.section.trash',
+};
+
+const isEditable = (target: EventTarget | null) =>
+  target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+
+/** The Library window: sidebar, items and inspector, all usable from the keyboard (D-053). */
+export function LibraryApp() {
+  useSettings((s) => s.lang);
+  const settings = useSettings((s) => s.settings);
+  const update = useSettings((s) => s.update);
+  const layout = settings?.library ?? DEFAULT_LAYOUT;
+  const [data, setData] = useState<LibraryData>({ items: [], folders: [], tags: [] });
+  const [now, setNow] = useState(() => Date.now());
+  const [section, setSection] = useState<Section>({ type: 'all' });
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [model, dispatch] = useReducer(reduceLibrary, undefined, () => emptyModel(1));
+  const [dialog, setDialog] = useState<Dialog | null>(null);
+  const [renaming, setRenaming] = useState<Group | null>(null);
+  const [preview, setPreview] = useState<PreviewMode | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [widths, setWidths] = useState({ sidebar: layout.sidebarWidth, inspector: layout.inspectorWidth });
+  const sidebarPane = useRef<HTMLDivElement>(null);
+  const itemsPane = useRef<HTMLDivElement>(null);
+  const inspectorPane = useRef<HTMLDivElement>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+
+  // A dialog gives the focus back to where it was opened from: the items, the tree or a button.
+  const opener = useRef<HTMLElement | null>(null);
+  const openDialog = (next: Dialog) => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setDialog(next);
+  };
+  const closeDialog = () => {
+    setDialog(null);
+    (opener.current?.isConnected ? opener.current : itemsPane.current)?.focus({ preventScroll: true });
+  };
+
+  const refresh = useCallback(async () => {
+    try {
+      const next = await libraryData();
+      // SQLite sorts names by ASCII case only; the sidebar and pickers follow the UI language.
+      const collator = new Intl.Collator(getLanguage(), { sensitivity: 'base', numeric: true });
+      const byName = (a: { id: number; name: string }, b: { id: number; name: string }) => collator.compare(a.name, b.name) || a.id - b.id;
+      setData({ items: next.items, folders: [...next.folders].sort(byName), tags: [...next.tags].sort(byName) });
+      setNow(Date.now());
+    } catch {
+      // The next change event tries again.
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+    const unlisten = listen('items:changed', () => void refresh());
+    return () => void unlisten.then((stop) => stop());
+  }, [refresh]);
+
+  useEffect(() => setWidths({ sidebar: layout.sidebarWidth, inspector: layout.inspectorWidth }), [layout.sidebarWidth, layout.inspectorWidth]);
+
+  const say = useCallback((text: string) => {
+    setToast(text);
+    window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 1800);
+  }, []);
+  const fail = useCallback((err: unknown) => say(t('shelf.error', { error: String(err) })), [say]);
+
+  const tags = useMemo(() => new Map(data.tags.map((tag) => [tag.id, tag])), [data.tags]);
+  const byId = useMemo(() => new Map(data.items.map((item) => [item.id, item])), [data.items]);
+  const counts = useMemo(() => sectionCounts(data.items), [data.items]);
+  const inSectionItems = useMemo(() => data.items.filter((item) => inSection(item, section)), [data.items, section]);
+  const visible = useMemo(
+    () =>
+      sortItems(
+        inSectionItems.filter((item) => matches(item, filters, now)),
+        layout.sort,
+        layout.descending,
+        (id) => tags.get(id)?.name ?? '',
+        getLanguage(),
+      ),
+    [inSectionItems, filters, now, layout.sort, layout.descending, tags],
+  );
+  // The grid reports how many tiles fit in a row; the list is one column.
+  const setColumns = useCallback((columns: number) => dispatch({ type: 'setColumns', columns }), []);
+  useEffect(() => {
+    if (layout.view === 'list') setColumns(1);
+  }, [layout.view, setColumns]);
+
+  // An item made here (a note) gets the cursor, and maybe its editor, once it is in view.
+  const reveal = useRef<{ id: number; preview: PreviewMode | null } | null>(null);
+  useEffect(() => {
+    dispatch({ type: 'setIds', ids: visible.map((item) => item.id) });
+    const next = reveal.current;
+    if (next && visible.some((item) => item.id === next.id)) {
+      reveal.current = null;
+      dispatch({ type: 'focus', id: next.id });
+      if (next.preview) setPreview(next.preview);
+    }
+  }, [visible]);
+
+  const ids = targets(model);
+  const selected = ids.map((id) => byId.get(id)).filter((item) => item !== undefined);
+  const inTrash = section.type === 'trash';
+  const currentId = model.cursor === null ? null : (model.ids[model.cursor] ?? null);
+  const current = currentId === null ? null : (byId.get(currentId) ?? null);
+
+  const saveLayout = (patch: Partial<LibraryLayout>) => void update({ library: patch });
+
+  // Actions. Every change comes back through `items:changed`.
+  const copy = async (list: number[]) => {
+    if (list.length === 0) return;
+    try {
+      await whenSaved();
+      await copyItems(list);
+      say(t('shelf.copied'));
+    } catch (err) {
+      fail(err);
+    }
+  };
+  const togglePin = (list: number[]) => {
+    const items = list.map((id) => byId.get(id)).filter((item) => item !== undefined);
+    if (items.length > 0) setPinned(list, !items.every((item) => item.pinned)).catch(fail);
+  };
+  const askTrash = (list: number[]) => {
+    if (list.length === 0) return;
+    openDialog({
+      type: 'confirm',
+      title: list.length === 1 ? t('shelf.trash.confirmOne') : t('shelf.trash.confirm', { count: list.length }),
+      confirm: t('shelf.trash.ok'),
+      run: () => trashItems(list).then(() => say(t('library.trashed')), fail),
+    });
+  };
+  const askDeleteForever = (list: number[]) => {
+    if (list.length === 0) return;
+    openDialog({
+      type: 'confirm',
+      title: t('library.deleteForever.confirm', { count: list.length }),
+      confirm: t('library.action.deleteForever'),
+      run: () => deleteForever(list).catch(fail),
+    });
+  };
+  const askEmptyTrash = () =>
+    openDialog({
+      type: 'confirm',
+      title: t('library.emptyTrash.confirm', { count: counts.trash }),
+      confirm: t('library.emptyTrash'),
+      run: () => emptyTrash().catch(fail),
+    });
+  const restore = (list: number[]) => {
+    if (list.length > 0) restoreItems(list).then(() => say(t('library.restored')), fail);
+  };
+  const undo = () => {
+    undoTakeDown().then((back) => back.length > 0 && say(t('library.undone')), fail);
+  };
+  const exportSelection = (list: number[]) => {
+    if (list.length === 0) return;
+    whenSaved()
+      .then(() => exportItems(list))
+      .then((done) => done && say(t('library.exported', { count: done.count, folder: done.folder })), fail);
+  };
+  const addNote = () => {
+    newNote()
+      .then(async (id) => {
+        if (section.type === 'folder') await addToFolder([id], section.id);
+        // A note is a pinned text: leave the views that cannot show it.
+        if (section.type === 'trash' || section.type === 'recent' || section.type === 'tag') setSection({ type: 'all' });
+        setFilters((f) =>
+          (f.kind === 'all' || f.kind === 'text') && f.tags.length === 0 && f.domain === null && f.date !== 'older' ? f : NO_FILTERS,
+        );
+        reveal.current = { id, preview: 'text' };
+        await refresh();
+      })
+      .catch(fail);
+  };
+  const addFolder = () => {
+    const parent = section.type === 'folder' ? section.id : null;
+    createFolder(t('library.folder.new'), parent)
+      .then(async (id) => {
+        await refresh();
+        setSection({ type: 'folder', id });
+        setRenaming({ type: 'folder', id });
+      })
+      .catch(fail);
+  };
+  const rename = (group: Group, name: string) => {
+    setRenaming(null);
+    const old = group.type === 'folder' ? data.folders.find((f) => f.id === group.id)?.name : tags.get(group.id)?.name;
+    if (!name.trim() || name.trim() === old) return;
+    (group.type === 'folder' ? renameFolder(group.id, name) : renameTag(group.id, name)).catch(fail);
+  };
+  const askDeleteGroup = (group: Group) => {
+    const name = group.type === 'folder' ? data.folders.find((f) => f.id === group.id)?.name : tags.get(group.id)?.name;
+    openDialog({
+      type: 'confirm',
+      title: t(group.type === 'folder' ? 'library.folder.deleteConfirm' : 'library.tag.deleteConfirm', { name: name ?? '' }),
+      confirm: t('library.delete'),
+      run: () => {
+        (group.type === 'folder' ? deleteFolder(group.id) : deleteTag(group.id)).catch(fail);
+        setSection({ type: 'all' });
+      },
+    });
+  };
+  const openEditor = (mode: PreviewMode) => {
+    if (!current) return;
+    if ((mode === 'text' && current.kind === 'text') || ((mode === 'markup' || mode === 'crop') && current.kind === 'image')) setPreview(mode);
+  };
+
+  const focusPane = (step: 1 | -1) => {
+    const panes = [sidebarPane.current, itemsPane.current, inspectorPane.current];
+    const at = panes.findIndex((pane) => pane?.contains(document.activeElement));
+    const next = panes[(at + step + panes.length) % panes.length];
+    const field = next === inspectorPane.current ? next?.querySelector<HTMLElement>('input, textarea, button') : null;
+    (field ?? next)?.focus();
+  };
+
+  // With its item gone, an editor falls back to the plain preview, which Esc closes.
+  const previewMode = preview && (current ? preview : 'view');
+  const busy = dialog !== null || (previewMode !== null && previewMode !== 'view');
+
+  const onItemsKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (busy) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    const { shiftKey: shift, altKey: alt } = e;
+    const grid = layout.view === 'grid';
+    const rows = Math.max(1, Math.floor((itemsPane.current?.clientHeight ?? 400) / (grid ? 188 : 36)) - 1);
+    let handled = true;
+    switch (e.key) {
+      case 'ArrowLeft':
+      case 'ArrowRight':
+        if (grid) dispatch({ type: 'move', dx: e.key === 'ArrowLeft' ? -1 : 1, dy: 0, extend: shift });
+        else handled = false;
+        break;
+      case 'ArrowUp':
+      case 'ArrowDown':
+        dispatch({ type: 'move', dx: 0, dy: e.key === 'ArrowUp' ? -1 : 1, extend: shift });
+        break;
+      case 'Home':
+      case 'End':
+        dispatch({ type: 'edge', end: e.key === 'Home' ? 'first' : 'last', extend: shift });
+        break;
+      case 'PageUp':
+      case 'PageDown':
+        dispatch({ type: 'page', dir: e.key === 'PageUp' ? -1 : 1, rows, extend: shift });
+        break;
+      case 'Enter':
+        // Copying from the Library keeps the window open.
+        void copy(ids);
+        break;
+      case ' ':
+        setPreview((open) => (open ? null : 'view'));
+        break;
+      case 'Delete':
+        if (inTrash) askDeleteForever(ids);
+        else askTrash(ids);
+        break;
+      case 'Escape':
+        if (preview) setPreview(null);
+        else handled = false;
+        break;
+      default:
+        handled = false;
+    }
+    const letter = handled ? null : letterOf(e.nativeEvent);
+    if (letter) {
+      handled = true;
+      if (ctrl && !alt && !shift && letter === 'a') dispatch({ type: 'selectAll' });
+      else if (ctrl && !alt && !shift && letter === 'c') void copy(ids);
+      else if (ctrl && shift && !alt && letter === 't') openDialog({ type: 'tag', ids });
+      else if (alt && !ctrl && !shift && letter === 'p') openDialog({ type: 'name', ids });
+      else if (shift && !ctrl && !alt && letter === 'p') openDialog({ type: 'folder', ids });
+      else if (!ctrl && !alt && !shift && letter === 'p') togglePin(ids);
+      else if (!ctrl && !alt && !shift && letter === 'f') setFilters((f) => ({ ...f, pinnedOnly: !f.pinnedOnly }));
+      else if (!ctrl && !alt && !shift && letter === 'e') openEditor('text');
+      else if (!ctrl && !alt && !shift && letter === 'm') openEditor('markup');
+      else if (!ctrl && !alt && !shift && letter === 'c') openEditor('crop');
+      else if (!ctrl && !alt && !shift && letter === 'r' && inTrash) restore(ids);
+      else handled = false;
+    }
+    if (handled && ids.length === 0 && ['Enter', 'Delete'].includes(e.key)) handled = true;
+    if (handled) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  // Keys that work from every pane: panes, filters, new note or folder, export, undo.
+  const onWindowKey = (e: KeyboardEvent) => {
+    if (busy) return;
+    if (e.key === 'F6') {
+      e.preventDefault();
+      focusPane(e.shiftKey ? -1 : 1);
+      return;
+    }
+    if (e.key === 'Escape' && previewMode === 'view') {
+      // The preview was clicked, so the items pane no longer has the focus.
+      setPreview(null);
+      return;
+    }
+    if (isEditable(e.target)) return;
+    const ctrl = e.ctrlKey || e.metaKey;
+    const letter = letterOf(e);
+    const digit = /^Digit([0-3])$/.exec(e.code)?.[1];
+    let handled = true;
+    if (ctrl && !e.shiftKey && !e.altKey && digit !== undefined) setFilters((f) => ({ ...f, kind: KINDS[Number(digit)]![0] }));
+    else if (ctrl && !e.altKey && letter === 'n') {
+      if (e.shiftKey) addFolder();
+      else addNote();
+    } else if (ctrl && e.shiftKey && !e.altKey && letter === 'e') exportSelection(ids);
+    else if ((ctrl && !e.shiftKey && letter === 'z') || (e.key === 'Backspace' && !ctrl && !e.altKey)) undo();
+    else handled = false;
+    if (handled) e.preventDefault();
+  };
+  const windowKey = useRef(onWindowKey);
+  useLayoutEffect(() => {
+    windowKey.current = onWindowKey;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => windowKey.current(e);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // The items take the focus when the window opens and whenever a dialog or editor closing
+  // leaves nothing focused.
+  useEffect(() => {
+    if (!document.activeElement || document.activeElement === document.body) itemsPane.current?.focus({ preventScroll: true });
+  }, [dialog, preview, renaming]);
+
+  const onItemClick = (id: number, e: MouseEvent) => {
+    dispatch({ type: 'click', id, ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey });
+    itemsPane.current?.focus({ preventScroll: true });
+  };
+  const onDragStart = (id: number, e: DragEvent) => {
+    const list = model.selection.includes(id) ? model.selection : [id];
+    if (e.altKey) {
+      // Alt+drag hands the items out as files (.txt, .url, .png).
+      e.preventDefault();
+      whenSaved()
+        .then(() => startDrag(list, null, true))
+        .catch(fail);
+      return;
+    }
+    e.dataTransfer.setData(ITEMS_MIME, JSON.stringify(list));
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+  const dropOnFolder = (folder: number, list: number[]) => {
+    // Joining a folder leaves the pin as it is.
+    addToFolder(list, folder).then(() => say(t('library.added')), fail);
+  };
+
+  const splitter = (side: 'sidebar' | 'inspector') => (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const start = widths[side];
+    const widthAt = (x: number) => Math.max(160, Math.min(560, start + (side === 'sidebar' ? x - startX : startX - x)));
+    const onMove = (ev: PointerEvent) => setWidths((w) => ({ ...w, [side]: widthAt(ev.clientX) }));
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      saveLayout(side === 'sidebar' ? { sidebarWidth: widthAt(ev.clientX) } : { inspectorWidth: widthAt(ev.clientX) });
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
+  const heading =
+    section.type === 'folder'
+      ? (data.folders.find((f) => f.id === section.id)?.name ?? '')
+      : section.type === 'tag'
+        ? `# ${tags.get(section.id)?.name ?? ''}`
+        : t(SECTION_NAME[section.type]!);
+  const domains = useMemo(() => domainsOf(inSectionItems), [inSectionItems]);
+  const sortValue = `${layout.sort}:${layout.descending ? 'desc' : 'asc'}`;
+  const emptyText = inTrash ? t('library.empty.trash') : inSectionItems.length === 0 ? t('library.empty.section') : t('library.empty.filters');
+
+  const viewProps = {
+    paneRef: itemsPane,
+    items: visible,
+    model,
+    tags,
+    emptyText,
+    onKeyDown: onItemsKey,
+    onClick: onItemClick,
+    onDoubleClick: (id: number) => {
+      dispatch({ type: 'focus', id });
+      setPreview('view');
+    },
+    onDragStart,
+  };
+
+  return (
+    <div className={styles.app} style={{ ['--sidebar' as string]: `${widths.sidebar}px`, ['--inspector' as string]: `${widths.inspector}px` }}>
+      <Sidebar
+        paneRef={sidebarPane}
+        section={section}
+        onSection={(next) => {
+          setSection(next);
+          setPreview(null);
+        }}
+        counts={counts}
+        folders={data.folders}
+        tags={data.tags}
+        renaming={renaming}
+        onRenaming={setRenaming}
+        onRename={rename}
+        onDelete={askDeleteGroup}
+        onNewFolder={addFolder}
+        onDropItems={dropOnFolder}
+        onEnter={() => itemsPane.current?.focus()}
+      />
+      <div className={styles.splitter} role="separator" aria-orientation="vertical" onPointerDown={splitter('sidebar')} />
+      <main className={styles.pane}>
+        <div className={styles.toolbar}>
+          <h1 className={styles.heading}>
+            {heading}
+            <small>{visible.length === 1 ? t('shelf.row.countOne') : t('shelf.row.count', { count: visible.length })}</small>
+          </h1>
+          <div className={styles.segment} role="group" aria-label={t('library.filter.kind')}>
+            {KINDS.map(([kind, label], i) => (
+              <button
+                key={kind}
+                type="button"
+                className={styles.tool}
+                aria-pressed={filters.kind === kind}
+                title={`${t(label)} (Ctrl+${i})`}
+                onClick={() => setFilters((f) => ({ ...f, kind }))}
+              >
+                {t(label)}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            className={styles.tool}
+            aria-pressed={filters.pinnedOnly}
+            title={`${t('library.filter.pinned')} (F)`}
+            onClick={() => setFilters((f) => ({ ...f, pinnedOnly: !f.pinnedOnly }))}
+          >
+            {t('library.filter.pinned')}
+          </button>
+          {data.tags.length > 0 && (
+            <select
+              className={styles.select}
+              aria-label={t('library.filter.tags')}
+              value=""
+              onChange={(e) => {
+                const id = Number(e.target.value);
+                if (id) setFilters((f) => ({ ...f, tags: f.tags.includes(id) ? f.tags : [...f.tags, id] }));
+              }}
+            >
+              <option value="">{t('library.filter.tags')}</option>
+              {data.tags
+                .filter((tag) => !filters.tags.includes(tag.id))
+                .map((tag) => (
+                  <option key={tag.id} value={tag.id}>
+                    # {tag.name}
+                  </option>
+                ))}
+            </select>
+          )}
+          {filters.tags.map((id) => (
+            <span key={id} className={styles.chip}>
+              # {tags.get(id)?.name}
+              <button
+                type="button"
+                aria-label={t('library.inspector.removeTag', { name: tags.get(id)?.name ?? '' })}
+                onClick={() => setFilters((f) => ({ ...f, tags: f.tags.filter((tag) => tag !== id) }))}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          <select
+            className={styles.select}
+            aria-label={t('library.filter.date')}
+            value={filters.date}
+            onChange={(e) => setFilters((f) => ({ ...f, date: e.target.value as DateFilter }))}
+          >
+            {DATES.map(([value, label]) => (
+              <option key={value} value={value}>
+                {t(label)}
+              </option>
+            ))}
+          </select>
+          {domains.length > 0 && (
+            <select
+              className={styles.select}
+              aria-label={t('library.filter.domain')}
+              value={filters.domain ?? ''}
+              onChange={(e) => setFilters((f) => ({ ...f, domain: e.target.value || null }))}
+            >
+              <option value="">{t('library.filter.anyDomain')}</option>
+              {domains.map((domain) => (
+                <option key={domain} value={domain}>
+                  {domain}
+                </option>
+              ))}
+            </select>
+          )}
+          <select
+            className={styles.select}
+            aria-label={t('library.sort')}
+            value={sortValue}
+            onChange={(e) => {
+              const [sort, dir] = e.target.value.split(':');
+              saveLayout({ sort: sort as SortKey, descending: dir === 'desc' });
+            }}
+          >
+            {SORTS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {t(label)}
+              </option>
+            ))}
+          </select>
+          <div className={styles.segment} role="group" aria-label={t('library.view')}>
+            <button type="button" className={styles.tool} aria-pressed={layout.view === 'grid'} onClick={() => saveLayout({ view: 'grid' })}>
+              {t('library.view.grid')}
+            </button>
+            <button type="button" className={styles.tool} aria-pressed={layout.view === 'list'} onClick={() => saveLayout({ view: 'list' })}>
+              {t('library.view.list')}
+            </button>
+          </div>
+          {inTrash ? (
+            <button type="button" className={styles.tool} disabled={counts.trash === 0} onClick={askEmptyTrash}>
+              {t('library.emptyTrash')}
+            </button>
+          ) : (
+            <button type="button" className={styles.tool} title={`${t('library.newNote')} (Ctrl+N)`} onClick={addNote}>
+              + {t('library.newNote')}
+            </button>
+          )}
+        </div>
+        {layout.view === 'grid' ? (
+          <ItemGrid {...viewProps} onColumns={setColumns} />
+        ) : (
+          <ItemList
+            {...viewProps}
+            layout={layout}
+            onSort={(sort, descending) => saveLayout({ sort, descending })}
+            onColumnWidth={(key, width) => saveLayout({ columns: { ...layout.columns, [key]: width } })}
+          />
+        )}
+      </main>
+      <div className={styles.splitter} role="separator" aria-orientation="vertical" onPointerDown={splitter('inspector')} />
+      <Inspector
+        paneRef={inspectorPane}
+        items={selected}
+        folders={data.folders}
+        tags={tags}
+        inTrash={inTrash}
+        onName={() => openDialog({ type: 'name', ids })}
+        onFolder={() => openDialog({ type: 'folder', ids })}
+        onTag={() => openDialog({ type: 'tag', ids })}
+        onPin={() => togglePin(ids)}
+        onExport={() => exportSelection(ids)}
+        onTrash={() => askTrash(ids)}
+        onRestore={() => restore(ids)}
+        onDeleteForever={() => askDeleteForever(ids)}
+      />
+      {preview && (
+        <Preview
+          item={current && current.kind !== 'video' ? (current as unknown as ShelfItem) : null}
+          mode={previewMode ?? 'view'}
+          onMode={setPreview}
+          onClose={() => {
+            setPreview(null);
+            itemsPane.current?.focus();
+          }}
+          onUndo={undo}
+        />
+      )}
+      {dialog?.type === 'folder' && (
+        <FolderPicker
+          folders={data.folders}
+          onCreate={(name) => createFolder(name, null)}
+          onClose={closeDialog}
+          onPick={(folder) => {
+            const list = dialog.ids;
+            closeDialog();
+            trackSave(addToFolder(list, folder).then(() => setPinned(list, true))).catch(fail);
+          }}
+        />
+      )}
+      {dialog?.type === 'tag' && (
+        <TagPicker
+          tags={data.tags}
+          onClose={closeDialog}
+          onPick={(name) => {
+            const list = dialog.ids;
+            closeDialog();
+            tagItems(list, name).catch(fail);
+          }}
+        />
+      )}
+      {dialog?.type === 'name' && (
+        <NamePrompt
+          items={dialog.ids.map((id) => {
+            const item = byId.get(id);
+            return { id, title: item?.title ?? null, label: item ? displayTitle(item) : '' };
+          })}
+          onSave={async (id, title) => {
+            await setTitle([id], title.trim() ? title : null);
+            await setPinned([id], true);
+          }}
+          onClose={() => {
+            closeDialog();
+          }}
+        />
+      )}
+      {dialog?.type === 'confirm' && (
+        <ConfirmDialog
+          title={dialog.title}
+          confirm={dialog.confirm}
+          onClose={() => {
+            closeDialog();
+          }}
+          onConfirm={() => {
+            dialog.run();
+            closeDialog();
+          }}
+        />
+      )}
+      {toast && (
+        <div className={styles.toast} role="status">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}

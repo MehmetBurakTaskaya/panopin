@@ -29,5 +29,13 @@ export function testSettings(): Settings {
     cardSize: 'm',
     shelfEdge: 'top',
     sounds: { enabled: true, volume: 30 },
+    library: {
+      view: 'grid',
+      sort: 'lastCopied',
+      descending: true,
+      sidebarWidth: 230,
+      inspectorWidth: 300,
+      columns: { title: 360, kind: 110, tags: 200, added: 160 },
+    },
   };
 }
