@@ -2,7 +2,7 @@
 //! A change of the accent colour in Windows reaches every window at once.
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::AppHandle;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +46,7 @@ pub struct LookWatch(#[allow(dead_code)] windows::UI::ViewManagement::UISettings
 
 #[cfg(windows)]
 pub fn watch(app: &AppHandle) {
+    use tauri::{Emitter, Manager};
     use windows::{Foundation::TypedEventHandler, UI::ViewManagement::UISettings};
     let Ok(settings) = UISettings::new() else {
         return;
