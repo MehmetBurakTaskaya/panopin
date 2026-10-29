@@ -51,13 +51,24 @@ Still to check by hand:
 
 ## Capture (Phase 2)
 
-- [ ] Win+Shift+S capture appears on the shelf exactly once (clipboard and auto-saved file merge).
-- [ ] Win+PrtScn file appears; the original file is unchanged and never moved.
-- [ ] The screenshot folder resolves correctly when Pictures is redirected to OneDrive and localised.
+The tray tooltip shows the item counts per kind; use it to see what was captured.
+
+- [x] First run: the welcome window lists the sources, says text is collected, and capture starts
+      only after "Start"; the window then closes (2026-10-29, Windows 11 25H2).
+- [ ] Copy a sentence in Notepad: texts +1. Copy it again: the count stays the same.
+- [ ] Copy `https://example.com`: links +1. Copy a sentence that contains a URL: texts +1.
+- [ ] Copy only spaces or empty lines: nothing changes.
+- [ ] Copy an image in a browser ("Copy image"): images +1.
+- [ ] Win+Shift+S capture: images +1 exactly once (clipboard and auto-saved file merge).
+- [ ] Win+PrtScn: images +1; the file in the Screenshots folder is unchanged and never moved.
+- [ ] The Screenshots folder is found although Pictures is redirected to OneDrive and localised.
 - [ ] Copies from KeePass, KeePassXC, Bitwarden and 1Password are not captured.
-- [ ] Pause for 5 minutes, 1 hour and until resumed; the tray icon changes while paused.
+- [ ] Copying files in Explorer captures nothing.
+- [ ] Tray → Pause capture → 5 minutes: icon greys out, copies are ignored, capture resumes by
+      itself after 5 minutes. "Until I resume" survives a restart.
 - [ ] Capture keeps working after sleep and resume.
 - [ ] Content already on the clipboard when a source is enabled is not captured.
+- [ ] `%APPDATA%\Panopin\media\<id>\` holds `original.*` and `thumb.*` for each image.
 
 ## Shelf, focus and paste (Phase 3)
 

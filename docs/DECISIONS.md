@@ -196,6 +196,48 @@ a read-only list of shortcuts. The full tabbed Settings window arrives in Phase 
 Clicking the tray icon first moves focus away from the shelf, which closes it. A tray click within
 400 ms of such a close is treated as the same gesture, so the shelf does not immediately reopen.
 
-## D-035 Phase 1 storage access — Accepted
-A single SQLite connection behind a mutex serves Phase 1 (settings only). The dedicated writer
-thread from ARCHITECTURE §4 arrives with capture in Phase 2.
+## D-035 Storage access — Accepted (revised in Phase 2)
+One SQLite connection behind a mutex serves every writer. Capture events are handled one at a time
+by a single worker thread, and decoding, hashing and thumbnails run outside the lock, so the lock is
+held only for short statements. A separate writer thread added complexity without a benefit.
+
+## D-036 Text wins over a rendered picture — Accepted
+Many apps put both text and a picture of it on the clipboard (spreadsheets, documents). A copy that
+carries non-whitespace text is stored as text or link only; its picture is not even read. A copy
+whose text is empty or whitespace-only, with an image, is stored as an image. A disabled text or
+link source does not fall back to the picture.
+
+## D-037 Copying again — Accepted
+Copying the same text, link or picture again moves the existing card to the front and takes it out
+of Trash; a text keeps the newest bytes. Title, pin and note never change. A link's identity is its
+URL without outer whitespace.
+
+## D-038 Pause — Accepted
+The pause is stored in settings (`pausedUntil`, Unix ms; the largest value means "until resumed"),
+so it survives a restart. Timed pauses end through a sleeping timer thread; a timer whose pause was
+replaced does nothing. While paused, the tray icon is greyed out with a pause badge.
+
+## D-039 First-run gate — Accepted
+Nothing is captured until the first-run window has been confirmed (`onboarded`). It lists the
+sources, says plainly that text is collected, states that everything stays on the PC and that
+Panopin is not a password vault, and asks separately about link previews (off by default).
+
+## D-040 Reading the clipboard — Accepted
+On `WM_CLIPBOARDUPDATE` the listener checks the sequence number, records the owner and foreground
+executables, opens the clipboard (up to five short retries), checks the privacy markers before
+reading any content, then reads text (UTF-16 up to the first NUL) or an image (`PNG`, then
+`CF_DIBV5`, then `CF_DIB`). The change is dropped if the sequence number moved meanwhile. Copies made
+by Panopin itself will carry the `Panopin.OwnCopy` format (Phase 3) and are skipped. After sleep, the
+listener re-registers on resume.
+
+## D-041 Screenshot files — Accepted
+A folder event starts a bounded wait (at most about 10 s) until the file size holds still and the
+file can be opened exclusively, then the bytes are copied into managed storage. Files already
+imported with the same size and time are skipped. The Screenshots known folder is created if it does
+not exist yet, so the first screenshot is not missed. Extra watched folders belong to the
+screenshots source; their settings UI arrives in Phase 6.
+
+## D-042 Retention schedule — Accepted
+Retention and Trash emptying run at start and then every 6 hours from a sleeping thread. "Clear
+history" is exposed as two commands (count with a cutoff, then confirm); its Settings UI arrives in
+Phase 6.

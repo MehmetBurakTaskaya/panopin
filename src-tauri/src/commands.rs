@@ -1,9 +1,17 @@
 //! IPC commands. Thin by design: they validate input and delegate to the core modules.
 
+use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, State};
 
-use crate::{error::Result, hotkeys, i18n, settings::Settings, shelf, tray, windows, AppState};
+use crate::{
+    capture::{self, now_ms},
+    error::Result,
+    settings::Settings,
+    shelf,
+    store::{items::Kind, retention},
+    AppState,
+};
 
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Settings {
@@ -12,22 +20,35 @@ pub fn get_settings(state: State<'_, AppState>) -> Settings {
 
 /// Applies a partial settings update; every change takes effect immediately.
 #[tauri::command]
-pub fn update_settings(
+pub fn update_settings(app: AppHandle, patch: Value) -> Result<Settings> {
+    crate::apply_settings(&app, patch)
+}
+
+#[derive(Serialize)]
+pub struct Clearable {
+    count: usize,
+    cutoff: i64,
+}
+
+/// "Clear history", step 1: how many unsaved items would move to Trash, and the cutoff to confirm with.
+#[tauri::command]
+pub fn count_clearable(state: State<'_, AppState>, kinds: Vec<Kind>) -> Result<Clearable> {
+    let (count, cutoff) = state.with_db(|db| retention::clearable(db, &kinds, now_ms()))?;
+    Ok(Clearable { count, cutoff })
+}
+
+/// "Clear history", step 2: moves the items that are still unsaved and were copied before the
+/// cutoff to Trash, in one transaction. Copies made while confirming stay.
+#[tauri::command]
+pub fn clear_history(
     app: AppHandle,
     state: State<'_, AppState>,
-    patch: Value,
-) -> Result<Settings> {
-    let (old, new) = state.update_settings(patch)?;
-    if old.language != new.language {
-        let lang = i18n::resolve(new.language);
-        tray::relabel(&app, lang)?;
-        windows::retitle(&app, lang)?;
-    }
-    if old.shortcuts != new.shortcuts {
-        hotkeys::register_all(&app, &new.shortcuts);
-    }
-    app.emit("settings:changed", &new)?;
-    Ok(new)
+    kinds: Vec<Kind>,
+    cutoff: i64,
+) -> Result<usize> {
+    let moved = state.with_db(|db| retention::clear_history(db, &kinds, cutoff, now_ms()))?;
+    capture::changed(&app);
+    Ok(moved)
 }
 
 #[tauri::command]

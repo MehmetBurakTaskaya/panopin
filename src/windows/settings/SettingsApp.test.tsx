@@ -4,27 +4,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setLanguage } from '../../i18n';
 import type { Settings } from '../../ipc';
 import { useSettings } from '../../state/settings';
+import { testSettings } from '../../test/fixtures';
 import { SettingsApp } from './SettingsApp';
-
-const defaults: Settings = {
-  language: 'en',
-  theme: 'system',
-  shortcuts: {
-    shelf: 'Super+Alt+V',
-    shelfSearch: 'Super+Alt+C',
-    snip: 'Super+Alt+S',
-    library: null,
-    copyLastImage: null,
-    pauseCapture: null,
-  },
-};
 
 describe('SettingsApp', () => {
   let stored: Settings;
   let patches: unknown[];
 
   beforeEach(async () => {
-    stored = structuredClone(defaults);
+    stored = testSettings();
     patches = [];
     mockIPC((cmd, args) => {
       if (cmd === 'get_settings') return stored;

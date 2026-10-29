@@ -48,7 +48,7 @@ src-tauri/src
     folder_watcher.rs    ReadDirectoryChangesW on a dedicated thread (D-008)
     admission.rs         privacy markers, excluded apps, pause, self-copy, whitespace rule
   store/
-    db.rs                single writer connection (WAL), read pool
+    mod.rs               open the database (WAL) and apply migrations
     migrations/          0001_init.sql, ... applied via PRAGMA user_version (D-012)
     models.rs            Item, Folder, Tag, ... (exported to TS with ts-rs, D-013)
     identity.rs          text and image identity hashes (D-016)
@@ -79,18 +79,19 @@ Platform traits: `ClipboardBackend`, `WatcherBackend`, `OcrBackend`, `PasteBacke
 ## 4. Threads and data flow
 
 ```
- clipboard thread ─┐                    ┌─> OCR queue (low priority thread)
- folder watcher ───┼─> admission ─> store writer ─┼─> link enricher (async, opt-in)
- import / manual ──┘   (pure rules)   (1 thread)  └─> event "items-changed" ─> webviews
-                                         ^
- IPC commands (pin, rename, tag, take down, undo, clear history, ...) ──┘
+ clipboard thread ─┐                        ┌─> OCR queue (low priority thread)
+ folder watchers ──┼─> capture worker ─> store ─┼─> link enricher (async, opt-in)
+ import / manual ──┘   (admission rules,         └─> event "items:changed" ─> webviews + tray
+                        decode, hash, thumbs)
+ IPC commands (pin, rename, tag, take down, undo, clear history, ...) ─> store
+ retention thread (start + every 6 h) ─> store
 ```
 
-- One **writer thread** owns the read-write SQLite connection; everything that mutates data is
-  a message to it, so transactions never interleave. Reads use a small pool of read-only
-  connections (WAL allows concurrent readers).
-- After each committed change the writer emits `items-changed` with the affected ids and a
-  monotonically increasing revision; windows refetch only what they display.
+- One **capture worker** handles clipboard and file events one at a time, so captures never race.
+- One SQLite connection behind a mutex is shared by all writers (D-035). Decoding, hashing and
+  thumbnails run outside the lock; statements and transactions inside it are short.
+- After each change the worker emits `items:changed` with the counts per kind; the tray tooltip
+  shows them and windows refetch only what they display.
 
 ## 5. Capture pipeline (Windows)
 
@@ -106,7 +107,7 @@ Platform traits: `ClipboardBackend`, `WatcherBackend`, `OcrBackend`, `PasteBacke
 6. Read the best format: registered `PNG` > `CF_DIBV5` > `CF_DIB` for images (D-015),
    `CF_UNICODETEXT` for text. `CF_HDROP` is ignored in v1.
 7. `CloseClipboard`, read the sequence number again; drop if it changed.
-8. Hand the raw payload to the writer; nothing is logged except kind and size.
+8. Hand the raw payload to the capture worker; nothing is logged except kind and size.
 
 Admission rules (pure, unit-tested): whitespace-only text is rejected but accepted text is kept
 byte-for-byte; a trimmed text that is exactly one http(s) URL becomes a **link**; identity is

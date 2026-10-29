@@ -5,7 +5,10 @@ use rusqlite::{Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::error::Result;
+use crate::{
+    error::{AppError, Result},
+    store::retention,
+};
 
 const KEY: &str = "app";
 
@@ -53,12 +56,135 @@ impl Default for Shortcuts {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+/// What gets captured; each source is switched on or off on its own.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Sources {
+    pub screenshots: bool,
+    pub clipboard_images: bool,
+    pub clipboard_text: bool,
+    pub links: bool,
+    pub screen_recordings: bool,
+}
+
+impl Default for Sources {
+    fn default() -> Self {
+        Self {
+            screenshots: true,
+            clipboard_images: true,
+            clipboard_text: true,
+            links: true,
+            screen_recordings: false,
+        }
+    }
+}
+
+/// Days to keep unsaved items per kind, and days before Trash empties; `None` = keep forever.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Retention {
+    pub image: Option<u32>,
+    pub text: Option<u32>,
+    pub link: Option<u32>,
+    pub video: Option<u32>,
+    pub trash: Option<u32>,
+}
+
+impl Default for Retention {
+    fn default() -> Self {
+        Self {
+            image: Some(30),
+            text: Some(30),
+            link: Some(30),
+            video: Some(30),
+            trash: Some(30),
+        }
+    }
+}
+
+impl Retention {
+    pub fn policy(&self) -> retention::Policy {
+        retention::Policy {
+            image: self.image,
+            text: self.text,
+            link: self.link,
+            video: self.video,
+            trash: self.trash,
+        }
+    }
+}
+
+pub const MAX_WATCHED_FOLDERS: usize = 3;
+/// `paused_until` value meaning "until the user resumes".
+pub const PAUSED_UNTIL_RESUMED: i64 = i64::MAX;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct Settings {
     pub language: Language,
     pub theme: Theme,
     pub shortcuts: Shortcuts,
+    /// Capture starts only after the first-run screen has been confirmed.
+    pub onboarded: bool,
+    pub sources: Sources,
+    /// Extra screenshot folders besides the Windows Screenshots folder.
+    pub watched_folders: Vec<String>,
+    /// Executable names whose copies are never captured (compared case-insensitively).
+    pub excluded_apps: Vec<String>,
+    pub retention: Retention,
+    pub link_previews: bool,
+    /// Capture is paused until this Unix time in milliseconds.
+    pub paused_until: Option<i64>,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            language: Language::default(),
+            theme: Theme::default(),
+            shortcuts: Shortcuts::default(),
+            onboarded: false,
+            sources: Sources::default(),
+            watched_folders: Vec::new(),
+            excluded_apps: [
+                "KeePass.exe",
+                "KeePassXC.exe",
+                "1Password.exe",
+                "Bitwarden.exe",
+            ]
+            .map(String::from)
+            .to_vec(),
+            retention: Retention::default(),
+            link_previews: false,
+            paused_until: None,
+        }
+    }
+}
+
+impl Settings {
+    pub fn is_paused(&self, now: i64) -> bool {
+        self.paused_until.is_some_and(|until| until > now)
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.watched_folders.len() > MAX_WATCHED_FOLDERS {
+            return Err(AppError::InvalidSetting("at most three extra folders"));
+        }
+        let r = &self.retention;
+        if [r.image, r.text, r.link, r.video]
+            .into_iter()
+            .flatten()
+            .any(|days| ![1, 3, 7, 15, 30].contains(&days))
+        {
+            return Err(AppError::InvalidSetting(
+                "retention is 1, 3, 7, 15 or 30 days",
+            ));
+        }
+        if r.trash.is_some_and(|days| ![7, 30].contains(&days)) {
+            return Err(AppError::InvalidSetting("Trash empties after 7 or 30 days"));
+        }
+        Ok(())
+    }
 }
 
 pub fn load(conn: &Connection) -> Result<Settings> {
@@ -90,7 +216,9 @@ pub fn save(conn: &Connection, settings: &Settings) -> Result<()> {
 pub fn apply_patch(current: &Settings, patch: Value) -> Result<Settings> {
     let mut merged = serde_json::to_value(current)?;
     merge(&mut merged, patch);
-    Ok(serde_json::from_value(merged)?)
+    let next: Settings = serde_json::from_value(merged)?;
+    next.validate()?;
+    Ok(next)
 }
 
 fn merge(target: &mut Value, patch: Value) {
@@ -119,6 +247,54 @@ mod tests {
         assert_eq!(s.shortcuts.shelf_search.as_deref(), Some("Super+Alt+C"));
         assert_eq!(s.shortcuts.snip.as_deref(), Some("Super+Alt+S"));
         assert_eq!(s.shortcuts.library, None);
+    }
+
+    #[test]
+    fn capture_defaults_are_privacy_first() {
+        let s = Settings::default();
+        assert!(
+            !s.onboarded,
+            "nothing is captured before the first-run screen"
+        );
+        assert!(s.sources.clipboard_text && s.sources.screenshots);
+        assert!(!s.sources.screen_recordings);
+        assert!(!s.link_previews);
+        assert_eq!(s.retention.text, Some(30));
+        assert_eq!(s.retention.trash, Some(30));
+        for app in [
+            "KeePass.exe",
+            "KeePassXC.exe",
+            "1Password.exe",
+            "Bitwarden.exe",
+        ] {
+            assert!(s.excluded_apps.iter().any(|a| a == app), "{app}");
+        }
+    }
+
+    #[test]
+    fn out_of_range_values_are_rejected() {
+        let s = Settings::default();
+        assert!(apply_patch(&s, json!({ "retention": { "text": 10 } })).is_err());
+        assert!(apply_patch(&s, json!({ "retention": { "trash": 15 } })).is_err());
+        assert!(apply_patch(&s, json!({ "watchedFolders": ["a", "b", "c", "d"] })).is_err());
+        let ok = apply_patch(&s, json!({ "retention": { "text": null, "trash": 7 } })).unwrap();
+        assert_eq!((ok.retention.text, ok.retention.trash), (None, Some(7)));
+    }
+
+    #[test]
+    fn pause_expires() {
+        let s = Settings {
+            paused_until: Some(1_000),
+            ..Settings::default()
+        };
+        assert!(s.is_paused(999));
+        assert!(!s.is_paused(1_000));
+        let forever = Settings {
+            paused_until: Some(PAUSED_UNTIL_RESUMED),
+            ..Settings::default()
+        };
+        assert!(forever.is_paused(i64::MAX - 1));
+        assert!(!Settings::default().is_paused(0));
     }
 
     #[test]

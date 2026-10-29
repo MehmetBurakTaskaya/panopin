@@ -58,6 +58,13 @@ pub fn t(lang: Lang, key: &str) -> String {
         .unwrap_or_else(|| key.to_owned())
 }
 
+/// Like `t`, filling `{name}` placeholders.
+pub fn t_with(lang: Lang, key: &str, args: &[(&str, u32)]) -> String {
+    args.iter().fold(t(lang, key), |text, (name, value)| {
+        text.replace(&format!("{{{name}}}"), &value.to_string())
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;

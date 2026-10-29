@@ -1,7 +1,9 @@
+mod capture;
 mod commands;
 mod error;
 mod hotkeys;
 mod i18n;
+mod media;
 mod settings;
 mod shelf;
 mod store;
@@ -15,34 +17,36 @@ use std::{
 
 use rusqlite::Connection;
 use serde_json::Value;
-use tauri::{AppHandle, Manager, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, WindowEvent};
 use tauri_plugin_global_shortcut::ShortcutState;
 
 use crate::{error::Result, settings::Settings};
 
-/// Shared state. Phase 1 keeps a single connection; the dedicated writer thread from
-/// ARCHITECTURE §4 arrives with capture in Phase 2.
+/// Shared state. One SQLite connection behind a mutex serves every writer; decoding, hashing
+/// and thumbnails happen outside the lock, so it is held only for short statements (D-035).
 pub struct AppState {
     db: Mutex<Connection>,
     settings: Mutex<Settings>,
 }
 
 impl AppState {
-    fn settings(&self) -> Settings {
+    pub(crate) fn settings(&self) -> Settings {
         self.settings
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .clone()
     }
 
+    pub(crate) fn with_db<T>(&self, f: impl FnOnce(&mut Connection) -> Result<T>) -> Result<T> {
+        let mut db = self.db.lock().unwrap_or_else(PoisonError::into_inner);
+        f(&mut db)
+    }
+
     /// Validates, persists and swaps in new settings. Returns `(old, new)`.
     fn update_settings(&self, patch: Value) -> Result<(Settings, Settings)> {
         let mut current = self.settings.lock().unwrap_or_else(PoisonError::into_inner);
         let next = settings::apply_patch(&current, patch)?;
-        {
-            let db = self.db.lock().unwrap_or_else(PoisonError::into_inner);
-            settings::save(&db, &next)?;
-        }
+        self.with_db(|db| settings::save(db, &next))?;
         let old = std::mem::replace(&mut *current, next.clone());
         Ok((old, next))
     }
@@ -51,6 +55,31 @@ impl AppState {
 pub(crate) fn current_lang(app: &AppHandle) -> i18n::Lang {
     let language = app.state::<AppState>().settings().language;
     i18n::resolve(language)
+}
+
+/// Applies a settings change and its side effects; every change takes effect immediately.
+pub(crate) fn apply_settings(app: &AppHandle, patch: Value) -> Result<Settings> {
+    let (old, new) = app.state::<AppState>().update_settings(patch)?;
+    if old.language != new.language {
+        windows::retitle(app, i18n::resolve(new.language))?;
+    }
+    if old.language != new.language || old.paused_until != new.paused_until {
+        tray::refresh(app)?;
+    }
+    if old.shortcuts != new.shortcuts {
+        hotkeys::register_all(app, &new.shortcuts);
+    }
+    if !old.onboarded && new.onboarded {
+        windows::close_onboarding(app)?;
+    }
+    if old.onboarded != new.onboarded
+        || old.sources != new.sources
+        || old.watched_folders != new.watched_folders
+    {
+        capture::reconfigure(app);
+    }
+    app.emit("settings:changed", &new)?;
+    Ok(new)
 }
 
 /// `%APPDATA%\Panopin` on Windows (D-006); the platform data directory elsewhere.
@@ -63,16 +92,20 @@ fn setup(app: &AppHandle) -> Result<()> {
     std::fs::create_dir_all(&dir)?;
     let conn = store::open(&dir.join("data.db"))?;
     let settings = settings::load(&conn)?;
-    let lang = i18n::resolve(settings.language);
+    let onboarded = settings.onboarded;
     let shortcuts = settings.shortcuts.clone();
     app.manage(AppState {
         db: Mutex::new(conn),
         settings: Mutex::new(settings),
     });
-    tray::create(app, lang)?;
+    capture::start(app, &dir)?;
+    tray::create(app)?;
     let failed = hotkeys::register_all(app, &shortcuts);
     if !failed.is_empty() {
         log::warn!("{} shortcut(s) could not be registered", failed.len());
+    }
+    if !onboarded {
+        windows::open_onboarding(app)?;
     }
     log::info!("Panopin {} started", app.package_info().version);
     Ok(())
@@ -80,7 +113,9 @@ fn setup(app: &AppHandle) -> Result<()> {
 
 /// A second launch brings the running instance forward instead of starting a copy.
 fn activate_existing(app: &AppHandle) {
-    let result = if app.get_webview_window(windows::SETTINGS).is_some() {
+    let result = if app.get_webview_window(windows::ONBOARDING).is_some() {
+        windows::open_onboarding(app)
+    } else if app.get_webview_window(windows::SETTINGS).is_some() {
         windows::open_settings(app)
     } else {
         shelf::open(app, false)
@@ -155,6 +190,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_settings,
             commands::update_settings,
+            commands::count_clearable,
+            commands::clear_history,
             commands::close_shelf,
             commands::shelf_hidden,
         ])

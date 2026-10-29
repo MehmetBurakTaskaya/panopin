@@ -14,17 +14,54 @@ export interface Shortcuts {
   pauseCapture: string | null;
 }
 
+export interface Sources {
+  screenshots: boolean;
+  clipboardImages: boolean;
+  clipboardText: boolean;
+  links: boolean;
+  screenRecordings: boolean;
+}
+
+/** Days to keep unsaved items per kind and before Trash empties; `null` = forever. */
+export interface Retention {
+  image: number | null;
+  text: number | null;
+  link: number | null;
+  video: number | null;
+  trash: number | null;
+}
+
 export interface Settings {
   language: LanguageSetting;
   theme: Theme;
   shortcuts: Shortcuts;
+  onboarded: boolean;
+  sources: Sources;
+  watchedFolders: string[];
+  excludedApps: string[];
+  retention: Retention;
+  linkPreviews: boolean;
+  pausedUntil: number | null;
 }
 
 export type SettingsPatch = {
   language?: LanguageSetting;
   theme?: Theme;
   shortcuts?: Partial<Shortcuts>;
+  onboarded?: boolean;
+  sources?: Partial<Sources>;
+  watchedFolders?: string[];
+  excludedApps?: string[];
+  retention?: Partial<Retention>;
+  linkPreviews?: boolean;
 };
+
+export interface Counts {
+  image: number;
+  text: number;
+  link: number;
+  video: number;
+}
 
 export interface ShelfOpenEvent {
   generation: number;

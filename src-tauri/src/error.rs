@@ -13,6 +13,12 @@ pub enum AppError {
     Tauri(#[from] tauri::Error),
     #[error("database schema version {found} is newer than this app supports ({supported})")]
     SchemaTooNew { found: u32, supported: u32 },
+    #[error("image error: {0}")]
+    Image(#[from] image::ImageError),
+    #[error("unsupported image data: {0}")]
+    BadImage(&'static str),
+    #[error("invalid setting: {0}")]
+    InvalidSetting(&'static str),
 }
 
 pub type Result<T, E = AppError> = std::result::Result<T, E>;

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Tray icon while capture is paused: the app icon greyed out with a pause badge. -->
+  <g transform="rotate(-7 128 150)">
+    <rect x="40" y="70" width="176" height="162" rx="16" fill="#e6e3de" stroke="#6e6a64" stroke-width="9"/>
+    <path d="M76 136h104M76 176h68" stroke="#aaa59d" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <circle cx="128" cy="64" r="38" fill="#8f8b86" stroke="#55524e" stroke-width="5"/>
+  <circle cx="190" cy="192" r="60" fill="#2f2f2f" stroke="#ffffff" stroke-width="10"/>
+  <rect x="166" y="162" width="16" height="60" rx="4" fill="#ffffff"/>
+  <rect x="198" y="162" width="16" height="60" rx="4" fill="#ffffff"/>
+</svg>

@@ -10,7 +10,8 @@ body {
 
 /* The shelf overlay is a transparent window: only the board paints. */
 html[data-window='shelf'], html[data-window='shelf'] body { background: transparent; overflow: hidden; }
-html[data-window='settings'] body { background: var(--ui-window); user-select: text; }
+html[data-window='settings'] body,
+html[data-window='onboarding'] body { background: var(--ui-window); user-select: text; }
 
 kbd {
   font: 600 11px/1 var(--font);

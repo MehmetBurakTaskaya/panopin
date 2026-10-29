@@ -4,7 +4,10 @@ use rusqlite::Connection;
 
 use crate::error::{AppError, Result};
 
-const MIGRATIONS: &[&str] = &[include_str!("migrations/0001_settings.sql")];
+const MIGRATIONS: &[&str] = &[
+    include_str!("migrations/0001_settings.sql"),
+    include_str!("migrations/0002_items.sql"),
+];
 
 #[cfg(test)]
 pub fn latest_version() -> u32 {
