@@ -1,6 +1,9 @@
 //! Decides what a clipboard change becomes. Pure, so every rule is unit-tested; the platform
 //! listeners only fill in a `Snapshot`.
 
+// Only the Windows listener builds snapshots so far; the macOS one arrives in Phase 8.
+#![cfg_attr(not(windows), allow(dead_code))]
+
 use crate::settings::Sources;
 
 /// What the listener saw on the clipboard. Content is only read when no privacy marker is set.

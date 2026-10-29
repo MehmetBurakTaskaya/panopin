@@ -1,6 +1,9 @@
 //! Capture pipeline (ARCHITECTURE §5): platform listeners feed one worker thread, which applies
 //! the admission rules and writes to the store. Clipboard content never reaches the logs.
 
+// Only Windows has listeners so far; the macOS ones arrive in Phase 8 and feed the same pipeline.
+#![cfg_attr(not(windows), allow(dead_code))]
+
 pub mod admission;
 #[cfg(windows)]
 mod clipboard_win;
