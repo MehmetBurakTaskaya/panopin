@@ -127,6 +127,8 @@ pub fn open(app: &AppHandle, search: bool) -> Result<()> {
 }
 
 /// Opens the shelf with a message on the board, e.g. after a refused paste.
+// Only the Windows paste path refuses after closing so far; macOS joins in Phase 8.
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn open_with_notice(app: &AppHandle, notice: &'static str) -> Result<()> {
     show(app, false, Some(notice))
 }
