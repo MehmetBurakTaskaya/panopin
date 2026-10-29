@@ -55,10 +55,22 @@ The tray tooltip shows the item counts per kind; use it to see what was captured
 
 - [x] First run: the welcome window lists the sources, says text is collected, and capture starts
       only after "Start"; the window then closes (2026-10-29, Windows 11 25H2).
+Automated run on the development PC (2026-10-29, Windows 11 25H2, debug build): a script set the
+clipboard through .NET and the database was checked afterwards; the test items were then deleted.
+
+- [x] A text with Turkish characters is captured once; copying it again (also with a trailing CRLF)
+      moves the same card forward and keeps the newest bytes.
+- [x] A whole-URL copy becomes a link; a sentence containing a URL stays text.
+- [x] Whitespace-only text and an Explorer-style file copy capture nothing.
+- [x] Copies carrying `ExcludeClipboardContentFromMonitorProcessing` or
+      `CanIncludeInClipboardHistory = 0` (what password managers set) are not captured.
+- [x] A copied bitmap is captured once (DIB path) with `original.png` and `thumb.jpg`; copying it
+      again adds nothing. The source app is recorded.
+
+Still to check by hand:
+
 - [ ] Copy a sentence in Notepad: texts +1. Copy it again: the count stays the same.
-- [ ] Copy `https://example.com`: links +1. Copy a sentence that contains a URL: texts +1.
-- [ ] Copy only spaces or empty lines: nothing changes.
-- [ ] Copy an image in a browser ("Copy image"): images +1.
+- [ ] Copy an image in a browser ("Copy image", PNG path): images +1.
 - [ ] Win+Shift+S capture: images +1 exactly once (clipboard and auto-saved file merge).
 - [ ] Win+PrtScn: images +1; the file in the Screenshots folder is unchanged and never moved.
 - [ ] The Screenshots folder is found although Pictures is redirected to OneDrive and localised.
