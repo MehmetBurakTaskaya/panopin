@@ -9,7 +9,11 @@ use std::{
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, WebviewWindow};
 
-use crate::error::Result;
+use crate::{
+    error::Result,
+    focus::{self, Target},
+    system_state,
+};
 
 pub const LABEL: &str = "shelf";
 
@@ -23,13 +27,29 @@ pub struct ShelfGate {
     generation: u64,
     open: bool,
     closed_at: Option<Instant>,
+    /// The window that was in front before the shelf opened.
+    previous: Option<Target>,
+    /// Losing focus closes the shelf only after it really had focus: a shelf shown by a
+    /// background launch may never get it.
+    focused: bool,
 }
 
 impl ShelfGate {
     pub fn open(&mut self) -> u64 {
         self.generation += 1;
+        if !self.open {
+            self.focused = false;
+        }
         self.open = true;
         self.generation
+    }
+
+    /// Undoes an opening that failed half-way, so the next shortcut opens again.
+    pub fn abort(&mut self) {
+        if self.open {
+            self.generation += 1;
+            self.open = false;
+        }
     }
 
     pub fn close(&mut self, now: Instant) -> Option<u64> {
@@ -70,6 +90,10 @@ fn with_gate<T>(app: &AppHandle, f: impl FnOnce(&mut ShelfGate) -> T) -> T {
 struct OpenEvent {
     generation: u64,
     search: bool,
+    /// Sounds stay off while a full-screen app, presentation or focus session is active.
+    muted: bool,
+    /// A message key the board shows, e.g. why a paste did not happen.
+    notice: Option<&'static str>,
 }
 
 #[derive(Clone, Serialize)]
@@ -79,7 +103,11 @@ struct CloseEvent {
 
 pub fn toggle(app: &AppHandle) -> Result<()> {
     if with_gate(app, |gate| gate.is_open()) {
-        request_close(app)
+        request_close(app, true)?;
+        // The shortcut is still held: releasing its Alt must not open the menu bar of the app
+        // that just got focus back.
+        focus::mask_alt_release();
+        Ok(())
     } else {
         open(app, false)
     }
@@ -95,22 +123,95 @@ pub fn toggle_from_tray(app: &AppHandle) -> Result<()> {
 }
 
 pub fn open(app: &AppHandle, search: bool) -> Result<()> {
+    show(app, search, None)
+}
+
+/// Opens the shelf with a message on the board, e.g. after a refused paste.
+pub fn open_with_notice(app: &AppHandle, notice: &'static str) -> Result<()> {
+    show(app, false, Some(notice))
+}
+
+fn show(app: &AppHandle, search: bool, notice: Option<&'static str>) -> Result<()> {
     let Some(window) = app.get_webview_window(LABEL) else {
         return Ok(());
     };
-    let generation = with_gate(app, ShelfGate::open);
-    cover_cursor_monitor(&window)?;
-    window.show()?;
-    window.set_focus()?;
-    app.emit_to(LABEL, "shelf:open", OpenEvent { generation, search })?;
+    // Recorded before anything is shown; the shelf itself never counts as the previous window.
+    let own = own_hwnd(&window);
+    let previous = focus::foreground().filter(|target| Some(target.hwnd) != own);
+    let muted = system_state::wants_quiet();
+    // An Alt still held from the shortcut must not open the menu bar of the app left behind.
+    focus::mask_alt_release();
+    let generation = with_gate(app, |gate| {
+        if previous.is_some() {
+            gate.previous = previous;
+        }
+        gate.open()
+    });
+    let shown = cover_cursor_monitor(&window)
+        .and_then(|()| Ok(window.show()?))
+        .and_then(|()| Ok(window.set_focus()?));
+    if let Err(err) = shown {
+        with_gate(app, ShelfGate::abort);
+        let _ = window.hide();
+        return Err(err);
+    }
+    // The focus event follows later; a shelf that is already in front counts as focused now.
+    if window.is_focused().unwrap_or(false) {
+        with_gate(app, |gate| gate.focused = true);
+    }
+    let event = OpenEvent {
+        generation,
+        search,
+        muted,
+        notice,
+    };
+    app.emit_to(LABEL, "shelf:open", event)?;
     Ok(())
 }
 
-pub fn request_close(app: &AppHandle) -> Result<()> {
-    if let Some(generation) = with_gate(app, |gate| gate.close(Instant::now())) {
+#[cfg(windows)]
+fn own_hwnd(window: &WebviewWindow) -> Option<isize> {
+    window.hwnd().ok().map(|hwnd| hwnd.0 as isize)
+}
+
+#[cfg(not(windows))]
+fn own_hwnd(_window: &WebviewWindow) -> Option<isize> {
+    None
+}
+
+/// Starts the slide-out. `restore` hands focus back to the window that was in front before:
+/// right for Esc, Enter and the shortcut, wrong when the user clicked another window.
+pub fn request_close(app: &AppHandle, restore: bool) -> Result<()> {
+    let closed = with_gate(app, |gate| {
+        gate.close(Instant::now())
+            .map(|generation| (generation, gate.previous))
+    });
+    if let Some((generation, previous)) = closed {
+        if let (true, Some(target)) = (restore, previous) {
+            focus::restore(target);
+        }
         app.emit_to(LABEL, "shelf:close", CloseEvent { generation })?;
     }
     Ok(())
+}
+
+pub fn previous_window(app: &AppHandle) -> Option<Target> {
+    with_gate(app, |gate| gate.previous)
+}
+
+/// Clicking anywhere outside Panopin closes the shelf, once it has had focus.
+pub fn focus_changed(app: &AppHandle, focused: bool) -> Result<()> {
+    let close = with_gate(app, |gate| {
+        if focused && gate.open {
+            gate.focused = true;
+        }
+        !focused && gate.open && gate.focused
+    });
+    if close {
+        request_close(app, false)
+    } else {
+        Ok(())
+    }
 }
 
 /// Called by the webview once its slide-out animation has finished.
@@ -170,6 +271,16 @@ mod tests {
         gate.open();
         assert!(gate.close(Instant::now()).is_some());
         assert_eq!(gate.close(Instant::now()), None);
+    }
+
+    #[test]
+    fn a_failed_opening_is_undone() {
+        let mut gate = ShelfGate::default();
+        let generation = gate.open();
+        gate.abort();
+        assert!(!gate.is_open());
+        assert!(gate.close(Instant::now()).is_none());
+        assert!(gate.open() > generation);
     }
 
     #[test]

@@ -2,6 +2,7 @@ pub mod identity;
 pub mod items;
 pub mod migrations;
 pub mod retention;
+pub mod shelf;
 
 use std::{path::Path, time::Duration};
 

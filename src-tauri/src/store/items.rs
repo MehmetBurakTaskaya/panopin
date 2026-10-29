@@ -62,6 +62,7 @@ pub fn upsert_text(conn: &Connection, capture: &TextCapture<'_>, now: i64) -> Re
              url = excluded.url,
              last_copied_at = excluded.last_copied_at,
              trashed_at = NULL,
+             shelved = 1,
              source_app = COALESCE(excluded.source_app, items.source_app)
          RETURNING id",
         params![
@@ -86,10 +87,10 @@ pub fn find(conn: &Connection, kind: Kind, identity: &Identity) -> Result<Option
         .optional()?)
 }
 
-/// Moves an existing item to the front (and out of Trash) without touching anything else.
+/// Moves an existing item to the front of the shelf (and out of Trash) without touching anything else.
 pub fn bump(conn: &Connection, id: i64, now: i64) -> Result<()> {
     conn.execute(
-        "UPDATE items SET last_copied_at = ?2, trashed_at = NULL WHERE id = ?1",
+        "UPDATE items SET last_copied_at = ?2, trashed_at = NULL, shelved = 1 WHERE id = ?1",
         params![id, now],
     )?;
     Ok(())
@@ -133,7 +134,7 @@ pub fn delete(conn: &Connection, id: i64) -> Result<()> {
     Ok(())
 }
 
-/// Items on the shelf (not in Trash), per kind.
+/// Items on the shelf (not taken down, not in Trash), per kind.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
 pub struct Counts {
     pub image: u32,
@@ -143,8 +144,9 @@ pub struct Counts {
 }
 
 pub fn counts(conn: &Connection) -> Result<Counts> {
-    let mut stmt =
-        conn.prepare("SELECT kind, count(*) FROM items WHERE trashed_at IS NULL GROUP BY kind")?;
+    let mut stmt = conn.prepare(
+        "SELECT kind, count(*) FROM items WHERE trashed_at IS NULL AND shelved = 1 GROUP BY kind",
+    )?;
     let mut counts = Counts::default();
     let rows = stmt.query_map([], |row| {
         Ok((row.get::<_, String>(0)?, row.get::<_, u32>(1)?))

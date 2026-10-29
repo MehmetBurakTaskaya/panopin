@@ -63,13 +63,18 @@ src-tauri/src
     video.rs             poster frame + duration via the shell (D-024)
   ocr/        windows.rs (Windows.Media.Ocr), macos.rs (Vision, Phase 8), queue.rs
   links/      classify.rs, enrich.rs, net_guard.rs (D-010)
+  transfer/
+    mod.rs               what a copy, paste or drag carries (D-045)
+    staging.rs           neutrally named files handed to other apps
+    clipboard_win.rs     clipboard writer with the own-copy marker
+    paste_win.rs         UIPI and password-field checks, SendInput (D-046)
+    drag_win.rs          shell data object + SHDoDragDrop (D-023)
+  focus.rs               remember/restore the previous foreground window, Alt mask key
+  system_state.rs        full-screen / presentation / focus-session detection (D-021)
+  hotkeys.rs             global shortcut registry, recorder suspend/restore
+  tray.rs                tray icon, menu, counts tooltip, paused/update badges
   platform/
-    paste.rs             SetForegroundWindow + SendInput, UIPI and password-field checks
-    focus.rs             remember/restore the previous foreground window
-    hotkeys.rs           global shortcut registry, recorder suspend/restore
-    tray.rs              tray icon, menu, counts tooltip, paused/update badges
     theme.rs             accent colour, light/dark, high contrast, animation setting
-    system_state.rs      full-screen / presentation / focus-session detection (D-021)
     edge.rs              optional edge-dwell opener (D-022)
 ```
 
@@ -176,8 +181,8 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 - React + TypeScript (strict) + Vite, CSS Modules with design tokens, Zustand stores per window.
 - `src/keyboard/` holds the **pure keyboard model** (rows, selection, ranges, layers, Esc stack),
   tested with scenario tests in vitest; React components only dispatch to it.
-- Virtualised rows and grids (`@tanstack/react-virtual`); memoised rows so unchanged rows do not
-  re-render.
+- Memoised cards so unchanged cards do not re-render; the Library grid is virtualised
+  (`@tanstack/react-virtual`), the shelf rows are capped at 300 cards instead (D-044).
 - Sounds: the Web Audio synthesis module proven in `docs/concept/mockup/sound.js`.
 - i18n: `/locales/en.json` and `tr.json` are the only string sources, used by TS and by Rust
   (tray, notifications). CI fails on missing or unused keys.
@@ -210,7 +215,7 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 | Topic | Plan |
 | --- | --- |
 | Transparent overlay on Win10/Win11 (known black-background issues) | Spike in Phase 1; fallback: strip window + separate preview window |
-| File drag-out from the overlay (`tauri-plugin-drag` open Windows issues) | Spike in Phase 3; fallback: own OLE drag source |
-| Alt-release menu activation after Win+Alt hotkeys | Mask keystroke; manual test in Word and Notepad |
+| File drag-out from the overlay | Resolved in Phase 3 without a plugin (D-023) |
+| Alt-release menu activation after Win+Alt hotkeys | Mask keystroke (D-046); manual test in Word and Notepad |
 | Do Not Disturb detection | No public API; partial signals only (D-021) |
 | Acrylic placement | Decide in Phase 4 once the preview layer exists |

@@ -6,7 +6,7 @@
 
 pub mod admission;
 #[cfg(windows)]
-mod clipboard_win;
+pub(crate) mod clipboard_win;
 #[cfg(windows)]
 mod folder_watcher;
 
@@ -149,6 +149,12 @@ fn resume_timer(app: &AppHandle) {
             }
         }
     });
+}
+
+/// The managed media folder, once capture has started.
+pub fn media(app: &AppHandle) -> Option<MediaStore> {
+    app.try_state::<CaptureState>()
+        .map(|state| state.media.clone())
 }
 
 pub fn counts(app: &AppHandle) -> Counts {

@@ -84,13 +84,58 @@ Still to check by hand:
 
 ## Shelf, focus and paste (Phase 3)
 
-- [ ] Enter and Ctrl+Enter paste correctly into Notepad, Word, Chrome, Edge and VS Code.
-- [ ] Ctrl+Enter into an elevated (administrator) window explains why it cannot paste.
-- [ ] Ctrl+Enter refuses to paste into a password field.
+Checked in a browser with the real shelf components, sample items and a mocked backend
+(2026-10-29): three rows with counts, tape and pins, tilt, 1–9 badges on the active row, arrow
+moves between rows, P pins with the pin animation, S takes a card down (the paper falls and the
+next card is selected), Backspace brings it back, Delete asks over the board and Enter confirms,
+F shows pinned items only, Shift+I hides the Images row, the right-click menu, the paste notice,
+the empty board, dark theme, small and large cards, and the board at the bottom edge. Everything
+below needs the real app on Windows.
+
+The board:
+
+- [ ] Win+Alt+V shows Images, Texts and Links with their counts; the first image is selected.
+- [ ] ←/→, ↑/↓ (keeps the column, skips empty rows), Tab, Ctrl+←/→, Alt+←/→ and 1–9 move as
+      expected; Shift+arrows and Ctrl+A select several cards.
+- [ ] A click copies, shows "Kopyalandı" and the board stays open; Ctrl+click and Shift+click select.
+- [ ] Right click and Shift+F10 open the menu with every action; Esc closes the menu first.
+- [ ] P pins and unpins; S takes down (a pinned card stays in the database, a temporary one goes to
+      Trash); Backspace undoes; Delete asks first and Backspace undoes it too.
+- [ ] F shows pinned items only; Shift+I/T/L hide rows; hiding the last row closes the shelf.
+- [ ] Settings → Shelf: card size S/M/L and "Slides in from: Bottom" apply at once.
+
+Copy, focus and paste:
+
+- [ ] Enter copies, closes the board and focus returns to the previous app; Ctrl+V pastes there.
+- [ ] Ctrl+Enter pastes into Notepad, Word, Chrome, Edge and VS Code.
+- [ ] Three texts selected with Shift+→: they are pasted in selection order, one per line.
+- [ ] One image: pastes into Paint and Word at full resolution; a transparent PNG keeps its
+      transparency where the app supports PNG.
+- [ ] Two images (Ctrl+click), Ctrl+C, paste in Explorer: two files named
+      `Panopin-<date>-<n>.<ext>`; Paint pastes the first image.
+- [ ] Copies made from the shelf are not captured again and do not move their card.
+- [ ] Ctrl+Enter after closing the previous window: the board says nothing was pasted.
+- [ ] Ctrl+Enter into an elevated (administrator) window explains why, and Ctrl+V there works.
+- [ ] Ctrl+Enter into a password field (a browser login form): refused, the board reopens with the
+      reason.
+- [ ] After closing the shelf with Win+Alt+V in Notepad, releasing Alt does not activate the menu
+      bar; same for Word's KeyTips.
+- [ ] Clicking the taskbar while the board is open closes it without moving focus elsewhere.
+- [ ] Starting Panopin.exe again from Explorer while it runs brings the shelf up with focus.
+
+Drag:
+
+- [ ] Drag a text card into Notepad: the text is inserted.
+- [ ] Drag an image card into Explorer: a file appears; into a chat app: it is attached.
+- [ ] Letting go over the board itself cancels; nothing is dropped into the app underneath.
+
+Windows and sound:
+
 - [ ] Two monitors at 100 % and 150 %: the shelf opens on the cursor's monitor and renders sharp.
-- [ ] With Windows "Animation effects" off, the shelf appears without sliding.
+- [ ] With Windows "Animation effects" off, the shelf appears without sliding and cards do not move.
 - [ ] Rapid open/close never leaves the shelf hidden while it should be open.
-- [ ] Drag text into Notepad; drag an image as a file into Explorer and into a chat app.
+- [ ] Sounds (open, close, copy, pin, unpin, drop, back) are short and quiet; Settings turns them
+      off and sets the volume.
 - [ ] Sounds are silent while a full-screen video, game or presentation is active.
 - [ ] Do Not Disturb on: note whether sounds stay silent (known limitation, D-021).
 - [ ] No black background on the transparent overlay (Windows 10 22H2 and Windows 11).

@@ -7,6 +7,7 @@ use crate::error::{AppError, Result};
 const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0001_settings.sql"),
     include_str!("migrations/0002_items.sql"),
+    include_str!("migrations/0003_shelved.sql"),
 ];
 
 #[cfg(test)]

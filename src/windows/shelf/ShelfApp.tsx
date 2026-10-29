@@ -1,36 +1,389 @@
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { useEffect, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { t } from '../../i18n';
-import { closeShelf, shelfHidden, type ShelfCloseEvent, type ShelfOpenEvent } from '../../ipc';
+import {
+  closeShelf,
+  copyItems,
+  pasteItems,
+  setPinned,
+  shelfHidden,
+  startDrag,
+  takeDown,
+  trashItems,
+  undoTakeDown,
+  type ShelfCloseEvent,
+  type ShelfItem,
+  type ShelfOpenEvent,
+} from '../../ipc';
+import { commandFor, type Command } from '../../keyboard/shelfKeys';
+import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type ShelfModel } from '../../keyboard/shelfModel';
+import { formatShortcut } from '../../shortcuts';
+import { configure, play, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
+import { cardDomId, type Effect } from './Card';
+import cardStyles from './Card.module.css';
+import { ConfirmTrash } from './ConfirmTrash';
+import { ContextMenu, type MenuEntry, type MenuPlacement } from './ContextMenu';
 import { EmptyState } from './EmptyState';
 import styles from './Shelf.module.css';
+import { ShelfRows } from './ShelfRows';
+import { rowsOf, useShelfData } from './useShelfData';
 
 // Matches the CSS transitions: open ~420 ms ease-out, close ~200 ms.
 const SETTLE_MS = 430;
 const CLOSE_MS = 210;
+const TOAST_MS = 1100;
+/** Pixels a pressed card must move before it becomes a drag. */
+const DRAG_THRESHOLD = 6;
 
 type Phase = 'hidden' | 'open' | 'settled' | 'closing';
+type ModelAction = Action | { type: 'reset'; rows: Rows };
+
+const ALL_ROWS: Record<Kind, boolean> = { image: false, text: false, link: false };
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, reducedMotion() ? 0 : ms));
+
+function modelReducer(model: ShelfModel, action: ModelAction): ShelfModel {
+  return action.type === 'reset' ? openModel(action.rows, model.pageSize) : reduce(model, action);
+}
+
+const cursorId = (model: ShelfModel): number | null =>
+  model.cursor ? (model.rows[model.cursor.kind][model.cursor.index] ?? null) : null;
+
+interface Toast {
+  key: number;
+  x: number;
+  y: number;
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 export function ShelfApp() {
   useSettings((s) => s.lang);
-  const shelfShortcut = useSettings((s) => s.settings?.shortcuts.shelf ?? null);
+  const settings = useSettings((s) => s.settings);
+  const edge = settings?.shelfEdge ?? 'top';
   const [phase, setPhase] = useState<Phase>('hidden');
+  const { shelf, refresh } = useShelfData();
+  // Row toggles (Shift+I/T/L) and the pinned filter (F) last for the session, like the board itself.
+  const [hidden, setHidden] = useState(ALL_ROWS);
+  const [pinnedOnly, setPinnedOnly] = useState(false);
+  const rows = useMemo(() => rowsOf(shelf, hidden, pinnedOnly), [shelf, hidden, pinnedOnly]);
+  const [model, dispatch] = useReducer(modelReducer, rows, (initial: Rows) => openModel(initial));
+  const [effects, setEffects] = useState<ReadonlyMap<number, Effect>>(new Map());
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ at: MenuPlacement; ids: number[] } | null>(null);
+  const [confirm, setConfirm] = useState<number[] | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const fallLayer = useRef<HTMLDivElement>(null);
+  const grid = useRef<HTMLDivElement>(null);
+  const board = useRef<HTMLElement>(null);
+  const pressed = useRef<{ id: number; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.size = settings?.cardSize ?? 'm';
+  }, [settings?.cardSize]);
+
+  useEffect(() => {
+    if (settings) configure(settings.sounds.enabled, settings.sounds.volume);
+  }, [settings]);
+
+  useEffect(() => dispatch({ type: 'setRows', rows }), [rows]);
+
+  /** Starts a short card animation; `idleOnly` leaves cards that are already animating alone. */
+  const flash = useCallback((ids: number[], effect: Effect, ms: number, idleOnly = false) => {
+    setEffects((prev) => {
+      const next = new Map(prev);
+      for (const id of ids) if (!idleOnly || !next.has(id)) next.set(id, effect);
+      return next;
+    });
+    window.setTimeout(
+      () =>
+        setEffects((prev) => {
+          const next = new Map(prev);
+          for (const id of ids) if (next.get(id) === effect) next.delete(id);
+          return next;
+        }),
+      reducedMotion() ? 0 : ms,
+    );
+  }, []);
+
+  // Event handlers read the newest state through this ref, so they can stay stable for memoised cards.
+  const latest = useRef({ model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm });
+  useLayoutEffect(() => {
+    latest.current = { model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm };
+  });
+
+  const itemsOf = (ids: number[]): ShelfItem[] => {
+    const all = new Map(KINDS.flatMap((kind) => latest.current.shelf[kind]).map((item) => [item.id, item] as const));
+    return ids.map((id) => all.get(id)).filter((item): item is ShelfItem => !!item);
+  };
+
+  /** The selection, or the card under the cursor when nothing is selected. */
+  const targetIds = (): number[] => {
+    const current = latest.current.model;
+    if (current.selection.length > 0) return current.selection;
+    const id = cursorId(current);
+    return id === null ? [] : [id];
+  };
+
+  const fail = (err: unknown) => setNotice(t('shelf.error', { error: String(err) }));
+
+  const toastAt = (id: number) => {
+    const rect = document.getElementById(cardDomId(id))?.getBoundingClientRect();
+    if (!rect) return;
+    const key = performance.now();
+    setToasts((list) => [...list, { key, x: rect.left + rect.width / 2, y: rect.top - 6 }]);
+    window.setTimeout(() => setToasts((list) => list.filter((toast) => toast.key !== key)), TOAST_MS);
+  };
+
+  /** Taken-down cards fall off the board as paper; the clones live on a layer React does not manage. */
+  const dropPapers = (ids: number[]) => {
+    const layer = fallLayer.current;
+    if (!layer || reducedMotion()) return;
+    for (const id of ids) {
+      const card = document.getElementById(cardDomId(id));
+      const rect = card?.parentElement?.getBoundingClientRect();
+      if (!card || !rect) continue;
+      const ghost = card.cloneNode(true) as HTMLElement;
+      ghost.removeAttribute('id');
+      ghost.removeAttribute('role');
+      ghost.className = `${cardStyles.card} ${cardStyles.falling}`;
+      const holder = document.createElement('div');
+      holder.className = styles.faller ?? '';
+      Object.assign(holder.style, {
+        left: `${rect.left}px`,
+        top: `${rect.top}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+      });
+      holder.append(ghost);
+      layer.append(holder);
+      window.setTimeout(() => holder.remove(), 820);
+    }
+  };
+
+  const copy = async (ids: number[], toastOn: number | null): Promise<boolean> => {
+    if (ids.length === 0) return false;
+    try {
+      await copyItems(ids);
+    } catch (err) {
+      fail(err);
+      return false;
+    }
+    play('copy');
+    flash(ids, 'copied', 450);
+    if (toastOn !== null) toastAt(toastOn);
+    return true;
+  };
+
+  const copyAndReturn = async (ids: number[]) => {
+    // The card jiggles briefly before the board slides away and focus goes back.
+    if (await copy(ids, null)) {
+      await wait(260);
+      void closeShelf();
+    }
+  };
+
+  const paste = async (ids: number[]) => {
+    if (ids.length === 0) return;
+    play('copy');
+    flash(ids, 'copied', 450);
+    await wait(160);
+    try {
+      const outcome = await pasteItems(ids);
+      if (outcome === 'windowGone') setNotice(t('shelf.paste.gone'));
+      if (outcome === 'elevated') setNotice(t('shelf.paste.elevated'));
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  const togglePin = async (ids: number[]) => {
+    const items = itemsOf(ids);
+    if (items.length === 0) return;
+    const pin = !items.every((item) => item.pinned);
+    if (pin) {
+      // The knock lands on the pin's impact frame.
+      play('pin', reducedMotion() ? 0 : 0.21);
+      flash(ids, 'pinning', 560);
+    } else {
+      play('unpin');
+      flash(ids, 'unpinning', 400);
+    }
+    try {
+      await setPinned(ids, pin);
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  /** S takes cards down; Delete (after the confirmation) moves them to Trash. Both can be undone. */
+  const remove = async (ids: number[], trash: boolean) => {
+    const items = itemsOf(ids);
+    if (items.length === 0) return;
+    for (const item of items) flash([item.id], item.pinned ? 'unpinning' : 'peeling', 200);
+    play('drop');
+    await wait(150);
+    dropPapers(ids);
+    flash(ids, 'gone', 2000);
+    try {
+      await (trash ? trashItems(ids) : takeDown(ids));
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  const undo = async () => {
+    let ids: number[];
+    try {
+      ids = await undoTakeDown();
+    } catch (err) {
+      fail(err);
+      return;
+    }
+    if (ids.length === 0) return;
+    const next = await refresh();
+    if (!next) return;
+    const restored = KINDS.flatMap((kind) => next[kind]).filter((item) => ids.includes(item.id));
+    // A restored card must be visible: show its row and leave the pinned filter if needed.
+    const nextHidden = { ...latest.current.hidden };
+    for (const item of restored) nextHidden[item.kind] = false;
+    const nextPinnedOnly = latest.current.pinnedOnly && restored.every((item) => item.pinned);
+    setHidden(nextHidden);
+    setPinnedOnly(nextPinnedOnly);
+    dispatch({ type: 'setRows', rows: rowsOf(next, nextHidden, nextPinnedOnly) });
+    const first = restored[0];
+    if (first) dispatch({ type: 'click', id: first.id });
+    play('back');
+    flash(ids, 'restoring', 560);
+  };
+
+  /** Hiding the last visible row closes the shelf; the rows come back for the next opening. */
+  const toggleRow = (kind: Kind) => {
+    const next = { ...latest.current.hidden, [kind]: !latest.current.hidden[kind] };
+    if (KINDS.every((k) => next[k])) {
+      setHidden(ALL_ROWS);
+      void closeShelf();
+      return;
+    }
+    setHidden(next);
+  };
+
+  const openMenuAtCursor = () => {
+    const id = cursorId(latest.current.model);
+    if (id === null) return;
+    const rect = document.getElementById(cardDomId(id))?.getBoundingClientRect();
+    setMenu({ ids: targetIds(), at: { x: rect ? rect.left + 8 : 40, y: rect ? rect.bottom + 6 : 40 } });
+  };
+
+  const run = (command: Command) => {
+    setNotice(null);
+    const ids = targetIds();
+    switch (command.type) {
+      case 'model':
+        dispatch(command.action);
+        return;
+      case 'copy':
+        void copy(ids, cursorId(latest.current.model));
+        return;
+      case 'copyAndReturn':
+        void copyAndReturn(ids);
+        return;
+      case 'paste':
+        void paste(ids);
+        return;
+      case 'pin':
+        void togglePin(ids);
+        return;
+      case 'takeDown':
+        void remove(ids, false);
+        return;
+      case 'trash':
+        if (ids.length > 0) setConfirm(ids);
+        return;
+      case 'undo':
+        void undo();
+        return;
+      case 'pinnedOnly':
+        setPinnedOnly((on) => !on);
+        return;
+      case 'toggleRow':
+        toggleRow(command.kind);
+        return;
+      case 'menu':
+        openMenuAtCursor();
+        return;
+      case 'escape':
+        void closeShelf();
+        return;
+    }
+  };
+
+  const menuEntries = (ids: number[]): MenuEntry[] => {
+    const ctrl = formatShortcut('CommandOrControl');
+    const allPinned = itemsOf(ids).every((item) => item.pinned);
+    return [
+      { label: 'shelf.menu.copy', shortcut: `${ctrl}+C`, run: () => void copy(ids, ids[0] ?? null) },
+      { label: 'shelf.menu.paste', shortcut: `${ctrl}+Enter`, run: () => void paste(ids) },
+      { label: allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', shortcut: 'P', run: () => void togglePin(ids) },
+      { label: 'shelf.menu.takeDown', shortcut: 'S', run: () => void remove(ids, false) },
+      { label: 'shelf.menu.trash', shortcut: 'Delete', run: () => setConfirm(ids) },
+      { label: 'shelf.menu.undo', shortcut: 'Backspace', run: () => void undo() },
+    ];
+  };
+
+  const handlers = useRef({ run, copy });
+  useLayoutEffect(() => {
+    handlers.current = { run, copy };
+  });
 
   useEffect(() => {
     const win = getCurrentWebviewWindow();
     let settleTimer: number | undefined;
-    const opened = win.listen<ShelfOpenEvent>('shelf:open', () => {
+    const opened = win.listen<ShelfOpenEvent>('shelf:open', ({ payload }) => {
       window.clearTimeout(settleTimer);
+      setMuted(payload.muted);
+      setNow(Date.now());
+      setMenu(null);
+      setConfirm(null);
+      setNotice(payload.notice ? t(payload.notice) : null);
+      dispatch({ type: 'reset', rows: latest.current.rows });
       setPhase('open');
-      // Keys work at once; the mouse waits until the board has landed.
-      settleTimer = window.setTimeout(() => setPhase('settled'), reducedMotion() ? 0 : SETTLE_MS);
+      play('open');
+      grid.current?.focus({ preventScroll: true });
+      // Keys work at once; the mouse waits until the board has landed, then the cards settle.
+      settleTimer = window.setTimeout(() => {
+        setPhase('settled');
+        if (!reducedMotion()) {
+          const ids = KINDS.flatMap((kind) => latest.current.model.rows[kind].slice(0, 13));
+          flash(ids, 'settle', 800, true);
+        }
+      }, reducedMotion() ? 0 : SETTLE_MS);
     });
     const closed = win.listen<ShelfCloseEvent>('shelf:close', ({ payload }) => {
       window.clearTimeout(settleTimer);
       setPhase('closing');
+      setMenu(null);
+      setConfirm(null);
+      play('close');
       // Rust hides the window only if no newer open happened in the meantime.
       window.setTimeout(() => void shelfHidden(payload.generation), reducedMotion() ? 0 : CLOSE_MS);
     });
@@ -39,40 +392,140 @@ export function ShelfApp() {
       void opened.then((unlisten) => unlisten());
       void closed.then((unlisten) => unlisten());
     };
-  }, []);
+  }, [flash]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        void closeShelf();
-      }
+      const state = latest.current;
+      // Closed boards, the menu and the confirmation handle their own keys; typing in an IME too.
+      if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm) return;
+      if (event.isComposing) return;
+      const command = commandFor(event);
+      if (!command) return;
+      event.preventDefault();
+      handlers.current.run(command);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const onCardClick = useCallback((id: number, event: MouseEvent) => {
+    if (latest.current.phase !== 'settled') return;
+    setNotice(null);
+    if (event.ctrlKey || event.metaKey) {
+      dispatch({ type: 'click', id, ctrl: true });
+    } else if (event.shiftKey) {
+      dispatch({ type: 'click', id, shift: true });
+    } else {
+      // A single click copies and the board stays open.
+      dispatch({ type: 'click', id });
+      void handlers.current.copy([id], id);
+    }
+  }, []);
+
+  const onCardContextMenu = useCallback((id: number, event: MouseEvent) => {
+    event.preventDefault();
+    if (latest.current.phase !== 'settled') return;
+    const selection = latest.current.model.selection;
+    const ids = selection.includes(id) ? selection : [id];
+    if (!selection.includes(id)) dispatch({ type: 'click', id });
+    setMenu({ ids, at: { x: event.clientX, y: event.clientY } });
+  }, []);
+
+  const onCardPointerDown = useCallback((id: number, event: ReactPointerEvent) => {
+    const ready = event.button === 0 && latest.current.phase === 'settled';
+    pressed.current = ready ? { id, x: event.clientX, y: event.clientY } : null;
+  }, []);
+
+  // A pressed card that moves a few pixels becomes a native drag: text as text, images as files.
+  // The selection goes along when the card is part of it.
+  useEffect(() => {
+    const onMove = (event: PointerEvent) => {
+      const press = pressed.current;
+      if (!press || (event.buttons & 1) === 0) return;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) < DRAG_THRESHOLD) return;
+      pressed.current = null;
+      const rect = board.current?.getBoundingClientRect();
+      if (!rect) return;
+      const selection = latest.current.model.selection;
+      const ids = selection.includes(press.id) ? selection : [press.id];
+      const area = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      startDrag(ids, area).catch((err: unknown) => setNotice(t('shelf.error', { error: String(err) })));
+    };
+    const onUp = () => {
+      pressed.current = null;
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, []);
+  const onPageSize = useCallback((pageSize: number) => dispatch({ type: 'setPageSize', pageSize }), []);
+
   const isOpen = phase === 'open' || phase === 'settled';
+  const empty = KINDS.every((kind) => shelf[kind].length === 0);
   const wrapClass = [styles.boardWrap, isOpen && styles.open, phase === 'settled' && styles.settled]
     .filter(Boolean)
     .join(' ');
+  const hints = <span className={styles.engrave}>{t('shelf.hints')}</span>;
 
   return (
-    <div className={styles.layer}>
-      <div className={styles.backdrop} onClick={() => void closeShelf()} />
+    <div className={styles.layer} data-edge={edge} onContextMenu={(event) => event.preventDefault()}>
+      <div className={styles.backdrop} onClick={() => phase === 'settled' && void closeShelf()} />
       <div className={wrapClass}>
-        <section className={styles.board} aria-label={t('shelf.label')}>
-          <div className={`${styles.frame} ${styles.frameTop}`} />
+        <section ref={board} className={styles.board} aria-label={t('shelf.label')}>
+          <div className={`${styles.frame} ${styles.frameTop}`}>{edge === 'bottom' && hints}</div>
           <div className={`${styles.frame} ${styles.frameLeft}`} />
           <div className={`${styles.frame} ${styles.frameRight}`} />
-          <div className={`${styles.frame} ${styles.frameBottom}`}>
-            <span className={styles.engrave}>{t('shelf.hints')}</span>
-          </div>
+          <div className={`${styles.frame} ${styles.frameBottom}`}>{edge === 'top' && hints}</div>
           <div className={styles.cork}>
-            <EmptyState shelfShortcut={shelfShortcut} />
+            {notice && (
+              <div className={styles.notice} role="alert">
+                {notice}
+              </div>
+            )}
+            {pinnedOnly && !empty && <div className={styles.filterTag}>{t('shelf.pinnedOnly')}</div>}
+            {empty ? (
+              <EmptyState shelfShortcut={settings?.shortcuts.shelf ?? null} />
+            ) : (
+              <ShelfRows
+                gridRef={grid}
+                shelf={shelf}
+                model={model}
+                hidden={hidden}
+                pinnedOnly={pinnedOnly}
+                effects={effects}
+                now={now}
+                reducedMotion={reducedMotion()}
+                onPageSize={onPageSize}
+                onCardClick={onCardClick}
+                onCardContextMenu={onCardContextMenu}
+                onCardPointerDown={onCardPointerDown}
+              />
+            )}
+            {confirm && (
+              <ConfirmTrash
+                count={confirm.length}
+                onConfirm={() => {
+                  setConfirm(null);
+                  void remove(confirm, true);
+                }}
+                onCancel={() => setConfirm(null)}
+              />
+            )}
           </div>
         </section>
       </div>
+      <div ref={fallLayer} className={styles.fallLayer} aria-hidden="true" />
+      {toasts.map((toast) => (
+        <div key={toast.key} className={styles.toast} role="status" style={{ left: toast.x, top: toast.y }}>
+          <CheckIcon />
+          {t('shelf.copied')}
+        </div>
+      ))}
+      {menu && <ContextMenu at={menu.at} entries={menuEntries(menu.ids)} onClose={() => setMenu(null)} />}
     </div>
   );
 }

@@ -6,7 +6,66 @@ pub mod thumbnails;
 
 use std::{fs, path::PathBuf};
 
+use rusqlite::{Connection, OptionalExtension};
+use tauri::http::Response;
+
 use crate::error::Result;
+
+fn content_type(ext: &str) -> &'static str {
+    match ext {
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "bmp" => "image/bmp",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Serves `media://localhost/<thumb|original>/<id>` (D-014). The webview only ever names an item
+/// id; the file path comes from the database, so nothing outside the managed folder is reachable.
+pub fn serve(store: &MediaStore, db: &Connection, path: &str) -> Response<Vec<u8>> {
+    let empty = |status: u16| {
+        Response::builder()
+            .status(status)
+            .body(Vec::new())
+            .unwrap_or_default()
+    };
+    let Some((variant, id)) = path
+        .trim_start_matches('/')
+        .split_once('/')
+        .and_then(|(variant, id)| Some((variant, id.parse::<i64>().ok()?)))
+    else {
+        return empty(400);
+    };
+    let column = match variant {
+        "thumb" => "thumb_ext",
+        "original" => "media_ext",
+        _ => return empty(404),
+    };
+    let ext: Option<String> = db
+        .query_row(
+            &format!("SELECT {column} FROM items WHERE id = ?1"),
+            [id],
+            |row| row.get(0),
+        )
+        .optional()
+        .ok()
+        .flatten()
+        .flatten();
+    let Some(ext) = ext else {
+        return empty(404);
+    };
+    let file = store.dir(id).join(format!("{variant}.{ext}"));
+    match fs::read(file) {
+        Ok(bytes) => Response::builder()
+            .header("Content-Type", content_type(&ext))
+            .header("Cache-Control", "max-age=31536000, immutable")
+            .body(bytes)
+            .unwrap_or_default(),
+        Err(_) => empty(404),
+    }
+}
 
 #[derive(Clone)]
 pub struct MediaStore {

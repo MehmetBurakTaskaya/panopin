@@ -42,10 +42,25 @@ describe('SettingsApp', () => {
   it('switches the language immediately through the backend', async () => {
     render(<SettingsApp />);
     await act(async () => {
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'tr' } });
+      fireEvent.change(screen.getByRole('combobox', { name: /^Language/ }), { target: { value: 'tr' } });
     });
     expect(patches).toEqual([{ language: 'tr' }]);
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Genel');
     expect(document.documentElement.lang).toBe('tr');
+  });
+
+  it('changes the shelf look and sounds', async () => {
+    render(<SettingsApp />);
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: /^Card size/ }), { target: { value: 'l' } });
+    });
+    await act(async () => {
+      fireEvent.change(screen.getByRole('combobox', { name: /^Slides in from/ }), { target: { value: 'bottom' } });
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Sounds' }));
+    });
+    expect(patches).toEqual([{ cardSize: 'l' }, { shelfEdge: 'bottom' }, { sounds: { enabled: false } }]);
+    expect((screen.getByRole('slider', { name: 'Volume' }) as HTMLInputElement).disabled).toBe(true);
   });
 });

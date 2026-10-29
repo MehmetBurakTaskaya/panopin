@@ -31,6 +31,26 @@
   --rule: rgba(70, 130, 190, 0.2);
   --shadow-card: 0 1px 1px rgba(45, 22, 4, 0.28), 0 5px 10px -3px rgba(45, 22, 4, 0.38),
     0 14px 24px -10px rgba(45, 22, 4, 0.42);
+  --shadow-lift: 0 2px 2px rgba(45, 22, 4, 0.22), 0 12px 18px -4px rgba(45, 22, 4, 0.42),
+    0 26px 38px -14px rgba(45, 22, 4, 0.5);
+  --tag-paper: #f0e4cc;
+  --hint: rgba(45, 22, 6, 0.62);
+  --badge-bg: #2b2520;
+  --badge-ink: #fffdf7;
+  /* Tape colours are RGB triplets so the alpha can vary: image teal, text mustard, link coral. */
+  --tape-image: 58 178 172;
+  --tape-text: 228 176 46;
+  --tape-link: 240 114 92;
+  --tape-alpha: 0.8;
+
+  /* Card size (Settings → General); medium by default. */
+  --mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
+  --ch: 104px;
+  --tw: 184px;
+  --lw: 204px;
+  --gap: 18px;
+  --label-w: 108px;
+  --lines: 4;
 
   --pits-tex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.68' numOctaves='2' seed='11' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .16  0 0 0 0 .08  0 0 0 0 .02  0 0 0 -9 3.85'/></filter><rect width='240' height='240' filter='url(%23p)'/></svg>");
   --mottle-tex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='480'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='3' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .2  0 0 0 0 .1  0 0 0 0 .03  0 0 0 2.2 -.95'/></filter><rect width='480' height='480' filter='url(%23m)'/></svg>");
@@ -63,4 +83,31 @@
   --ink-2: #574e45;
   --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.45), 0 6px 12px -3px rgba(0, 0, 0, 0.55),
     0 16px 26px -10px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 2px 2px rgba(0, 0, 0, 0.4), 0 14px 20px -4px rgba(0, 0, 0, 0.6),
+    0 28px 40px -14px rgba(0, 0, 0, 0.65);
+  --tag-paper: #d8cbb2;
+  --hint: rgba(255, 238, 215, 0.62);
+  --badge-bg: #efe8da;
+  --badge-ink: #211c18;
+  --tape-image: 50 150 146;
+  --tape-text: 198 152 44;
+  --tape-link: 208 102 84;
+  --tape-alpha: 0.86;
+}
+
+:root[data-size='s'] {
+  --ch: 78px;
+  --tw: 150px;
+  --lw: 168px;
+  --gap: 14px;
+  --lines: 2;
+  --label-w: 96px;
+}
+
+:root[data-size='l'] {
+  --ch: 138px;
+  --tw: 236px;
+  --lw: 256px;
+  --gap: 22px;
+  --lines: 6;
 }

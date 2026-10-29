@@ -23,3 +23,9 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 - Portable mode that keeps data next to the executable (see D-029).
 - Detect a manually enabled Do Not Disturb if Windows ever offers a public API for it (see D-021).
+
+## Ideas from Phase 3
+
+- A thumbnail under the pointer while dragging a card (the drag now shows the system cursor only).
+- Neighbouring cards sliding over when a card is taken down, instead of closing the gap at once.
+- Code-looking text in a monospace font on text cards.

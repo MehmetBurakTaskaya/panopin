@@ -24,7 +24,7 @@ fn open(app: &AppHandle, label: &str, title_key: &str, size: (f64, f64)) -> Resu
 }
 
 pub fn open_settings(app: &AppHandle) -> Result<()> {
-    open(app, SETTINGS, "settings.title", (560.0, 420.0))
+    open(app, SETTINGS, "settings.title", (560.0, 640.0))
 }
 
 /// First-run screen: nothing is captured until it is confirmed.

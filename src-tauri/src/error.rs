@@ -19,6 +19,19 @@ pub enum AppError {
     BadImage(&'static str),
     #[error("invalid setting: {0}")]
     InvalidSetting(&'static str),
+    #[cfg(windows)]
+    #[error("Windows error: {0}")]
+    Windows(#[from] windows::core::Error),
+    #[cfg(windows)]
+    #[error("the clipboard is in use by another app")]
+    ClipboardBusy,
+    #[error("Panopin is still starting")]
+    NotReady,
+    #[cfg(not(windows))]
+    #[error("not available on this system yet")]
+    Unsupported,
+    #[error("a background task stopped unexpectedly")]
+    Interrupted,
 }
 
 pub type Result<T, E = AppError> = std::result::Result<T, E>;

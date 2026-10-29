@@ -1,12 +1,15 @@
 mod capture;
 mod commands;
 mod error;
+mod focus;
 mod hotkeys;
 mod i18n;
 mod media;
 mod settings;
 mod shelf;
 mod store;
+mod system_state;
+mod transfer;
 mod tray;
 mod windows;
 
@@ -98,6 +101,9 @@ fn setup(app: &AppHandle) -> Result<()> {
         db: Mutex::new(conn),
         settings: Mutex::new(settings),
     });
+    let staging = transfer::Staging::new(dir.join("staging"));
+    staging.clean();
+    app.manage(staging);
     capture::start(app, &dir)?;
     tray::create(app)?;
     let failed = hotkeys::register_all(app, &shortcuts);
@@ -132,7 +138,15 @@ fn log_failure(result: Result<()>, what: &str) {
 }
 
 pub fn run() {
-    let result = tauri::Builder::default()
+    // A second launch hands its right to take the foreground to the running instance, so the
+    // shelf it opens there gets focus (the first launch gives this up at its first input).
+    #[cfg(windows)]
+    // SAFETY: no pointers; failure only means focus stays where it is.
+    unsafe {
+        use ::windows::Win32::UI::WindowsAndMessaging::{AllowSetForegroundWindow, ASFW_ANY};
+        let _ = AllowSetForegroundWindow(ASFW_ANY);
+    }
+    let app = tauri::Builder::default()
         // Must be registered first so a second launch exits before doing anything else.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             activate_existing(app)
@@ -162,6 +176,26 @@ pub fn run() {
         )
         .manage(shelf::ShelfState::default())
         .manage(hotkeys::HotkeyState::default())
+        .manage(commands::ShelfUndo::default())
+        .register_asynchronous_uri_scheme_protocol("media", |ctx, request, responder| {
+            let app = ctx.app_handle().clone();
+            let path = request.uri().path().to_owned();
+            std::thread::spawn(move || {
+                let unavailable = || {
+                    tauri::http::Response::builder()
+                        .status(503)
+                        .body(Vec::new())
+                        .unwrap_or_default()
+                };
+                let response = match (capture::media(&app), app.try_state::<AppState>()) {
+                    (Some(store), Some(state)) => state
+                        .with_db(|db| Ok(media::serve(&store, db, &path)))
+                        .unwrap_or_else(|_| unavailable()),
+                    _ => unavailable(),
+                };
+                responder.respond(response);
+            });
+        })
         .setup(|app| {
             setup(app.handle())?;
             Ok(())
@@ -172,15 +206,15 @@ pub fn run() {
             }
             match event {
                 // Clicking anywhere outside Panopin closes the shelf.
-                WindowEvent::Focused(false) => log_failure(
-                    shelf::request_close(window.app_handle()),
+                WindowEvent::Focused(focused) => log_failure(
+                    shelf::focus_changed(window.app_handle(), *focused),
                     "closing the shelf",
                 ),
                 // The overlay is reused: Alt+F4 slides it away instead of destroying it.
                 WindowEvent::CloseRequested { api, .. } => {
                     api.prevent_close();
                     log_failure(
-                        shelf::request_close(window.app_handle()),
+                        shelf::request_close(window.app_handle(), true),
                         "closing the shelf",
                     );
                 }
@@ -192,12 +226,30 @@ pub fn run() {
             commands::update_settings,
             commands::count_clearable,
             commands::clear_history,
+            commands::list_shelf,
+            commands::set_pinned,
+            commands::take_down,
+            commands::undo_take_down,
+            commands::trash_items,
+            commands::copy_items,
+            commands::paste_items,
+            commands::start_drag,
             commands::close_shelf,
             commands::shelf_hidden,
         ])
-        .run(tauri::generate_context!());
-    if let Err(err) = result {
-        log::error!("Panopin stopped unexpectedly: {err}");
-        eprintln!("Panopin stopped unexpectedly: {err}");
+        .build(tauri::generate_context!());
+    match app {
+        Ok(app) => app.run(|app, event| {
+            // Staged files are only for the session that handed them out.
+            if let tauri::RunEvent::Exit = event {
+                if let Some(staging) = app.try_state::<transfer::Staging>() {
+                    staging.clean();
+                }
+            }
+        }),
+        Err(err) => {
+            log::error!("Panopin could not start: {err}");
+            eprintln!("Panopin could not start: {err}");
+        }
     }
 }

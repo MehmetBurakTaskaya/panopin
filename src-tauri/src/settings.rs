@@ -30,6 +30,42 @@ pub enum Theme {
     Dark,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CardSize {
+    S,
+    #[default]
+    M,
+    L,
+}
+
+/// The screen edge the shelf slides in from.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ShelfEdge {
+    #[default]
+    Top,
+    Bottom,
+}
+
+/// Interface sounds; on and quiet by default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Sounds {
+    pub enabled: bool,
+    /// 0 to 100.
+    pub volume: u8,
+}
+
+impl Default for Sounds {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            volume: 30,
+        }
+    }
+}
+
 /// Global shortcuts in Tauri accelerator syntax (`Super` is the Windows key); `None` means off.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -135,6 +171,9 @@ pub struct Settings {
     pub link_previews: bool,
     /// Capture is paused until this Unix time in milliseconds.
     pub paused_until: Option<i64>,
+    pub card_size: CardSize,
+    pub shelf_edge: ShelfEdge,
+    pub sounds: Sounds,
 }
 
 impl Default for Settings {
@@ -157,6 +196,9 @@ impl Default for Settings {
             retention: Retention::default(),
             link_previews: false,
             paused_until: None,
+            card_size: CardSize::default(),
+            shelf_edge: ShelfEdge::default(),
+            sounds: Sounds::default(),
         }
     }
 }
@@ -182,6 +224,9 @@ impl Settings {
         }
         if r.trash.is_some_and(|days| ![7, 30].contains(&days)) {
             return Err(AppError::InvalidSetting("Trash empties after 7 or 30 days"));
+        }
+        if self.sounds.volume > 100 {
+            return Err(AppError::InvalidSetting("volume is 0 to 100"));
         }
         Ok(())
     }
@@ -279,6 +324,36 @@ mod tests {
         assert!(apply_patch(&s, json!({ "watchedFolders": ["a", "b", "c", "d"] })).is_err());
         let ok = apply_patch(&s, json!({ "retention": { "text": null, "trash": 7 } })).unwrap();
         assert_eq!((ok.retention.text, ok.retention.trash), (None, Some(7)));
+    }
+
+    #[test]
+    fn shelf_settings_default_to_medium_cards_at_the_top_with_quiet_sounds() {
+        let s = Settings::default();
+        assert_eq!(s.card_size, CardSize::M);
+        assert_eq!(s.shelf_edge, ShelfEdge::Top);
+        assert_eq!(
+            s.sounds,
+            Sounds {
+                enabled: true,
+                volume: 30
+            }
+        );
+        let next = apply_patch(
+            &s,
+            json!({ "cardSize": "l", "shelfEdge": "bottom", "sounds": { "volume": 0 } }),
+        )
+        .unwrap();
+        assert_eq!(
+            (
+                next.card_size,
+                next.shelf_edge,
+                next.sounds.enabled,
+                next.sounds.volume
+            ),
+            (CardSize::L, ShelfEdge::Bottom, true, 0)
+        );
+        assert!(apply_patch(&s, json!({ "sounds": { "volume": 101 } })).is_err());
+        assert!(apply_patch(&s, json!({ "cardSize": "xl" })).is_err());
     }
 
     #[test]

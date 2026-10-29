@@ -141,10 +141,14 @@ go undetected; this is stated in the README. Undocumented WNF state is not used.
 A low-level mouse hook is installed only while the (default-off) feature is enabled; a 300 ms
 dwell timer starts on entering the edge band and is suppressed when a full-screen app is active.
 
-## D-023 Drag-out — Open (spike in Phase 3)
-Text uses HTML5 drag from the webview. Files (images, videos, exports) use `tauri-plugin-drag`
-2.1.1 (MIT OR Apache-2.0), which has open Windows issues (a DoDragDrop hang, long-path and network
-path crashes). Fallback: our own OLE drag source with the `windows` crate.
+## D-023 Drag-out — Accepted (revised in Phase 3)
+No plugin. A card that moves 6 px while pressed starts a native drag: the shell builds the data
+object (`SHCreateDataObject` with the item IDs of neutrally named copies in `staging/`, plus
+`CF_UNICODETEXT` for texts and links) and `SHDoDragDrop` runs it with a small drop source of ours.
+The overlay covers the screen, so it ignores the pointer during the drag and the app beneath gets
+the drop; letting go over the board cancels instead of dropping into what lies under it. A drop
+closes the shelf without taking focus back. (`tauri-plugin-drag` was the first plan; it has open
+Windows issues and is not needed.)
 
 ## D-024 Video posters — Accepted
 Poster frame from the Windows shell thumbnail provider (`IShellItemImageFactory`), duration from the
@@ -241,3 +245,57 @@ screenshots source; their settings UI arrives in Phase 6.
 Retention and Trash emptying run at start and then every 6 hours from a sleeping thread. "Clear
 history" is exposed as two commands (count with a cutoff, then confirm); its Settings UI arrives in
 Phase 6.
+
+## D-043 Taking items off the shelf — Accepted
+Items carry a `shelved` flag (migration 0003). S on a saved item (pinned or named) clears it, so the
+item leaves the shelf but stays in the Library; S on a temporary item moves it to Trash. Delete asks
+first and moves any item to Trash, pin included. Copying an item again puts it back on the shelf.
+Backspace undoes the last 32 take-downs or deletions of the session; a batch is one step. Each row
+shows its 300 most recent items.
+
+## D-044 Keyboard model and paging — Accepted
+The model is a pure reducer (`src/keyboard/shelfModel.ts`) and the key table a pure function
+(`shelfKeys.ts`); both are covered by scenario tests. A page is the number of cards that fit side by
+side in the active row, at most 9. The page that holds the cursor is scrolled to the left edge, so
+the 1–9 badges are always on screen. Digits also match the physical digit row (layouts that need
+Shift for digits). Rows are not virtualised: lazy thumbnails keep 300 cards per row cheap, and
+virtualisation arrives with the Library grid.
+
+## D-045 What a copy puts on the clipboard — Accepted
+Texts and links are joined with CRLF in selection order; a link goes back as its URL without outer
+whitespace, a text exactly as it was last copied. One image: PNG (the stored original when it is
+PNG) and a 32-bit `CF_DIB` laid on white, since DIB readers ignore alpha. Several images: a
+`CF_HDROP` list of copies in `staging/` named `Panopin-<date>-<n>.<ext>` in their original format,
+and the first image as PNG and DIB. Every copy carries `Panopin.OwnCopy`, so it is not captured
+again and does not move its card. Windows clipboard history treats it like any other copy.
+
+## D-046 Focus and paste — Accepted
+The foreground window (HWND and process id) is recorded before the shelf is shown. Esc, Enter, a
+click beside the board and the shelf shortcut give focus back to it; losing focus to another window
+does not. Ctrl+Enter: the window must still exist in the same process; a window of a higher
+integrity level (an app run as administrator) cannot receive input from Panopin (UIPI), so the item
+is copied and the shelf explains that Ctrl+V has to be pressed there; a process that cannot be
+queried counts as higher. Otherwise the item is copied, focus goes back, Panopin waits up to 600 ms
+for the window to be in front, asks UI Automation whether the focused element of that process is a
+password field (refused if so), releases held modifiers and sends Ctrl+V with `SendInput`. A refusal
+after the board has gone reopens it with the reason. While Alt is held when the shelf opens or is
+closed by its shortcut, the unassigned key 0xE8 is sent so the Alt release does not activate a menu
+bar.
+
+## D-047 Shelf session state — Accepted
+Hidden rows (Shift+I/T/L) and the pinned-only filter (F) last until Panopin quits, like the board
+itself. Hiding the last visible row closes the shelf and the next opening shows all rows again.
+The context menu and the Delete confirmation are layers inside the shelf webview rather than native
+menus, so focus never leaves the overlay and one key handler serves every layer.
+
+## D-048 Opening from a second launch — Accepted
+Every launch first calls `AllowSetForegroundWindow(ASFW_ANY)`, so a second launch can pass its
+right to take the foreground to the running instance, which then brings the shelf up with focus. A focus-loss close counts only after the
+shelf has had focus once, and an opening that fails half-way is undone so the next shortcut works.
+
+## D-049 Shelf look and sounds settings — Accepted
+Card size (small, medium, large; medium by default) switches size tokens on `<html data-size>`.
+The shelf slides in from the top (default) or the bottom of the screen. Sounds are on at level 30
+of 100. They stay silent for an opening when `SHQueryUserNotificationState` reports busy,
+full-screen Direct3D or presentation mode, or a focus session is active (D-021). WebView2 allows
+audio without a prior click in Tauri's default configuration, so the opening sound plays at once.

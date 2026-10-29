@@ -29,6 +29,16 @@
   gap: 16px;
 }
 
+.group {
+  display: grid;
+  gap: 4px;
+}
+
+.row input[type='range'] {
+  width: 180px;
+  accent-color: var(--accent);
+}
+
 .row select {
   min-width: 180px;
   padding: 5px 8px;

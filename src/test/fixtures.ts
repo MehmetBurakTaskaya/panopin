@@ -26,5 +26,8 @@ export function testSettings(): Settings {
     retention: { image: 30, text: 30, link: 30, video: 30, trash: 30 },
     linkPreviews: false,
     pausedUntil: null,
+    cardSize: 'm',
+    shelfEdge: 'top',
+    sounds: { enabled: true, volume: 30 },
   };
 }

@@ -76,6 +76,86 @@
 .cork::before { background-image: var(--pits-tex), var(--mottle-tex); opacity: var(--pits); }
 .cork::after { background-image: var(--grains-tex); opacity: var(--grains); mix-blend-mode: soft-light; }
 
+.rows { position: relative; z-index: 1; padding: 6px 4px 4px; outline: none; }
+.row { display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); align-items: center; }
+.row[data-kind='image'] { --tape: var(--tape-image); }
+.row[data-kind='text'] { --tape: var(--tape-text); }
+.row[data-kind='link'] { --tape: var(--tape-link); }
+
+.label {
+  justify-self: start;
+  position: relative;
+  margin-left: 8px;
+  padding: 6px 10px 6px 13px;
+  border-radius: 2px 7px 7px 2px;
+  transform: rotate(-1.2deg);
+  background: var(--tag-paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+  font: 700 10.5px/1.15 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.label::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 2px 0 0 2px; background: rgb(var(--tape)); }
+.label small { display: block; margin-top: 2px; font: 600 10.5px var(--font); letter-spacing: 0; text-transform: none; color: var(--ink-2); }
+.activeRow .label { box-shadow: var(--shadow-card), 0 0 0 2px var(--accent); }
+
+.track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: calc(var(--ch) + 32px);
+  padding: 18px 10px 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 28px), transparent);
+}
+.track::-webkit-scrollbar { display: none; }
+.rowEmpty { margin: 0; padding-left: 6px; font: italic 12.5px var(--font); color: var(--hint); }
+
+/* Shown while F limits the board to pinned items. */
+.filterTag {
+  position: absolute;
+  top: 8px;
+  right: 14px;
+  z-index: 2;
+  padding: 4px 9px;
+  border-radius: 2px;
+  transform: rotate(1.5deg);
+  background: var(--tag-paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+  font: 600 11px/1.2 var(--font);
+}
+
+.fallLayer { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+.faller { position: fixed; }
+
+.toast {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 99px;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  background: rgba(24, 22, 20, 0.92);
+  color: #fff;
+  font: 600 12px/1.2 var(--font);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  animation: toast 1.1s ease both;
+}
+.toast svg { width: 14px; height: 14px; }
+@keyframes toast {
+  0% { opacity: 0; transform: translate(-50%, -70%); }
+  15%, 80% { opacity: 1; transform: translate(-50%, -100%); }
+  100% { opacity: 0; transform: translate(-50%, -115%); }
+}
+
 .empty {
   position: relative;
   z-index: 1;
@@ -122,10 +202,93 @@
   clip-path: polygon(0 4%, 3% 16%, 0.5% 30%, 3% 46%, 0 60%, 2.5% 76%, 0.5% 90%, 3% 100%, 97% 100%, 99.5% 88%, 97% 72%, 100% 58%, 97.5% 42%, 100% 28%, 97% 12%, 99.5% 0);
 }
 
+/* Opening from the bottom edge mirrors the board. */
+.layer[data-edge='bottom'] .boardWrap { top: auto; bottom: 0; transform: translateY(calc(100% + 30px)); }
+.layer[data-edge='bottom'] .boardWrap.open { transform: none; }
+.layer[data-edge='bottom'] .board { border-radius: 14px 14px 0 0; box-shadow: 0 -14px 34px -10px rgba(20, 10, 0, 0.5), 0 -4px 12px rgba(20, 10, 0, 0.2); }
+.layer[data-edge='bottom'] .frameTop { border-radius: 14px 14px 0 0; }
+.layer[data-edge='bottom'] .frameBottom { border-radius: 0; }
+.layer[data-edge='bottom'] .frameLeft { border-radius: 14px 0 0 0; }
+.layer[data-edge='bottom'] .frameRight { border-radius: 0 14px 0 0; }
+
+/* A paper slip at the top of the board: why a paste did not happen, or an error. */
+.notice {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 6;
+  max-width: min(520px, 80%);
+  padding: 8px 14px;
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(-0.6deg);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+  font: 600 12.5px/1.4 var(--font);
+}
+
+.menuCatcher { position: fixed; inset: 0; z-index: 60; }
+.menu {
+  position: fixed;
+  z-index: 61;
+  min-width: 240px;
+  padding: 4px;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.menuItem {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font: 13px var(--font);
+  cursor: default;
+}
+.menuItem:hover, .menuItem:focus-visible { background: var(--ui-line); outline: none; }
+.menuItem:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.menuItem kbd { background: none; box-shadow: none; padding: 0; color: var(--ui-muted); font-weight: 400; }
+
+/* The confirmation is pinned over the board itself, not somewhere on the screen. */
+.scrim { position: absolute; inset: 0; z-index: 8; display: grid; place-items: center; background: rgba(20, 10, 0, 0.22); }
+.dialog {
+  position: relative;
+  width: min(380px, 90%);
+  padding: 22px 22px 16px;
+  border-radius: 2px;
+  transform: rotate(-0.8deg);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+}
+.dialog h2 { margin: 0 0 16px; font: 600 15px/1.35 var(--font); }
+.dialogButtons { display: flex; justify-content: flex-end; gap: 8px; }
+.dialogButtons button {
+  min-width: 96px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  border-radius: 4px;
+  background: var(--paper-2);
+  color: var(--ink);
+  font: 600 12.5px var(--font);
+}
+.dialogButtons .danger { border-color: #9e2a17; background: #c2381f; color: #fff; }
+
 @media (prefers-reduced-motion: reduce) {
   .boardWrap, .open { transition: none; }
+  .toast { animation: none; }
 }
 
 @media (forced-colors: active) {
-  .note { outline: 1px solid CanvasText; }
+  .note, .label, .filterTag, .toast { outline: 1px solid CanvasText; }
+  .activeRow .label { outline: 3px solid Highlight; }
 }
