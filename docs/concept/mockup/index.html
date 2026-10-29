@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="tr" data-theme="auto" data-scheme="light" data-size="m" data-motion="full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panopin Konsepti</title>
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="pinBase" cx="40%" cy="35%" r="75%">
+      <stop offset="0" stop-color="#f0604a"/><stop offset=".55" stop-color="#c62a18"/><stop offset="1" stop-color="#7e130a"/>
+    </radialGradient>
+    <radialGradient id="pinCap" cx="38%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#ffb4a4"/><stop offset=".35" stop-color="#ee4a33"/><stop offset="1" stop-color="#a51c0e"/>
+    </radialGradient>
+    <symbol id="pin" viewBox="0 0 32 32">
+      <circle cx="16" cy="17" r="12" fill="url(#pinBase)"/>
+      <circle cx="16" cy="17" r="11.5" fill="none" stroke="#5e0d06" stroke-opacity=".35"/>
+      <circle cx="16" cy="14.5" r="7.5" fill="url(#pinCap)"/>
+      <ellipse cx="13" cy="11" rx="3.2" ry="2" fill="#fff" fill-opacity=".6"/>
+    </symbol>
+    <symbol id="i-search" viewBox="0 0 24 24">
+      <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <!-- app icon draft: a paper card held by a pushpin -->
+    <symbol id="app" viewBox="0 0 32 32">
+      <g transform="rotate(-7 16 18)">
+        <rect x="6" y="9" width="20" height="18" rx="2" fill="#f6efe2" stroke="#7a5534" stroke-width="1.3"/>
+        <path d="M10 16h12M10 20.5h8" stroke="#b39a7a" stroke-width="1.8" stroke-linecap="round"/>
+      </g>
+      <circle cx="16" cy="9" r="4.8" fill="url(#pinCap)" stroke="#7e130a" stroke-width=".9"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div class="desktop">
+  <section class="appwin" aria-label="Örnek uygulama penceresi">
+    <header><b>notlar.txt</b> — Metin Düzenleyici <span class="caps" aria-hidden="true"><i>–</i><i>□</i><i>✕</i></span></header>
+    <pre id="editor">Perşembe toplantısı için notlar
+- Raf animasyonlarını gözden geçir
+- Ses seviyesi varsayılanı %30
+</pre>
+  </section>
+
+  <div class="shelf-layer" id="layer" tabindex="-1" hidden>
+    <div class="backdrop" id="backdrop"></div>
+    <div class="board-wrap">
+      <div class="board" id="board" role="region" aria-label="Pano rafı">
+        <div class="frame f-top"></div><div class="frame f-left"></div><div class="frame f-right"></div>
+        <div class="frame f-bottom"><span class="engrave">Ara ⇧S · Sabitle P · İndir S · Kütüphane L · Kapat Esc</span></div>
+        <div class="cork">
+          <div class="rows" id="rows"></div>
+          <div class="empty">
+            <span class="stray tape"><i></i></span>
+            <svg class="stray pin" viewBox="0 0 32 32" aria-hidden="true"><use href="#pin"/></svg>
+            <div class="note">
+              <svg class="pin" viewBox="0 0 32 32" aria-hidden="true"><use href="#pin"/></svg>
+              <h3>Pano şimdilik boş</h3>
+              <p>Kopyaladıkların ve ekran görüntülerin buraya bantlanır. Saklamak istediklerine raptiye saplarsın.</p>
+              <ul>
+                <li>Bir şey kopyala <kbd>Ctrl+C</kbd></li>
+                <li>Ekran alıntısı al <kbd>Win+Shift+S</kbd></li>
+                <li>Rafı aç / kapat <kbd class="hk-shelf">Win+Alt+V</kbd></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="search" id="search" hidden>
+      <label class="field">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="q" type="search" placeholder="Raflarda ara…" autocomplete="off" spellcheck="false" aria-label="Raflarda ara" aria-describedby="count">
+        <span class="count" id="count" aria-live="polite"></span>
+      </label>
+      <div class="chips" id="chips"></div>
+    </div>
+  </div>
+
+  <footer class="taskbar">
+    <span class="app on" style="--c:linear-gradient(135deg,#5b9be8,#2f63b8)"><i></i></span>
+    <span class="app" style="--c:linear-gradient(135deg,#f3c34f,#e08a2c)"><i></i></span>
+    <span class="app" style="--c:linear-gradient(135deg,#59c48a,#2f8f5c)"><i></i></span>
+    <span class="app" style="--c:linear-gradient(135deg,#a98be8,#6c4cc4)"><i></i></span>
+    <div class="tray">
+      <button id="trayBtn" aria-label="Panopin rafını aç (tepsi simgesi)"><svg width="20" height="20" aria-hidden="true"><use href="#app"/></svg></button>
+      <span class="clock">14:32<br>29.10.2026</span>
+    </div>
+  </footer>
+</div>
+<div class="fall-layer" id="fall"></div>
+
+<details class="panel" open aria-label="Mockup kontrolleri">
+  <summary><h1>Panopin · mantar pano konsepti</h1></summary>
+  <p class="sub">Faz 0 mockup'ı. Raf, global kısayolla (burada <kbd>F9</kbd>) ya da tepsi simgesiyle açılır.</p>
+  <div class="opt"><span>Tema</span><div class="seg" data-opt="theme"><button data-v="auto">Sistem</button><button data-v="light">Açık</button><button data-v="dark">Koyu</button></div></div>
+  <div class="opt"><span>Durum</span><div class="seg" data-opt="view"><button data-v="full">Dolu</button><button data-v="empty">Boş</button><button data-v="search">Arama</button></div></div>
+  <div class="opt"><span>Kart boyutu</span><div class="seg" data-opt="size"><button data-v="s">Küçük</button><button data-v="m">Orta</button><button data-v="l">Büyük</button></div></div>
+  <div class="opt"><span>Hareket</span><div class="seg" data-opt="motion"><button data-v="full">Tam</button><button data-v="reduced">Azaltılmış</button></div></div>
+  <div class="opt"><label><input type="checkbox" id="snd" checked> Ses</label><input type="range" id="vol" min="0" max="1" step="0.05" value="0.3" aria-label="Ses seviyesi"></div>
+  <button class="btn" id="toggle" type="button">Rafı aç / kapat (F9)</button>
+  <details>
+    <summary>Raf içi kısayollar</summary>
+    <dl class="keys">
+      <dt><kbd>← →</kbd> <kbd>↑ ↓</kbd></dt><dd>Gezin; ↑↓ dolu satırlar arasında</dd>
+      <dt><kbd>Tab</kbd> <kbd>1–9</kbd></dt><dd>Satır değiştir · numaralı kart</dd>
+      <dt><kbd>Enter</kbd></dt><dd>Kopyala, kapat, odağı geri ver</dd>
+      <dt><kbd>Ctrl+C</kbd></dt><dd>Kopyala, raf açık kalsın</dd>
+      <dt><kbd>Ctrl+Enter</kbd></dt><dd>Önceki uygulamaya yapıştır</dd>
+      <dt><kbd>P</kbd></dt><dd>Sabitle / sabitlemeyi kaldır</dd>
+      <dt><kbd>S</kbd> <kbd>⌫</kbd></dt><dd>Raftan indir · geri al</dd>
+      <dt><kbd>Shift+S</kbd></dt><dd>Raflarda ara</dd>
+      <dt><kbd>F</kbd></dt><dd>Sadece sabitlenenler</dd>
+      <dt><kbd>Shift+I/T/L</kbd></dt><dd>Satırı gizle / göster</dd>
+      <dt><kbd>Esc</kbd></dt><dd>En üst katmanı kapat</dd>
+    </dl>
+  </details>
+  <p class="note-s">Tek tık kopyalar, raf açık kalır. Raf dışına tıklamak rafı kapatır. Sesler Web Audio ile anlık sentezlenir.</p>
+</details>
+
+<script src="sound.js"></script>
+<script src="data.js"></script>
+<script src="mockup.js"></script>
+</body>
+</html>

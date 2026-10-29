@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mantar Pano Referansı</title>
+<style>
+  :root{--bg:#f4f2ee;--ink:#1d1b19;--muted:#6b655e;--card:#fff;--line:#e3ded6;--accent:#1f8a83}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15140f;--ink:#f1ede6;--muted:#a39b90;--card:#201e19;--line:#34302a}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI Variable","Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.45}
+  header,main{max-width:1180px;margin:0 auto;padding:0 16px}
+  header{padding-top:28px}
+  h1{font-size:25px;margin:0 0 6px}
+  header p{margin:0 0 12px;color:var(--muted);max-width:780px}
+  .sound{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px;color:var(--muted);margin-bottom:14px}
+  .sound input{accent-color:var(--accent)}
+  .grid{display:grid;grid-template-columns:minmax(0,640px);gap:18px;margin-bottom:22px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .panel h2{margin:0;font-size:18px;padding:14px 18px 0}
+  .panel .sub{margin:2px 18px 10px;color:var(--muted);font-size:13.5px}
+  .stage{position:relative;height:250px;overflow:hidden;background:radial-gradient(120% 90% at 20% 0%,#3b5ba8 0%,#22305e 45%,#141a33 100%);user-select:none}
+  .stage::after{content:"";position:absolute;inset:auto 0 0 0;height:34px;background:rgba(20,22,30,.55);border-top:1px solid rgba(255,255,255,.08)}
+  .shelf{position:absolute;inset:0;transition:transform .42s cubic-bezier(.2,.9,.3,1.1)}
+  .shelf.closed{transform:translateY(-250px);transition:transform .22s ease-in}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;padding:12px 18px 16px}
+  .controls button{font:inherit;font-size:13.5px;padding:7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+  .controls button:hover{border-color:var(--accent)}
+  .hint{font-size:12.5px;color:var(--muted);padding:0 18px 14px;margin-top:-6px}
+
+  .c{position:absolute;width:118px;height:86px;border-radius:6px;background:#fff;color:#222;box-shadow:0 8px 18px rgba(0,0,0,.35);font-size:10.5px;padding:16px 8px 8px;cursor:pointer;outline:2px solid transparent;outline-offset:3px;transition:outline-color .15s}
+  .c.sel{outline-color:#ffd54a}
+  .c.img{padding:0;background:linear-gradient(135deg,#9fd3ff,#e6f3ff)}
+  .c.img i{position:absolute;left:10px;right:10px;top:14px;height:10px;border-radius:3px;background:#fff;opacity:.9}
+  .c.img i+i{top:32px;right:40px;height:36px;background:#6aa6e8}
+  .c.img i+i+i{left:auto;right:10px;width:24px;top:32px;height:36px;background:#ffd46a}
+  .c .k{font-weight:700;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:#888;margin-bottom:4px}
+  .c.txt .k{color:#d99a21}.c.lnk .k{color:#d9573f}
+  .c .d{font-size:9.5px;color:#777;margin-top:4px}
+  .toast{position:absolute;left:50%;top:-28px;transform:translateX(-50%);background:#111c;color:#fff;font-size:11px;padding:3px 8px;border-radius:99px;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none;z-index:5}
+  .toast.on{opacity:1}
+
+  /* B: cork */
+  #B .cork{position:absolute;left:12px;right:12px;top:0;height:190px;border-radius:0 0 14px 14px;
+    background:
+      radial-gradient(circle at 20% 30%,rgba(120,70,30,.35) 0 1.5px,transparent 2px) 0 0/9px 11px,
+      radial-gradient(circle at 70% 60%,rgba(255,235,200,.35) 0 1.2px,transparent 2px) 0 0/13px 9px,
+      linear-gradient(#c99a62,#b98852);
+    box-shadow:0 14px 30px rgba(0,0,0,.45),inset 0 0 0 6px #8a5f35,inset 0 0 0 8px #6f4a28}
+  #B .c{transform:rotate(var(--r));transform-origin:50% 0}
+  #B .tape{position:absolute;top:-9px;left:50%;width:52px;height:18px;margin-left:-26px;background:rgba(255,245,200,.72);border-left:2px dashed rgba(0,0,0,.06);border-right:2px dashed rgba(0,0,0,.06);transform:rotate(-4deg);transition:opacity .2s,transform .2s;z-index:2}
+  #B .pin{position:absolute;top:-8px;left:50%;width:17px;height:17px;margin-left:-8.5px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#ff8c7a,#d3321b 60%,#8e1d0e);box-shadow:2px 4px 4px rgba(0,0,0,.45);opacity:0;transform:translateY(-24px) scale(1.6);transition:opacity .15s,transform .22s cubic-bezier(.5,1.8,.6,1);z-index:3}
+  #B .pinned .pin{opacity:1;transform:none}
+  #B .pinned .tape{opacity:0;transform:rotate(-14deg) translateY(-10px)}
+  #B .c.jiggle{animation:jiggle .45s ease-out}
+  #B .c.gone{animation:flutter .8s cubic-bezier(.45,0,.8,.5) forwards}
+  #B .c.back{animation:back .35s ease-out}
+  @keyframes jiggle{0%{transform:rotate(var(--r))}30%{transform:rotate(calc(var(--r) + 4deg))}65%{transform:rotate(calc(var(--r) - 2.5deg))}100%{transform:rotate(var(--r))}}
+  @keyframes flutter{0%{transform:rotate(var(--r))}20%{transform:rotate(calc(var(--r) + 14deg)) translateY(6px)}100%{transform:rotate(calc(var(--r) - 30deg)) translate(30px,300px);opacity:0}}
+  @keyframes back{from{transform:rotate(var(--r)) translateY(-30px);opacity:0}to{transform:rotate(var(--r));opacity:1}}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Mantar pano: hareket ve ses referansı</h1>
+  <p>Bir karta tıklarsan kopyalanır. Düğmelerle sabitleme, raftan indirme ve rafı açıp kapatma hareketlerini görürsün. Bu kaba bir referans: seslerin ve hareketlerin karakterini gösterir. Sesler Web Audio API ile anlık üretiliyor; gerçek uygulama aynı yaklaşımı kullanacak.</p>
+  <div class="sound">
+    <label><input type="checkbox" id="snd" checked> Ses açık</label>
+    <label>Seviye <input type="range" id="vol" min="0" max="1" step="0.05" value="0.5"></label>
+    <span>(İlk tıklamadan sonra ses başlar)</span>
+  </div>
+</header>
+
+<main class="grid">
+
+  <section class="panel" id="B">
+    <h2>Mantar pano ve raptiye</h2>
+    <p class="sub">Geçici öğeler kâğıt bantla tutturulur. Sabitlenen öğeye raptiye saplanır.</p>
+    <div class="stage"><div class="shelf"><div class="cork">
+      <div class="c img item sel" style="left:7%;top:54px;--r:-3deg"><span class="tape"></span><span class="pin"></span><i></i><i></i><i></i><span class="toast">Kopyalandı</span></div>
+      <div class="c txt item" style="left:calc(50% - 59px);top:62px;--r:2deg"><span class="tape" style="transform:rotate(3deg)"></span><span class="pin"></span><div class="k">Metin</div>Toplantı Perşembe 14:00, B-204<div class="d">30 karakter</div><span class="toast">Kopyalandı</span></div>
+      <div class="c lnk item" style="right:7%;top:50px;--r:-1.5deg"><span class="tape" style="transform:rotate(-2deg)"></span><span class="pin"></span><div class="k">Bağlantı</div>Proje deposu<div class="d">github.com</div><span class="toast">Kopyalandı</span></div>
+    </div></div></div>
+    <div class="controls"><button data-act="toggle">Rafı kapat / aç</button><button data-act="pin">Sabitle (P)</button><button data-act="remove">Raftan indir (S)</button><button data-act="undo">Geri al</button></div>
+    <p class="hint">Sabitleyince bant kalkar ve yerine raptiye saplanır. Raftan inen kartın bandı sökülür, kart kâğıt gibi süzülerek düşer.</p>
+  </section>
+</main>
+
+<script>
+/* ---------- synthesized sounds (Web Audio) ---------- */
+let ctx=null;
+const sndEl=document.getElementById('snd'), volEl=document.getElementById('vol');
+function ac(){ if(!ctx){ try{ ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } } if(ctx.state==='suspended') ctx.resume(); return ctx; }
+function out(g=1){ const a=ac(); if(!a||!sndEl.checked) return null; const m=a.createGain(); m.gain.value=parseFloat(volEl.value)*g; m.connect(a.destination); return m; }
+function noise(a,dur){ const b=a.createBuffer(1,Math.ceil(a.sampleRate*dur),a.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s=a.createBufferSource(); s.buffer=b; return s; }
+function burst(a,dst,{t=0,dur=.04,type='bandpass',f=1800,f2=null,q=3,g=.9}){ const s=noise(a,dur), fl=a.createBiquadFilter(), e=a.createGain(); fl.type=type; const T=a.currentTime+t; fl.frequency.setValueAtTime(f,T); if(f2) fl.frequency.exponentialRampToValueAtTime(f2,T+dur); fl.Q.value=q; e.gain.setValueAtTime(g,T); e.gain.exponentialRampToValueAtTime(.001,T+dur); s.connect(fl).connect(e).connect(dst); s.start(T); s.stop(T+dur); }
+function tone(a,dst,{t=0,f=200,f2=null,dur=.08,g=.6,type='sine'}){ const o=a.createOscillator(), e=a.createGain(); o.type=type; const T=a.currentTime+t; o.frequency.setValueAtTime(f,T); if(f2) o.frequency.exponentialRampToValueAtTime(f2,T+dur); e.gain.setValueAtTime(g,T); e.gain.exponentialRampToValueAtTime(.001,T+dur); o.connect(e).connect(dst); o.start(T); o.stop(T+dur+.02); }
+function crinkle(a,d,{t=0,n=7,span=.14,f=3200,g=.45}){ for(let i=0;i<n;i++) burst(a,d,{t:t+Math.random()*span,dur:.008+Math.random()*.012,f:f*(.7+Math.random()*.6),q:2,g:g*(.4+Math.random()*.6)}); }
+const S={
+  B:{
+    copy(){ const a=ac(),d=out(.7); if(!d) return; crinkle(a,d,{n:4,span:.05,f:3600,g:.35}); tone(a,d,{f:230,f2:170,dur:.05,g:.2}); },
+    pin(){ const a=ac(),d=out(); if(!d) return; burst(a,d,{dur:.012,type:'highpass',f:3000,q:.7,g:.5}); burst(a,d,{t:.012,dur:.07,type:'lowpass',f:420,q:1,g:.9}); tone(a,d,{t:.012,f:150,f2:85,dur:.09,g:.55}); },
+    unpin(){ const a=ac(),d=out(); if(!d) return; tone(a,d,{f:650,f2:1150,dur:.05,g:.25,type:'triangle'}); crinkle(a,d,{t:.08,n:6,span:.1,f:2800,g:.4}); },
+    drop(){ const a=ac(),d=out(.8); if(!d) return; burst(a,d,{dur:.22,f:1400,f2:4200,q:1.4,g:.35}); crinkle(a,d,{n:10,span:.2,f:3000,g:.5}); burst(a,d,{t:.22,dur:.45,type:'lowpass',f:1200,f2:300,q:.6,g:.22}); },
+    back(){ const a=ac(),d=out(.8); if(!d) return; crinkle(a,d,{n:8,span:.12,f:2600,g:.45}); tone(a,d,{t:.1,f:200,f2:140,dur:.05,g:.25}); },
+    open(){ const a=ac(),d=out(.6); if(!d) return; burst(a,d,{dur:.38,type:'lowpass',f:700,f2:250,q:.7,g:.3}); burst(a,d,{t:.36,dur:.09,type:'lowpass',f:300,q:1,g:.8}); tone(a,d,{t:.36,f:110,f2:70,dur:.14,g:.5}); },
+    close(){ const a=ac(),d=out(.4); if(!d) return; burst(a,d,{dur:.2,type:'lowpass',f:900,q:.6,g:.3}); }
+  }
+};
+
+/* ---------- interactions ---------- */
+function setup(id){
+  const root=document.getElementById(id), shelf=root.querySelector('.shelf');
+  const items=[...root.querySelectorAll('.item')];
+  const card=el=>el.classList.contains('c')?el:el.querySelector('.c');
+  let sel=0, removed=[], open=true;
+  const select=i=>{ sel=i; items.forEach((el,j)=>card(el).classList.toggle('sel',j===i)); };
+  const restart=(el,cls)=>{ el.classList.remove('snap','jolt','wiggle','jiggle','back'); el.style.animationDelay='0s'; void el.offsetWidth; el.classList.add(cls); };
+  items.forEach((el,i)=>card(el).addEventListener('click',()=>{
+    if(el.classList.contains('gone')) return;
+    select(i); S[id].copy();
+    const t=card(el).querySelector('.toast'); t.classList.add('on'); setTimeout(()=>t.classList.remove('on'),900);
+    restart(el,{A:'wiggle',B:'jiggle',C:'jolt'}[id]);
+    if(id==='A') setTimeout(()=>el.classList.remove('wiggle'),520);
+  }));
+  root.querySelectorAll('[data-act]').forEach(b=>b.addEventListener('click',()=>{
+    const act=b.dataset.act, el=items[sel];
+    if(act==='toggle'){
+      open=!open; shelf.classList.toggle('closed',!open);
+      if(!open){ S[id].close(); return; }
+      S[id].open();
+      if(id==='C') items.forEach((x,k)=>{ if(x.classList.contains('gone')) return; x.classList.remove('snap','jolt'); x.style.animationDelay=(.25+k*.09)+'s'; void x.offsetWidth; x.classList.add('snap'); });
+      return;
+    }
+    if(!open) return;
+    if(act==='pin' && el && !el.classList.contains('gone')){
+      const now=el.classList.toggle('pinned');
+      if(id==='B' && !now) S.B.unpin(); else S[id].pin();
+    }
+    if(act==='remove' && el && !el.classList.contains('gone')){
+      el.classList.remove('snap','jolt','wiggle','jiggle','back'); el.style.animationDelay='0s'; void el.offsetWidth;
+      el.classList.add('gone'); removed.push(sel); S[id].drop();
+      const n=items.findIndex(x=>!x.classList.contains('gone')); if(n>=0) select(n);
+    }
+    if(act==='undo' && removed.length){
+      const i=removed.pop(), x=items[i]; x.classList.remove('gone');
+      if(id==='C') restart(x,'snap'); if(id==='B') restart(x,'back');
+      S[id].back(); select(i);
+    }
+  }));
+}
+setup('B');
+</script>
+</body>
+</html>
