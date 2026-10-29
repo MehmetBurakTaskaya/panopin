@@ -299,3 +299,35 @@ The shelf slides in from the top (default) or the bottom of the screen. Sounds a
 of 100. They stay silent for an opening when `SHQueryUserNotificationState` reports busy,
 full-screen Direct3D or presentation mode, or a focus session is active (D-021). WebView2 allows
 audio without a prior click in Tauri's default configuration, so the opening sound plays at once.
+
+## D-050 Image edit layer and flattening — Accepted
+The original pixels never change. A crop and the marks live in `media/<id>/edit.json` (version 1,
+original image pixels); "Revert to original" deletes it. Rust validates every layer (sizes,
+colours, counts) before using it. The full-resolution picture is drawn only when it is needed —
+copying, dragging and saving, which redraws the thumbnail — with `tiny-skia` 0.12 (BSD-3-Clause):
+pixelation first, on the original pixels, then the marks in order, then the crop. The webview draws
+the same geometry with Canvas 2D: round caps and joins for strokes, mitred rectangles, the
+highlighter as one shape at 35 % opacity (no darker overlaps), and one shared arrow-head formula.
+Text marks carry a PNG of their glyphs drawn by the webview at image resolution, so the copied
+picture shows exactly the text that was on screen and Rust needs no font engine. A 3840×2160
+picture with 40 strokes, a pixelated area and a crop flattens in about 0.45 s (release build).
+Thumbnails are versioned in their URL (`?v=`), so a redrawn one is never served from the cache.
+
+## D-051 Preview and editors — Accepted
+The preview is a layer in the shelf webview and shows the card under the shelf cursor: the arrows
+move through the cards and the layer stays open when the kind changes. Space toggles it, a double
+click opens it, E edits a text, M marks up and C crops an image, Esc closes the editor first, then
+the preview, then the board. Images fit the panel without being enlarged; the wheel zooms from
+100 % to 400 % of that size, dragging pans, a double click resets. The original is decoded once into
+an `ImageBitmap`; one canvas holds the picture and its pixelated areas, a second one the marks,
+redrawn once per animation frame while drawing, with every coalesced pointer sample kept. Tool keys
+are V B H R O A D T, and X for pixelate. Stroke widths are picked on
+screen and stored in image pixels; pixelation blocks are 1.2 % of the picture's longer side (at
+least 10 px), coarse enough that small text cannot be read back. Edits save when leaving the editor,
+the picture or the preview; copying, pasting and dragging wait for saves still in flight.
+
+## D-052 Edited texts — Accepted
+A text saves about 300 ms after typing stops, and when editing ends or another card is shown. Its
+identity follows the new text, so copying that text again finds the same card. When another card
+already holds that text, the edited card gets an identity of its own and both stay, because merging
+them could lose a name or a pin.

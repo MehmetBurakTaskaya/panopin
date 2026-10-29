@@ -1,5 +1,6 @@
 mod capture;
 mod commands;
+mod editing;
 mod error;
 mod focus;
 mod hotkeys;
@@ -234,6 +235,11 @@ pub fn run() {
             commands::copy_items,
             commands::paste_items,
             commands::start_drag,
+            commands::get_text,
+            commands::update_text,
+            commands::get_edit,
+            commands::save_edit,
+            commands::revert_edit,
             commands::close_shelf,
             commands::shelf_hidden,
         ])

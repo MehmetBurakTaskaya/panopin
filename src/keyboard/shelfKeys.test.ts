@@ -65,6 +65,15 @@ describe('shelf keys', () => {
     expect(commandFor(press('S', { code: 'KeyS', shiftKey: true }))).toBeNull();
   });
 
+  it('opens the preview and its editors', () => {
+    expect(commandFor(press(' ', { code: 'Space' }))).toEqual({ type: 'preview' });
+    expect(commandFor(press(' ', { code: 'Space', ctrlKey: true }))).toBeNull();
+    expect(commandFor(press('e', { code: 'KeyE' }))).toEqual({ type: 'editText' });
+    expect(commandFor(press('m', { code: 'KeyM' }))).toEqual({ type: 'markup' });
+    expect(commandFor(press('c', { code: 'KeyC' }))).toEqual({ type: 'crop' });
+    expect(commandFor(press('c', { code: 'KeyC', ctrlKey: true }))).toEqual({ type: 'copy' });
+  });
+
   it('maps undo, trash, the menu keys and Escape', () => {
     expect(commandFor(press('Backspace'))).toEqual({ type: 'undo' });
     expect(commandFor(press('Delete'))).toEqual({ type: 'trash' });

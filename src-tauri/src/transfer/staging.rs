@@ -13,6 +13,15 @@ pub struct Staging {
     dir: PathBuf,
 }
 
+/// One file to hand out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Staged {
+    /// A copy of a stored file, keeping its format.
+    Copy(PathBuf),
+    /// A picture made for this hand-out, such as an edited image.
+    Png(Vec<u8>),
+}
+
 impl Staging {
     pub fn new(dir: PathBuf) -> Self {
         Self { dir }
@@ -26,21 +35,23 @@ impl Staging {
         }
     }
 
-    /// Copies each file under a fresh neutral name with its own extension and returns the new
-    /// paths in the same order.
-    pub fn copy_files(&self, sources: &[PathBuf]) -> Result<Vec<PathBuf>> {
-        if sources.is_empty() {
+    /// Writes each item under a fresh neutral name and returns the paths in the same order.
+    pub fn stage(&self, items: &[Staged]) -> Result<Vec<PathBuf>> {
+        if items.is_empty() {
             return Ok(Vec::new());
         }
         fs::create_dir_all(&self.dir)?;
         let date = local_date();
-        let mut paths = Vec::with_capacity(sources.len());
+        let mut paths = Vec::with_capacity(items.len());
         let mut n = 0u32;
-        for source in sources {
-            let ext = source
-                .extension()
-                .map(|ext| ext.to_string_lossy().into_owned())
-                .unwrap_or_default();
+        for item in items {
+            let ext = match item {
+                Staged::Copy(source) => source
+                    .extension()
+                    .map(|ext| ext.to_string_lossy().into_owned())
+                    .unwrap_or_default(),
+                Staged::Png(_) => "png".to_owned(),
+            };
             let path = loop {
                 n += 1;
                 let candidate = self.dir.join(format!("Panopin-{date}-{n:03}.{ext}"));
@@ -48,18 +59,33 @@ impl Staging {
                     break candidate;
                 }
             };
-            copy_atomically(source, &path)?;
+            match item {
+                Staged::Copy(source) => copy_atomically(source, &path)?,
+                Staged::Png(bytes) => write_atomically(&path, bytes)?,
+            }
             paths.push(path);
         }
         Ok(paths)
     }
 }
 
-/// A copy that appears under its final name only when complete.
-fn copy_atomically(source: &Path, path: &Path) -> Result<()> {
+fn tmp_of(path: &Path) -> PathBuf {
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
+    PathBuf::from(tmp)
+}
+
+/// A copy that appears under its final name only when complete.
+fn copy_atomically(source: &Path, path: &Path) -> Result<()> {
+    let tmp = tmp_of(path);
     fs::copy(source, &tmp)?;
+    fs::rename(&tmp, path)?;
+    Ok(())
+}
+
+fn write_atomically(path: &Path, bytes: &[u8]) -> Result<()> {
+    let tmp = tmp_of(path);
+    fs::write(&tmp, bytes)?;
     fs::rename(&tmp, path)?;
     Ok(())
 }
@@ -105,9 +131,12 @@ mod tests {
             fs::write(&path, name).unwrap();
             path
         };
-        let (a, b, c) = (source("a.png"), source("b.png"), source("c.jpg"));
-        let first = staging.copy_files(&[a.clone(), b]).unwrap();
-        let second = staging.copy_files(&[c]).unwrap();
+        let (a, c) = (source("a.png"), source("c.jpg"));
+        let first = staging
+            .stage(&[Staged::Copy(a.clone()), Staged::Png(vec![1, 2])])
+            .unwrap();
+        let second = staging.stage(&[Staged::Copy(c)]).unwrap();
+        assert_eq!(fs::read(&first[1]).unwrap(), vec![1, 2]);
         assert_eq!(fs::read(&first[0]).unwrap(), fs::read(&a).unwrap());
         let names: Vec<String> = first
             .iter()

@@ -22,6 +22,7 @@ export interface ShelfRowsProps {
   onPageSize: (size: number) => void;
   onCardClick: (id: number, event: MouseEvent) => void;
   onCardContextMenu: (id: number, event: MouseEvent) => void;
+  onCardDoubleClick: (id: number) => void;
   onCardPointerDown: (id: number, event: PointerEvent) => void;
 }
 
@@ -114,6 +115,7 @@ export function ShelfRows(props: ShelfRowsProps) {
                   now={now}
                   onClick={props.onCardClick}
                   onContextMenu={props.onCardContextMenu}
+                  onDoubleClick={props.onCardDoubleClick}
                   onPointerDown={props.onCardPointerDown}
                 />
               ))}

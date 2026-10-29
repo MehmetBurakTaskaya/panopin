@@ -8,7 +8,9 @@ use tauri::{AppHandle, State};
 
 use crate::{
     capture::{self, now_ms},
+    editing,
     error::{AppError, Result},
+    media::annotations::EditLayer,
     settings::Settings,
     shelf,
     store::{
@@ -127,6 +129,40 @@ pub fn clear_history(
     let moved = state.with_db(|db| retention::clear_history(db, &kinds, cutoff, now_ms()))?;
     capture::changed(&app);
     Ok(moved)
+}
+
+/// The whole text behind a text or link card; the shelf itself only holds a preview.
+#[tauri::command]
+pub fn get_text(app: AppHandle, id: i64) -> Result<String> {
+    editing::full_text(&app, id)
+}
+
+/// Saves an edited text; the preview calls this about 300 ms after typing stops.
+#[tauri::command]
+pub fn update_text(app: AppHandle, id: i64, body: String) -> Result<()> {
+    editing::update_text(&app, id, &body)
+}
+
+/// The crop and marks over an image, if it was edited.
+#[tauri::command]
+pub fn get_edit(app: AppHandle, id: i64) -> Result<Option<EditLayer>> {
+    editing::load_layer(&app, id)
+}
+
+/// Saves an image's crop and marks and redraws its thumbnail (off the main thread).
+#[tauri::command]
+pub async fn save_edit(app: AppHandle, id: i64, layer: EditLayer) -> Result<()> {
+    tauri::async_runtime::spawn_blocking(move || editing::save_layer(&app, id, &layer))
+        .await
+        .map_err(|_| AppError::Interrupted)?
+}
+
+/// "Revert to original": removes the crop and the marks.
+#[tauri::command]
+pub async fn revert_edit(app: AppHandle, id: i64) -> Result<()> {
+    tauri::async_runtime::spawn_blocking(move || editing::revert(&app, id))
+        .await
+        .map_err(|_| AppError::Interrupted)?
 }
 
 /// Esc, Enter and clicks beside the board: the shelf slides away and focus goes back.

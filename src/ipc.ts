@@ -1,6 +1,7 @@
 // Typed wrappers around the Rust commands and events. Types mirror src-tauri/src/settings.rs;
 // they move to ts-rs generated bindings once the data model grows (D-013).
 import { invoke } from '@tauri-apps/api/core';
+import type { EditLayer } from './edit/layer';
 import type { LanguageSetting, MessageKey } from './i18n';
 
 export type Theme = 'system' | 'light' | 'dark';
@@ -106,6 +107,10 @@ export interface ShelfItem {
   hasThumb: boolean;
   pinned: boolean;
   lastCopiedAt: number;
+  /** An image with an edit layer; width and height are then the edited size. */
+  edited: boolean;
+  /** Changes whenever the thumbnail is redrawn. */
+  thumbVersion: number;
 }
 
 export type Shelf = Record<ShelfKind, ShelfItem[]>;
@@ -136,8 +141,16 @@ export interface BoardRect {
  * were dropped somewhere. */
 export const startDrag = (ids: number[], board: BoardRect) => invoke<boolean>('start_drag', { ids, board });
 
-/** Managed media is served by item id only (D-014); Windows maps custom schemes to http://<scheme>.localhost. */
-export function mediaUrl(variant: 'thumb' | 'original', id: number): string {
+export const getText = (id: number) => invoke<string>('get_text', { id });
+export const updateText = (id: number, body: string) => invoke<void>('update_text', { id, body });
+export const getEdit = (id: number) => invoke<EditLayer | null>('get_edit', { id });
+export const saveEdit = (id: number, layer: EditLayer) => invoke<void>('save_edit', { id, layer });
+export const revertEdit = (id: number) => invoke<void>('revert_edit', { id });
+
+/** Managed media is served by item id only (D-014); Windows maps custom schemes to http://<scheme>.localhost.
+ * `version` changes when a thumbnail is redrawn, so a cached copy is not shown. */
+export function mediaUrl(variant: 'thumb' | 'original', id: number, version = 0): string {
   const windows = /Windows/.test(navigator.userAgent);
-  return windows ? `http://media.localhost/${variant}/${id}` : `media://localhost/${variant}/${id}`;
+  const base = windows ? `http://media.localhost/${variant}/${id}` : `media://localhost/${variant}/${id}`;
+  return version ? `${base}?v=${version}` : base;
 }

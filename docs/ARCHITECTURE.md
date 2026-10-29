@@ -40,6 +40,7 @@ specified behaviour. Preview and palette components are reused inside the Librar
 src-tauri/src
   main.rs, lib.rs        app setup, plugin registration, single-instance hand-off
   commands.rs            Tauri IPC commands (thin; delegates to services)
+  editing.rs             preview edits: text bodies, image edit layers, thumbnails (D-050)
   events.rs              typed events pushed to the webviews
   settings/              typed settings (serde defaults) stored in SQLite
   capture/
@@ -52,6 +53,7 @@ src-tauri/src
     migrations/          0001_init.sql, ... applied via PRAGMA user_version (D-012)
     models.rs            Item, Folder, Tag, ... (exported to TS with ts-rs, D-013)
     identity.rs          text and image identity hashes (D-016)
+    edits.rs             edited text bodies and image edit state (D-052)
     retention.rs         expiry to Trash, Trash auto-empty, "clear history" transaction
     search.rs            FTS5 index + Turkish folding (D-017)
     undo.rs              session undo stack (32 steps, batches = one step)
@@ -181,6 +183,8 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 - React + TypeScript (strict) + Vite, CSS Modules with design tokens, Zustand stores per window.
 - `src/keyboard/` holds the **pure keyboard model** (rows, selection, ranges, layers, Esc stack),
   tested with scenario tests in vitest; React components only dispatch to it.
+- `src/edit/` holds the edit layer model, the geometry shared with Rust, the Canvas 2D drawing and
+  the undo history; the preview and its editors live in `src/windows/shelf/preview/`.
 - Memoised cards so unchanged cards do not re-render; the Library grid is virtualised
   (`@tanstack/react-virtual`), the shelf rows are capped at 300 cards instead (D-044).
 - Sounds: the Web Audio synthesis module proven in `docs/concept/mockup/sound.js`.

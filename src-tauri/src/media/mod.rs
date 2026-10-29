@@ -1,7 +1,9 @@
 //! Managed media under `media/<id>/`: a copy of the original and a thumbnail (D-006, D-025).
 //! Files in watched folders are only ever read, never moved or deleted.
 
+pub mod annotations;
 pub mod decode;
+pub mod flatten;
 pub mod thumbnails;
 
 use std::{fs, path::PathBuf};
@@ -107,6 +109,27 @@ impl MediaStore {
                 log::warn!("could not remove media of item {id}: {err}");
             }
         }
+    }
+
+    pub fn original(&self, id: i64, ext: &str) -> PathBuf {
+        self.dir(id).join(format!("original.{ext}"))
+    }
+
+    /// Swaps in a new thumbnail after an edit; an old one with another extension is removed.
+    pub fn replace_thumb(
+        &self,
+        id: i64,
+        thumb: &thumbnails::Thumbnail,
+        old_ext: Option<&str>,
+    ) -> Result<()> {
+        let dir = self.dir(id);
+        let tmp = dir.join(format!("thumb.{}.tmp", thumb.ext));
+        fs::write(&tmp, &thumb.bytes)?;
+        fs::rename(&tmp, dir.join(format!("thumb.{}", thumb.ext)))?;
+        if let Some(old) = old_ext.filter(|old| *old != thumb.ext) {
+            let _ = fs::remove_file(dir.join(format!("thumb.{old}")));
+        }
+        Ok(())
     }
 
     /// Removes leftovers of writes interrupted by a crash.

@@ -29,3 +29,10 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - A thumbnail under the pointer while dragging a card (the drag now shows the system cursor only).
 - Neighbouring cards sliding over when a card is taken down, instead of closing the gap at once.
 - Code-looking text in a monospace font on text cards.
+
+## Ideas from Phase 4
+
+- Zoom while cropping, for pixel-exact frames on large screenshots.
+- Arrow keys nudging the selected mark by one pixel.
+- More text styles in the markup text tool (size steps beyond three, a background box).
+- Flattening only the cropped part of very large pictures, to speed up copies.

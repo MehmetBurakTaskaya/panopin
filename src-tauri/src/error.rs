@@ -19,6 +19,10 @@ pub enum AppError {
     BadImage(&'static str),
     #[error("invalid setting: {0}")]
     InvalidSetting(&'static str),
+    #[error("invalid edit: {0}")]
+    InvalidEdit(&'static str),
+    #[error("this item cannot be edited that way")]
+    NotEditable,
     #[cfg(windows)]
     #[error("Windows error: {0}")]
     Windows(#[from] windows::core::Error),

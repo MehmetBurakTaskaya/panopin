@@ -13,6 +13,10 @@ export type Command =
   | { type: 'pinnedOnly' }
   | { type: 'toggleRow'; kind: Kind }
   | { type: 'menu' }
+  | { type: 'preview' }
+  | { type: 'editText' }
+  | { type: 'markup' }
+  | { type: 'crop' }
   | { type: 'escape' };
 
 export interface KeyInput {
@@ -75,6 +79,8 @@ export function commandFor(event: KeyInput): Command | null {
       return { type: 'menu' };
     case 'F10':
       return shift && !ctrl && !alt ? { type: 'menu' } : null;
+    case ' ':
+      return ctrl || alt || shift ? null : { type: 'preview' };
   }
 
   const digit = digitOf(event);
@@ -92,8 +98,13 @@ export function commandFor(event: KeyInput): Command | null {
     const kind = ROW_LETTERS[letter];
     return kind ? { type: 'toggleRow', kind } : null;
   }
-  if (letter === 'p') return { type: 'pin' };
-  if (letter === 's') return { type: 'takeDown' };
-  if (letter === 'f') return { type: 'pinnedOnly' };
-  return null;
+  const plain: Record<string, Command> = {
+    p: { type: 'pin' },
+    s: { type: 'takeDown' },
+    f: { type: 'pinnedOnly' },
+    e: { type: 'editText' },
+    m: { type: 'markup' },
+    c: { type: 'crop' },
+  };
+  return plain[letter] ?? null;
 }

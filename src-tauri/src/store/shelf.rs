@@ -29,6 +29,10 @@ pub struct ShelfItem {
     pub has_thumb: bool,
     pub pinned: bool,
     pub last_copied_at: i64,
+    /// An image with an edit layer; width and height are then the edited size.
+    pub edited: bool,
+    /// Changes whenever the thumbnail is redrawn, so the webview does not show a cached one.
+    pub thumb_version: i64,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize)]
@@ -45,7 +49,8 @@ fn domain_of(url: &str) -> Option<String> {
 
 pub fn list(conn: &Connection) -> Result<Shelf> {
     let mut stmt = conn.prepare(
-        "SELECT id, title, text_body, url, width, height, thumb_ext, pinned, last_copied_at
+        "SELECT id, title, text_body, url, COALESCE(edit_width, width), COALESCE(edit_height, height),
+                thumb_ext, pinned, last_copied_at, edit_width IS NOT NULL, COALESCE(edited_at, 0)
          FROM items
          WHERE kind = ?1 AND trashed_at IS NULL AND shelved = 1
          ORDER BY last_copied_at DESC, id DESC
@@ -68,6 +73,8 @@ pub fn list(conn: &Connection) -> Result<Shelf> {
                 has_thumb: row.get::<_, Option<String>>(6)?.is_some(),
                 pinned: row.get::<_, i64>(7)? == 1,
                 last_copied_at: row.get(8)?,
+                edited: row.get(9)?,
+                thumb_version: row.get(10)?,
             })
         })?;
         Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)

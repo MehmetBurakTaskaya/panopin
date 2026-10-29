@@ -1,3 +1,4 @@
+pub mod edits;
 pub mod identity;
 pub mod items;
 pub mod migrations;

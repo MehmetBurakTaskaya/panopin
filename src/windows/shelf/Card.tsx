@@ -20,6 +20,7 @@ export interface CardProps {
   now: number;
   onClick: (id: number, event: MouseEvent) => void;
   onContextMenu: (id: number, event: MouseEvent) => void;
+  onDoubleClick: (id: number) => void;
   onPointerDown: (id: number, event: PointerEvent) => void;
 }
 
@@ -46,7 +47,9 @@ function Body({ item, now }: { item: ShelfItem; now: number }) {
   if (item.kind === 'image') {
     return (
       <div className={styles.ph}>
-        {item.hasThumb && <img src={mediaUrl('thumb', item.id)} alt="" draggable={false} loading="lazy" decoding="async" />}
+        {item.hasThumb && (
+          <img src={mediaUrl('thumb', item.id, item.thumbVersion)} alt="" draggable={false} loading="lazy" decoding="async" />
+        )}
       </div>
     );
   }
@@ -74,7 +77,7 @@ function Body({ item, now }: { item: ShelfItem; now: number }) {
 }
 
 function CardView(props: CardProps) {
-  const { item, cursor, selected, badge, effect, order, now, onClick, onContextMenu, onPointerDown } = props;
+  const { item, cursor, selected, badge, effect, order, now, onClick, onContextMenu, onDoubleClick, onPointerDown } = props;
   const style = {
     '--r': `${tilt(item.id, 'r', 3).toFixed(2)}deg`,
     '--ta': `${tilt(item.id, 't', 6).toFixed(2)}deg`,
@@ -98,6 +101,7 @@ function CardView(props: CardProps) {
           aria-label={label(item)}
           onClick={(event) => onClick(item.id, event)}
           onContextMenu={(event) => onContextMenu(item.id, event)}
+          onDoubleClick={() => onDoubleClick(item.id)}
           onPointerDown={(event) => onPointerDown(item.id, event)}
         >
           <span className={styles.tape} aria-hidden="true">

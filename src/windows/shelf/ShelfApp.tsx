@@ -15,6 +15,7 @@ import {
   closeShelf,
   copyItems,
   pasteItems,
+  revertEdit,
   setPinned,
   shelfHidden,
   startDrag,
@@ -35,6 +36,8 @@ import cardStyles from './Card.module.css';
 import { ConfirmTrash } from './ConfirmTrash';
 import { ContextMenu, type MenuEntry, type MenuPlacement } from './ContextMenu';
 import { EmptyState } from './EmptyState';
+import { Preview, type PreviewMode } from './preview/Preview';
+import { trackSave, whenSaved } from './preview/saves';
 import styles from './Shelf.module.css';
 import { ShelfRows } from './ShelfRows';
 import { rowsOf, useShelfData } from './useShelfData';
@@ -60,6 +63,9 @@ function modelReducer(model: ShelfModel, action: ModelAction): ShelfModel {
 
 const cursorId = (model: ShelfModel): number | null =>
   model.cursor ? (model.rows[model.cursor.kind][model.cursor.index] ?? null) : null;
+
+const isEditable = (target: EventTarget | null) =>
+  target instanceof HTMLElement && (target.isContentEditable || target.tagName === 'TEXTAREA' || target.tagName === 'INPUT');
 
 interface Toast {
   key: number;
@@ -91,6 +97,8 @@ export function ShelfApp() {
   const [notice, setNotice] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ at: MenuPlacement; ids: number[] } | null>(null);
   const [confirm, setConfirm] = useState<number[] | null>(null);
+  // Space opens the preview of the card under the cursor; E, M and C open its editors.
+  const [preview, setPreview] = useState<PreviewMode | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const fallLayer = useRef<HTMLDivElement>(null);
   const grid = useRef<HTMLDivElement>(null);
@@ -126,10 +134,15 @@ export function ShelfApp() {
   }, []);
 
   // Event handlers read the newest state through this ref, so they can stay stable for memoised cards.
-  const latest = useRef({ model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm });
+  const latest = useRef({ model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, preview });
   useLayoutEffect(() => {
-    latest.current = { model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm };
+    latest.current = { model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, preview };
   });
+
+  const current = useMemo(() => {
+    const id = cursorId(model);
+    return id === null ? null : (KINDS.flatMap((kind) => shelf[kind]).find((item) => item.id === id) ?? null);
+  }, [model, shelf]);
 
   const itemsOf = (ids: number[]): ShelfItem[] => {
     const all = new Map(KINDS.flatMap((kind) => latest.current.shelf[kind]).map((item) => [item.id, item] as const));
@@ -183,6 +196,8 @@ export function ShelfApp() {
   const copy = async (ids: number[], toastOn: number | null): Promise<boolean> => {
     if (ids.length === 0) return false;
     try {
+      // A copy always carries the latest edits.
+      await whenSaved();
       await copyItems(ids);
     } catch (err) {
       fail(err);
@@ -208,6 +223,7 @@ export function ShelfApp() {
     flash(ids, 'copied', 450);
     await wait(160);
     try {
+      await whenSaved();
       const outcome = await pasteItems(ids);
       if (outcome === 'windowGone') setNotice(t('shelf.paste.gone'));
       if (outcome === 'elevated') setNotice(t('shelf.paste.elevated'));
@@ -294,10 +310,32 @@ export function ShelfApp() {
     setMenu({ ids: targetIds(), at: { x: rect ? rect.left + 8 : 40, y: rect ? rect.bottom + 6 : 40 } });
   };
 
+  /** E, M and C open an editor only for the kind they belong to. */
+  const openEditor = (mode: PreviewMode) => {
+    const kind = latest.current.model.cursor?.kind;
+    if ((mode === 'text' && kind === 'text') || ((mode === 'markup' || mode === 'crop') && kind === 'image')) setPreview(mode);
+  };
+
+  const revert = (id: number) => {
+    trackSave(revertEdit(id)).catch(fail);
+  };
+
   const run = (command: Command) => {
     setNotice(null);
     const ids = targetIds();
     switch (command.type) {
+      case 'preview':
+        setPreview((open) => (open ? null : 'view'));
+        return;
+      case 'editText':
+        openEditor('text');
+        return;
+      case 'markup':
+        openEditor('markup');
+        return;
+      case 'crop':
+        openEditor('crop');
+        return;
       case 'model':
         dispatch(command.action);
         return;
@@ -332,17 +370,32 @@ export function ShelfApp() {
         openMenuAtCursor();
         return;
       case 'escape':
-        void closeShelf();
+        // Esc closes the top layer first: the preview, then the board.
+        if (latest.current.preview) setPreview(null);
+        else void closeShelf();
         return;
     }
   };
 
   const menuEntries = (ids: number[]): MenuEntry[] => {
     const ctrl = formatShortcut('CommandOrControl');
-    const allPinned = itemsOf(ids).every((item) => item.pinned);
+    const items = itemsOf(ids);
+    const allPinned = items.every((item) => item.pinned);
+    const single = items.length === 1 ? items[0] : undefined;
+    const kindEntries: MenuEntry[] = [];
+    if (single?.kind === 'text') kindEntries.push({ label: 'shelf.menu.edit', shortcut: 'E', run: () => setPreview('text') });
+    if (single?.kind === 'image') {
+      kindEntries.push(
+        { label: 'shelf.menu.markup', shortcut: 'M', run: () => setPreview('markup') },
+        { label: 'shelf.menu.crop', shortcut: 'C', run: () => setPreview('crop') },
+      );
+      if (single.edited) kindEntries.push({ label: 'shelf.menu.revert', shortcut: '', run: () => revert(single.id) });
+    }
     return [
       { label: 'shelf.menu.copy', shortcut: `${ctrl}+C`, run: () => void copy(ids, ids[0] ?? null) },
       { label: 'shelf.menu.paste', shortcut: `${ctrl}+Enter`, run: () => void paste(ids) },
+      { label: 'shelf.menu.preview', shortcut: 'Space', run: () => setPreview('view') },
+      ...kindEntries,
       { label: allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', shortcut: 'P', run: () => void togglePin(ids) },
       { label: 'shelf.menu.takeDown', shortcut: 'S', run: () => void remove(ids, false) },
       { label: 'shelf.menu.trash', shortcut: 'Delete', run: () => setConfirm(ids) },
@@ -364,6 +417,7 @@ export function ShelfApp() {
       setNow(Date.now());
       setMenu(null);
       setConfirm(null);
+      setPreview(null);
       setNotice(payload.notice ? t(payload.notice) : null);
       dispatch({ type: 'reset', rows: latest.current.rows });
       setPhase('open');
@@ -383,6 +437,7 @@ export function ShelfApp() {
       setPhase('closing');
       setMenu(null);
       setConfirm(null);
+      setPreview(null);
       play('close');
       // Rust hides the window only if no newer open happened in the meantime.
       window.setTimeout(() => void shelfHidden(payload.generation), reducedMotion() ? 0 : CLOSE_MS);
@@ -399,6 +454,8 @@ export function ShelfApp() {
       const state = latest.current;
       // Closed boards, the menu and the confirmation handle their own keys; typing in an IME too.
       if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm) return;
+      // The text, markup and crop editors handle their own keys; typing never reaches the shelf.
+      if ((state.preview && state.preview !== 'view') || isEditable(event.target)) return;
       if (event.isComposing) return;
       const command = commandFor(event);
       if (!command) return;
@@ -432,6 +489,13 @@ export function ShelfApp() {
     setMenu({ ids, at: { x: event.clientX, y: event.clientY } });
   }, []);
 
+  // A double click opens the preview (the first click has already copied).
+  const onCardDoubleClick = useCallback((id: number) => {
+    if (latest.current.phase !== 'settled') return;
+    dispatch({ type: 'click', id });
+    setPreview('view');
+  }, []);
+
   const onCardPointerDown = useCallback((id: number, event: ReactPointerEvent) => {
     const ready = event.button === 0 && latest.current.phase === 'settled';
     pressed.current = ready ? { id, x: event.clientX, y: event.clientY } : null;
@@ -450,7 +514,9 @@ export function ShelfApp() {
       const selection = latest.current.model.selection;
       const ids = selection.includes(press.id) ? selection : [press.id];
       const area = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
-      startDrag(ids, area).catch((err: unknown) => setNotice(t('shelf.error', { error: String(err) })));
+      whenSaved()
+        .then(() => startDrag(ids, area))
+        .catch((err: unknown) => setNotice(t('shelf.error', { error: String(err) })));
     };
     const onUp = () => {
       pressed.current = null;
@@ -502,6 +568,7 @@ export function ShelfApp() {
                 onPageSize={onPageSize}
                 onCardClick={onCardClick}
                 onCardContextMenu={onCardContextMenu}
+                onCardDoubleClick={onCardDoubleClick}
                 onCardPointerDown={onCardPointerDown}
               />
             )}
@@ -525,6 +592,9 @@ export function ShelfApp() {
           {t('shelf.copied')}
         </div>
       ))}
+      {preview && (phase === 'open' || phase === 'settled') && (
+        <Preview item={current} mode={preview} onMode={setPreview} onClose={() => setPreview(null)} onUndo={() => void undo()} />
+      )}
       {menu && <ContextMenu at={menu.at} entries={menuEntries(menu.ids)} onClose={() => setMenu(null)} />}
     </div>
   );

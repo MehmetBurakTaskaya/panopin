@@ -1,7 +1,8 @@
 //! Items leaving Panopin: copying to the clipboard, pasting into the previous app, dragging.
 //!
 //! - Texts and links are joined in selection order, one per line.
-//! - One image goes on the clipboard as PNG and DIB at full resolution.
+//! - One image goes on the clipboard as PNG and DIB at full resolution, edited images with their
+//!   crop and marks drawn in (D-050).
 //! - Several images become a file list (`CF_HDROP`) of neutrally named copies in the staging
 //!   folder; the first one is also put on as PNG and DIB.
 //! - A drag carries the text and the images as files the same way.
@@ -15,7 +16,11 @@ mod drag_win;
 mod paste_win;
 pub mod staging;
 
-use std::{fs, io::Cursor, path::PathBuf};
+use std::{
+    fs,
+    io::Cursor,
+    path::{Path, PathBuf},
+};
 
 use image::{ImageFormat, RgbaImage};
 use rusqlite::{Connection, OptionalExtension};
@@ -24,24 +29,51 @@ use tauri::{AppHandle, Manager};
 
 use crate::{
     error::{AppError, Result},
-    media::{decode, MediaStore},
+    media::{annotations, decode, flatten, MediaStore},
     store::items::Kind,
 };
 
-pub use staging::Staging;
+pub use staging::{Staged, Staging};
+
+/// A stored image on its way out.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImageSource {
+    pub original: PathBuf,
+    /// It has an edit layer next to the original.
+    pub edited: bool,
+}
+
+impl ImageSource {
+    fn dir(&self) -> &Path {
+        self.original.parent().unwrap_or(Path::new("."))
+    }
+
+    /// The picture as it leaves Panopin: with its crop and marks when it was edited.
+    fn pixels(&self) -> Result<RgbaImage> {
+        let original = decode::decode(&fs::read(&self.original)?)?;
+        if !self.edited {
+            return Ok(original);
+        }
+        match annotations::load(self.dir())? {
+            Some(layer) => flatten::flatten(&original, &layer),
+            None => Ok(original),
+        }
+    }
+}
 
 /// What a selection puts on the clipboard, read from the store.
 #[derive(Debug, Default, PartialEq)]
 pub struct Selection {
     pub texts: Vec<String>,
-    /// Original image files, in selection order.
-    pub images: Vec<PathBuf>,
+    /// Images in selection order.
+    pub images: Vec<ImageSource>,
 }
 
 pub fn gather(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Selection> {
     let mut selection = Selection::default();
-    let mut stmt =
-        conn.prepare("SELECT kind, text_body, url, media_ext FROM items WHERE id = ?1")?;
+    let mut stmt = conn.prepare(
+        "SELECT kind, text_body, url, media_ext, edit_width IS NOT NULL FROM items WHERE id = ?1",
+    )?;
     for &id in ids {
         let row = stmt
             .query_row([id], |row| {
@@ -50,18 +82,22 @@ pub fn gather(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Sele
                     row.get::<_, Option<String>>(1)?,
                     row.get::<_, Option<String>>(2)?,
                     row.get::<_, Option<String>>(3)?,
+                    row.get::<_, bool>(4)?,
                 ))
             })
             .optional()?;
         match row {
-            Some((kind, _, _, Some(ext))) if kind == Kind::Image.as_str() => selection
-                .images
-                .push(media.dir(id).join(format!("original.{ext}"))),
+            Some((kind, _, _, Some(ext), edited)) if kind == Kind::Image.as_str() => {
+                selection.images.push(ImageSource {
+                    original: media.original(id, &ext),
+                    edited,
+                })
+            }
             // A link goes back as its clean URL; a text exactly as it was last copied.
-            Some((kind, body, url, _)) if kind == Kind::Link.as_str() => {
+            Some((kind, body, url, _, _)) if kind == Kind::Link.as_str() => {
                 selection.texts.extend(url.or(body))
             }
-            Some((_, body, _, _)) => selection.texts.extend(body),
+            Some((_, body, _, _, _)) => selection.texts.extend(body),
             None => {}
         }
     }
@@ -92,21 +128,35 @@ pub fn prepare(selection: &Selection, staging: &Staging) -> Result<Formats> {
         ..Formats::default()
     };
     if let Some(first) = selection.images.first() {
-        let original = fs::read(first)?;
-        let pixels = decode::decode(&original)?;
+        let pixels = first.pixels()?;
         formats.dib = Some(dib(&pixels));
-        let is_png = first.extension().is_some_and(|ext| ext == "png");
-        formats.png = Some(if is_png {
-            original
+        let stored_png =
+            !first.edited && first.original.extension().is_some_and(|ext| ext == "png");
+        formats.png = Some(if stored_png {
+            fs::read(&first.original)?
         } else {
             encode_png(&pixels)?
         });
     }
     if selection.images.len() > 1 {
-        let paths = staging.copy_files(&selection.images)?;
+        let paths = stage_images(&selection.images, staging)?;
         formats.files = Some(dropfiles(&paths));
     }
     Ok(formats)
+}
+
+/// Neutrally named files for a file list or a drag: a copy of the stored file, or a PNG of the
+/// edited picture.
+pub fn stage_images(images: &[ImageSource], staging: &Staging) -> Result<Vec<PathBuf>> {
+    let mut items = Vec::with_capacity(images.len());
+    for image in images {
+        items.push(if image.edited {
+            Staged::Png(encode_png(&image.pixels()?)?)
+        } else {
+            Staged::Copy(image.original.clone())
+        });
+    }
+    staging.stage(&items)
 }
 
 fn encode_png(pixels: &RgbaImage) -> Result<Vec<u8>> {
@@ -205,7 +255,7 @@ pub fn drag(app: &AppHandle, ids: &[i64], board: BoardRect) -> Result<bool> {
 ",
         ))
     });
-    let files = app.state::<Staging>().copy_files(&selection.images)?;
+    let files = stage_images(&selection.images, &app.state::<Staging>())?;
     if text.is_none() && files.is_empty() {
         return Ok(false);
     }
@@ -353,6 +403,7 @@ mod tests {
         let media = MediaStore::new(PathBuf::from("unused"));
         let selection = gather(&conn, &media, &[link, first, 999]).unwrap();
         assert_eq!(selection.texts, ["https://example.com/a", "first\r\nline"]);
+        assert!(selection.images.is_empty());
         let staging = Staging::new(tempfile::tempdir().unwrap().path().to_path_buf());
         let formats = prepare(&selection, &staging).unwrap();
         assert_eq!(
@@ -394,7 +445,13 @@ mod tests {
         let staging = Staging::new(dir.path().join("staging"));
         let selection = Selection {
             texts: Vec::new(),
-            images: images.clone(),
+            images: images
+                .iter()
+                .map(|original| ImageSource {
+                    original: original.clone(),
+                    edited: false,
+                })
+                .collect(),
         };
         let formats = prepare(&selection, &staging).unwrap();
         let png = formats.png.unwrap();

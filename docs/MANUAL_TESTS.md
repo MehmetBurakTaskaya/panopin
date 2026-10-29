@@ -140,6 +140,34 @@ Windows and sound:
 - [ ] Do Not Disturb on: note whether sounds stay silent (known limitation, D-021).
 - [ ] No black background on the transparent overlay (Windows 10 22H2 and Windows 11).
 
+## Preview and editing (Phase 4)
+
+Checked in a browser with the real preview components, generated pictures and a mocked backend
+(2026-10-29): Space opens the first image fitted, with Mark up and Crop; M, then a rectangle, an
+arrow and a pixelated area are stored in image pixels; Ctrl+Z and Ctrl+Shift+Z; C, dragging a
+corner handle, Enter applies the crop and Esc saves; the view then shows the cropped picture with
+its marks; ↓ shows the first text, E edits it and the text (with Turkish characters) is saved
+300 ms after typing; ↓ shows the link card and Esc closes the preview. Automated: the Rust renderer
+is checked pixel by pixel (strokes, crop, pixel averages, highlighter, text bitmaps, arrow heads),
+and a 4K flatten takes about 0.45 s in a release build. Everything below needs the real app.
+
+- [ ] Space opens and closes the preview; ←/→ and ↑/↓ move through the cards; a double click opens it.
+- [ ] Image: the wheel zooms from 100 % to 400 %, dragging pans, a double click resets.
+- [ ] Drawing on a 4K and an 8K screenshot stays smooth, and fast pen strokes keep their shape.
+- [ ] Pen, highlighter (see-through, no darker overlaps), rectangle and ellipse (Shift: square,
+      circle), arrow and line (Shift: 45°), text (Enter or Esc commits, double click edits it
+      again), pixelate.
+- [ ] Select (V): moving, the 8 handles (2 on lines and arrows), Delete; colour and thickness
+      restyle the selected mark.
+- [ ] Ctrl+Z, Ctrl+Shift+Z, Ctrl+S; Esc saves and leaves the editor.
+- [ ] Crop (C): 8 handles, Enter applies, Esc cancels. "Revert to original" brings back the
+      untouched picture and its thumbnail.
+- [ ] Enter or Ctrl+C on an edited image pastes the edited picture at full resolution into Paint
+      and Word; the card thumbnail shows the edit; dragging it out gives the edited picture too.
+- [ ] Text: E or a click edits, saved about 300 ms after typing; Ctrl+Enter or Esc finishes; the
+      card updates; copying the new text later moves the same card forward.
+- [ ] Taking down the last card while the preview is open leaves the empty preview with "Undo".
+
 ## Appearance and accessibility (Phase 3–5)
 
 - [ ] Mica on Windows 11; opaque fallback on Windows 10 22H2.
