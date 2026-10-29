@@ -15,7 +15,7 @@ import { getLanguage, t, type MessageKey } from '../../i18n';
 import { mediaUrl, type LibraryItem, type LibraryLayout, type SortKey, type Tag } from '../../ipc';
 import type { LibraryModel } from '../../keyboard/libraryModel';
 import { displayTitle } from '../../library/query';
-import { letterTile } from '../shelf/paper';
+import { duration, letterTile } from '../shelf/paper';
 import styles from './Library.module.css';
 
 const TILE_W = 172;
@@ -60,16 +60,28 @@ function setRefs<T>(own: { current: T | null }, outer: Ref<T>) {
 }
 
 function Visual({ item }: { item: LibraryItem }) {
-  if (item.kind === 'image' && item.hasThumb) {
-    return <img src={mediaUrl('thumb', item.id, item.thumbVersion)} alt="" loading="lazy" decoding="async" draggable={false} />;
+  if ((item.kind === 'image' || item.kind === 'video') && item.hasThumb) {
+    return (
+      <>
+        <img src={mediaUrl('thumb', item.id, item.thumbVersion)} alt="" loading="lazy" decoding="async" draggable={false} />
+        {item.kind === 'video' && <span className={styles.duration}>{duration(item.durationMs)}</span>}
+      </>
+    );
   }
   if (item.kind === 'text') return <div className={styles.thumbText}>{(item.preview ?? '').slice(0, 260)}</div>;
+  if (item.kind === 'link' && item.linkImage) {
+    return <img className={styles.cover} src={mediaUrl('link-image', item.id, item.linkVersion)} alt="" loading="lazy" draggable={false} />;
+  }
   const tile = letterTile(item.domain);
   return (
     <div className={styles.thumbLink}>
-      <span className={styles.letter} style={{ background: tile.colour }} aria-hidden="true">
-        {tile.letter}
-      </span>
+      {item.linkIcon ? (
+        <img className={styles.letter} src={mediaUrl('link-icon', item.id, item.linkVersion)} alt="" draggable={false} />
+      ) : (
+        <span className={styles.letter} style={{ background: tile.colour }} aria-hidden="true">
+          {tile.letter}
+        </span>
+      )}
       <span>{item.domain}</span>
     </div>
   );

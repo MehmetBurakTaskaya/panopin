@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Ref } f
 import { folderPaths } from '../../components/pickers/Pickers';
 import { getLanguage, t, type MessageKey } from '../../i18n';
 import { removeFromFolder, setNote, setTitle, untagItems, type Folder, type LibraryItem, type Tag } from '../../ipc';
+import { duration } from '../shelf/paper';
 import styles from './Library.module.css';
 
 /** Inspector edits save this long after typing stops. */
@@ -77,6 +78,8 @@ export interface InspectorProps {
   onTrash: () => void;
   onRestore: () => void;
   onDeleteForever: () => void;
+  onOpenLink: (id: number) => void;
+  onRefreshLink: (id: number) => void;
 }
 
 function Single({ item, folders, tags }: { item: LibraryItem; folders: Folder[]; tags: Map<number, Tag> }) {
@@ -131,6 +134,24 @@ function Single({ item, folders, tags }: { item: LibraryItem; folders: Folder[];
         </div>
       </div>
       <dl className={styles.facts}>
+        {item.kind === 'link' && (
+          <>
+            <dt>{t('library.inspector.address')}</dt>
+            <dd>{item.url}</dd>
+            {item.linkTitle && (
+              <>
+                <dt>{t('library.inspector.page')}</dt>
+                <dd>{[item.linkTitle, item.linkSite].filter(Boolean).join(' · ')}</dd>
+              </>
+            )}
+          </>
+        )}
+        {item.kind === 'video' && item.durationMs !== null && (
+          <>
+            <dt>{t('library.inspector.length')}</dt>
+            <dd>{duration(item.durationMs)}</dd>
+          </>
+        )}
         <dt>{t('library.inspector.source')}</dt>
         <dd>{source}</dd>
         {size && (
@@ -177,6 +198,16 @@ export function Inspector(props: InspectorProps) {
             </>
           ) : (
             <>
+              {items.length === 1 && first?.kind === 'link' && (
+                <>
+                  <button type="button" className={styles.tool} onClick={() => props.onOpenLink(first.id)}>
+                    {t('shelf.menu.openLink')} (Ctrl+O)
+                  </button>
+                  <button type="button" className={styles.tool} onClick={() => props.onRefreshLink(first.id)}>
+                    {t('shelf.menu.refreshLink')}
+                  </button>
+                </>
+              )}
               <button type="button" className={styles.tool} onClick={props.onPin}>
                 {t(allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin')} (P)
               </button>

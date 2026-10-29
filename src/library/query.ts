@@ -58,7 +58,9 @@ function startOfDay(now: number): number {
 }
 
 export function matches(item: LibraryItem, filters: Filters, now: number): boolean {
-  if (filters.kind !== 'all' && item.kind !== filters.kind) return false;
+  // Screen recordings count as images, as they sit in the shelf's image row.
+  const kind = item.kind === 'video' ? 'image' : item.kind;
+  if (filters.kind !== 'all' && kind !== filters.kind) return false;
   if (filters.pinnedOnly && !item.pinned) return false;
   if (filters.tags.some((tag) => !item.tags.includes(tag))) return false;
   if (filters.domain !== null && item.domain !== filters.domain) return false;
@@ -78,10 +80,12 @@ export function matches(item: LibraryItem, filters: Filters, now: number): boole
 }
 
 /** A title for lists and sorting: the given name, else the content's own first words. */
-export function displayTitle(item: Pick<LibraryItem, 'title' | 'kind' | 'preview' | 'domain' | 'url' | 'width' | 'height'>): string {
+export function displayTitle(
+  item: Pick<LibraryItem, 'title' | 'kind' | 'preview' | 'domain' | 'url' | 'width' | 'height' | 'linkTitle'>,
+): string {
   if (item.title) return item.title;
   if (item.kind === 'text') return (item.preview ?? '').trim().split('\n')[0]?.slice(0, 120) ?? '';
-  if (item.kind === 'link') return item.domain ?? item.url ?? '';
+  if (item.kind === 'link') return item.linkTitle ?? item.domain ?? item.url ?? '';
   return item.width && item.height ? `${item.width}×${item.height}` : '';
 }
 

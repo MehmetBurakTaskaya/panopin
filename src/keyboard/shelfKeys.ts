@@ -22,6 +22,10 @@ export type Command =
   | { type: 'tag' }
   | { type: 'export' }
   | { type: 'library' }
+  | { type: 'search' }
+  | { type: 'palette' }
+  | { type: 'openLink' }
+  | { type: 'copyText' }
   | { type: 'escape' };
 
 export interface KeyInput {
@@ -98,14 +102,18 @@ export function commandFor(event: KeyInput): Command | null {
     if (shift) {
       if (letter === 't') return { type: 'tag' };
       if (letter === 'e') return { type: 'export' };
+      if (letter === 'c') return { type: 'copyText' };
       return null;
     }
     if (letter === 'a') return model({ type: 'selectAll' });
     if (letter === 'c') return { type: 'copy' };
+    if (letter === 'k') return { type: 'palette' };
+    if (letter === 'o') return { type: 'openLink' };
     return null;
   }
   if (shift) {
     if (letter === 'p') return { type: 'folder' };
+    if (letter === 's') return { type: 'search' };
     const kind = ROW_LETTERS[letter];
     return kind ? { type: 'toggleRow', kind } : null;
   }

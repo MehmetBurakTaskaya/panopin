@@ -4,6 +4,7 @@ pub mod items;
 pub mod library;
 pub mod migrations;
 pub mod retention;
+pub mod search;
 pub mod shelf;
 
 use std::{path::Path, time::Duration};

@@ -71,3 +71,30 @@ export function age(then: number, now: number, lang: string): string {
   }
   return format.format(0, 'second');
 }
+
+/** What a link card is called: the user's name, else the page title, else the domain. */
+export function linkHeading(item: { title: string | null; linkTitle: string | null; domain: string | null; url: string | null }): string {
+  return item.title ?? item.linkTitle ?? item.domain ?? item.url ?? '';
+}
+
+/** A YouTube video link, whose picture gets a play mark. */
+export function isVideoLink(url: string | null): boolean {
+  if (!url) return false;
+  try {
+    const { hostname, pathname, searchParams } = new URL(url);
+    const host = hostname.replace(/^www\./, '');
+    if (host === 'youtu.be') return pathname.length > 1;
+    return /^(m\.|music\.)?youtube\.com$/.test(host) && (searchParams.has('v') || pathname.startsWith('/shorts/'));
+  } catch {
+    return false;
+  }
+}
+
+/** A recording's length as m:ss or h:mm:ss. */
+export function duration(ms: number | null): string {
+  if (ms === null || !Number.isFinite(ms)) return '';
+  const total = Math.round(ms / 1000);
+  const [h, m, s] = [Math.floor(total / 3600), Math.floor((total % 3600) / 60), total % 60];
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}

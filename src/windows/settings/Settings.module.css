@@ -1,67 +1,131 @@
-.page {
-  max-width: 560px;
-  padding: 24px 28px;
-  font-size: 14px;
+/* Settings: tabs on the left, rows of controls on the right; Mica behind both where Windows has it. */
+
+.app {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  height: 100vh;
+  font: 14px var(--font);
+  color: var(--ui-ink);
 }
 
-.page h1 {
-  margin: 0 0 16px;
-  font: 600 20px/1.3 var(--font-display);
+.nav { display: flex; flex-direction: column; gap: 2px; padding: 18px 8px; overflow: auto; }
+.tab {
+  all: unset;
+  position: relative;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  line-height: 36px;
+  cursor: default;
 }
+.tab:hover { background: var(--ui-line); }
+.tab[aria-selected='true'] { background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
+.tab[aria-selected='true']::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--accent); }
+.tab:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 
-.page h2 {
-  margin: 28px 0 10px;
-  font: 600 15px/1.3 var(--font-display);
-}
+.page { overflow: auto; padding: 22px 28px 40px; }
+.page h1 { margin: 0 0 18px; font: 600 24px/1.3 var(--font-display); }
 
-.row,
-.shortcuts {
-  padding: 12px 16px;
-  border-radius: 8px;
-  background: var(--ui-surface);
-  box-shadow: 0 0 0 1px var(--ui-line);
-}
+.section { margin-bottom: 24px; }
+.section h2 { margin: 0 0 8px; font: 600 14px/1.3 var(--font); }
+.group { display: grid; gap: 4px; }
 
 .row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  min-height: 48px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-surface) 88%, transparent);
+  box-shadow: 0 0 0 1px var(--ui-line);
 }
+.label { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.label small { color: var(--ui-muted); font-size: 12px; line-height: 1.4; }
+.control { display: flex; align-items: center; gap: 8px; flex: none; }
 
-.group {
-  display: grid;
-  gap: 4px;
-}
-
-.row input[type='range'] {
-  width: 180px;
-  accent-color: var(--accent);
-}
-
-.row select {
+.row select,
+.input {
   min-width: 180px;
-  padding: 5px 8px;
-  border-radius: 6px;
+  height: 32px;
+  padding: 0 8px;
   border: 1px solid var(--ui-line);
+  border-radius: 6px;
   background: var(--ui-window);
   color: var(--ui-ink);
   font: inherit;
 }
+.input { flex: 1; }
+.row input[type='range'] { width: 180px; accent-color: var(--accent); }
 
-.shortcuts {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px 16px;
+/* A switch drawn from a checkbox, so it keeps the native keyboard and screen-reader behaviour. */
+.switch {
+  appearance: none;
+  position: relative;
+  width: 40px;
+  height: 20px;
   margin: 0;
+  border: 1px solid var(--ui-muted);
+  border-radius: 10px;
+  background: transparent;
+  cursor: default;
 }
-
-.shortcuts dd {
-  margin: 0;
-  color: var(--ui-muted);
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--ui-muted);
+  transition: transform 0.12s ease;
 }
+.switch:checked { border-color: var(--accent); background: var(--accent); }
+.switch:checked::after { background: #fff; transform: translateX(20px); }
+.switch:disabled { opacity: 0.45; }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.error {
-  margin-top: 16px;
-  color: #c42b1c;
+.button {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: 6px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  font: inherit;
+  white-space: nowrap;
+}
+.button:hover:not(:disabled) { background: color-mix(in srgb, var(--ui-line) 60%, var(--ui-surface)); }
+.button:disabled { opacity: 0.5; }
+.button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.danger { border-color: #9e2a17; background: #c42b1c; color: #fff; }
+.danger:hover:not(:disabled) { background: #b13018; }
+.buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.help { margin: 0 0 8px; color: var(--ui-muted); font-size: 12.5px; line-height: 1.5; }
+.notice { margin: 8px 0; padding: 8px 12px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.error { margin-top: 16px; color: #c42b1c; }
+.warning { color: #b4461a !important; }
+.muted { color: var(--ui-muted); }
+.path { min-width: 0; overflow-wrap: anywhere; font: 12.5px var(--mono); }
+.radio { display: inline-flex; align-items: center; gap: 6px; }
+.radio input { accent-color: var(--accent); }
+.confirm { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-radius: 8px; box-shadow: inset 0 0 0 2px #c42b1c; }
+.swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; box-shadow: 0 0 0 1px var(--ui-line); vertical-align: middle; }
+.listening { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.about { display: grid; gap: 4px; margin-bottom: 14px; }
+.about strong { font: 600 22px var(--font-display); }
+.packages { padding: 8px 16px; border-radius: 8px; background: color-mix(in srgb, var(--ui-surface) 88%, transparent); box-shadow: 0 0 0 1px var(--ui-line); }
+.packages summary { cursor: default; font-weight: 600; }
+.packages table { width: 100%; margin-top: 8px; border-collapse: collapse; font-size: 12px; }
+.packages td { padding: 2px 8px 2px 0; border-top: 1px solid var(--ui-line); overflow-wrap: anywhere; }
+.packages td:nth-child(2) { color: var(--ui-muted); white-space: nowrap; }
+
+@media (forced-colors: active) {
+  .row, .packages { border: 1px solid CanvasText; }
+  .tab[aria-selected='true'] { outline: 2px solid Highlight; }
 }

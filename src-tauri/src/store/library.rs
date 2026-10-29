@@ -11,6 +11,7 @@ use crate::{
     store::{
         identity::note_identity,
         items::{Kind, SAVED},
+        search,
         shelf::domain_of,
     },
 };
@@ -47,6 +48,13 @@ pub struct LibraryItem {
     pub byte_size: Option<i64>,
     pub folders: Vec<i64>,
     pub tags: Vec<i64>,
+    pub link_title: Option<String>,
+    pub link_description: Option<String>,
+    pub link_site: Option<String>,
+    pub link_image: bool,
+    pub link_icon: bool,
+    pub link_version: i64,
+    pub duration_ms: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -89,7 +97,9 @@ pub fn load(conn: &Connection) -> Result<LibraryData> {
         "SELECT id, kind, title, note, text_body, url, COALESCE(edit_width, width),
                 COALESCE(edit_height, height), thumb_ext, pinned, {SAVED}, edit_width IS NOT NULL,
                 COALESCE(edited_at, 0), created_at, last_copied_at, trashed_at, source, source_app,
-                source_path, byte_size
+                source_path, byte_size, link_title, link_description, link_site,
+                link_image_ext IS NOT NULL, link_icon_ext IS NOT NULL, COALESCE(link_checked_at, 0),
+                duration_ms
          FROM items ORDER BY last_copied_at DESC, id DESC"
     ))?;
     let rows = stmt.query_map([], |row| {
@@ -121,6 +131,13 @@ pub fn load(conn: &Connection) -> Result<LibraryData> {
             byte_size: row.get(19)?,
             folders: Vec::new(),
             tags: Vec::new(),
+            link_title: row.get(20)?,
+            link_description: row.get(21)?,
+            link_site: row.get(22)?,
+            link_image: row.get(23)?,
+            link_icon: row.get(24)?,
+            link_version: row.get(25)?,
+            duration_ms: row.get(26)?,
         })
     })?;
     let mut items = Vec::new();
@@ -189,6 +206,7 @@ pub fn set_title(conn: &mut Connection, ids: &[i64], title: Option<&str>) -> Res
             "UPDATE items SET title = ?2 WHERE id = ?1",
             params![id, title],
         )?;
+        search::index(&tx, *id)?;
     }
     tx.commit()?;
     Ok(())
@@ -203,7 +221,7 @@ pub fn set_note(conn: &Connection, id: i64, note: Option<&str>) -> Result<()> {
         "UPDATE items SET note = ?2 WHERE id = ?1",
         params![id, note],
     )?;
-    Ok(())
+    search::index(conn, id)
 }
 
 pub fn create_folder(conn: &Connection, name: &str, parent: Option<i64>, now: i64) -> Result<i64> {
@@ -300,13 +318,14 @@ pub fn rename_tag(conn: &Connection, id: i64, name: &str) -> Result<()> {
         "UPDATE tags SET name = ?2, name_key = ?3 WHERE id = ?1",
         params![id, name, key],
     )?;
-    Ok(())
+    search::index_many(conn, &search::tagged(conn, id)?)
 }
 
 /// Removes the tag from every item.
 pub fn delete_tag(conn: &Connection, id: i64) -> Result<()> {
+    let tagged = search::tagged(conn, id)?;
     conn.execute("DELETE FROM tags WHERE id = ?1", [id])?;
-    Ok(())
+    search::index_many(conn, &tagged)
 }
 
 /// Adds a tag; the items keep the tags they already have.
@@ -317,6 +336,7 @@ pub fn add_tag(conn: &mut Connection, ids: &[i64], tag: i64) -> Result<()> {
             "INSERT OR IGNORE INTO item_tags (item_id, tag_id) VALUES (?1, ?2)",
             params![id, tag],
         )?;
+        search::index(&tx, *id)?;
     }
     tx.commit()?;
     Ok(())
@@ -329,6 +349,7 @@ pub fn remove_tag(conn: &mut Connection, ids: &[i64], tag: i64) -> Result<()> {
             "DELETE FROM item_tags WHERE item_id = ?1 AND tag_id = ?2",
             params![id, tag],
         )?;
+        search::index(&tx, *id)?;
     }
     tx.commit()?;
     Ok(())
@@ -380,7 +401,9 @@ pub fn new_note(conn: &Connection, now: i64) -> Result<i64> {
          VALUES (?1, ?2, ?3, ?3, 'manual', 1, '')",
         params![Kind::Text.as_str(), &note_identity(now)[..], now],
     )?;
-    Ok(conn.last_insert_rowid())
+    let id = conn.last_insert_rowid();
+    search::index(conn, id)?;
+    Ok(id)
 }
 
 #[cfg(test)]

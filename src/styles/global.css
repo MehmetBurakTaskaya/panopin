@@ -10,11 +10,28 @@ body {
 
 /* The shelf overlay is a transparent window: only the board paints. */
 html[data-window='shelf'], html[data-window='shelf'] body { background: transparent; overflow: hidden; }
-html[data-window='settings'] body,
 html[data-window='onboarding'] body { background: var(--ui-window); user-select: text; }
-/* The Library sits on Mica where Windows 11 provides it (the init script sets data-material). */
-html[data-window='library'] body { background: var(--ui-window); overflow: hidden; }
-html[data-window='library'][data-material='mica'] body { background: transparent; }
+html[data-window='settings'] body { user-select: text; }
+/* The Library and Settings sit on Mica where Windows 11 provides it and the setting allows it. */
+html[data-window='library'] body,
+html[data-window='settings'] body { background: var(--ui-window); overflow: hidden; }
+html[data-window='library'][data-material='mica'] body,
+html[data-window='settings'][data-material='mica'] body { background: transparent; }
+
+/* The Windows accent colour (Settings → Appearance): darker on light surfaces, lighter on dark. */
+html[data-accent='system'] { --accent: var(--system-accent-light); }
+html[data-accent='system'][data-scheme='dark'] { --accent: var(--system-accent-dark); }
+
+/* Animations off (Settings → Appearance): nothing moves, whatever Windows says. */
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
 
 kbd {
   font: 600 11px/1 var(--font);

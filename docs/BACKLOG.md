@@ -42,3 +42,11 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - Folder counts that include their subfolders.
 - Remembering which folders are folded in the sidebar.
 - Ordering folders by hand.
+
+## Ideas from Phase 6
+
+- Trimming screen recordings (out of scope for v1).
+- A small "text" tag on image cards found by their OCR text, as in the concept.
+- Marking matched words in the Library's tiles and list.
+- Choosing the OCR language per image.
+- The command palette inside the markup, crop and text editors.

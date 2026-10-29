@@ -12,10 +12,12 @@ import {
   type MouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
+import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
 import { ConfirmDialog, FolderPicker, NamePrompt, TagPicker } from '../../components/pickers/Pickers';
 import { getLanguage, t, type MessageKey } from '../../i18n';
 import {
   addToFolder,
+  copyImageText,
   copyItems,
   createFolder,
   deleteFolder,
@@ -23,11 +25,16 @@ import {
   deleteTag,
   emptyTrash,
   exportItems,
+  importFiles,
   libraryData,
   newNote,
+  openLink,
+  openSettings,
+  refreshLink,
   renameFolder,
   renameTag,
   restoreItems,
+  searchLibrary,
   setPinned,
   setTitle,
   startDrag,
@@ -64,7 +71,8 @@ import { ITEMS_MIME, Sidebar, type Group } from './Sidebar';
 
 type Dialog =
   | { type: 'folder' | 'tag' | 'name'; ids: number[] }
-  | { type: 'confirm'; title: string; confirm: string; run: () => void };
+  | { type: 'confirm'; title: string; confirm: string; run: () => void }
+  | { type: 'palette'; commands: PaletteCommand[] };
 
 const DEFAULT_LAYOUT: LibraryLayout = {
   view: 'grid',
@@ -174,17 +182,34 @@ export function LibraryApp() {
   const byId = useMemo(() => new Map(data.items.map((item) => [item.id, item])), [data.items]);
   const counts = useMemo(() => sectionCounts(data.items), [data.items]);
   const inSectionItems = useMemo(() => data.items.filter((item) => inSection(item, section)), [data.items, section]);
-  const visible = useMemo(
-    () =>
-      sortItems(
-        inSectionItems.filter((item) => matches(item, filters, now)),
-        layout.sort,
-        layout.descending,
-        (id) => tags.get(id)?.name ?? '',
-        getLanguage(),
-      ),
-    [inSectionItems, filters, now, layout.sort, layout.descending, tags],
-  );
+  // Ctrl+F: Rust finds the matches (best first); the section and filters still apply (D-059).
+  const [query, setQuery] = useState('');
+  const [found, setFound] = useState<number[] | null>(null);
+  const [byRelevance, setByRelevance] = useState(true);
+  const searchBox = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!query.trim()) {
+      setFound(null);
+      return;
+    }
+    let stale = false;
+    const timer = window.setTimeout(() => {
+      searchLibrary(query).then(
+        (ids) => !stale && setFound(ids),
+        () => {},
+      );
+    }, 90);
+    return () => {
+      stale = true;
+      window.clearTimeout(timer);
+    };
+  }, [query, data, settings?.searchWithoutAccents]);
+  const visible = useMemo(() => {
+    const rank = found ? new Map(found.map((id, index) => [id, index])) : null;
+    const kept = inSectionItems.filter((item) => matches(item, filters, now) && (!rank || rank.has(item.id)));
+    if (rank && byRelevance) return kept.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
+    return sortItems(kept, layout.sort, layout.descending, (id) => tags.get(id)?.name ?? '', getLanguage());
+  }, [inSectionItems, filters, now, layout.sort, layout.descending, tags, found, byRelevance]);
   // The grid reports how many tiles fit in a row; the list is one column.
   const setColumns = useCallback((columns: number) => dispatch({ type: 'setColumns', columns }), []);
   useEffect(() => {
@@ -221,6 +246,21 @@ export function LibraryApp() {
     } catch (err) {
       fail(err);
     }
+  };
+  const openLinkOf = (id: number) => {
+    if (byId.get(id)?.kind === 'link') openLink(id).catch(fail);
+  };
+  const refreshPreview = (id: number) => {
+    refreshLink(id).then((on) => say(t(on ? 'library.link.refreshing' : 'shelf.link.previewsOff')), fail);
+  };
+
+  /** Ctrl+Shift+C: the text Windows OCR read in the focused image. */
+  const copyText = () => {
+    if (current?.kind !== 'image') return;
+    copyImageText(current.id).then(
+      (outcome) => say(t(outcome === 'copied' ? 'shelf.ocr.copied' : outcome === 'noText' ? 'shelf.ocr.none' : 'shelf.ocr.unavailable')),
+      fail,
+    );
   };
   const togglePin = (list: number[]) => {
     const items = list.map((id) => byId.get(id)).filter((item) => item !== undefined);
@@ -277,6 +317,10 @@ export function LibraryApp() {
       })
       .catch(fail);
   };
+  /** Pictures and screen recordings from files (D-058). */
+  const importSome = () => {
+    importFiles().then((count) => count > 0 && say(t('library.imported', { count })), fail);
+  };
   const addFolder = () => {
     const parent = section.type === 'folder' ? section.id : null;
     createFolder(t('library.folder.new'), parent)
@@ -321,6 +365,53 @@ export function LibraryApp() {
   // With its item gone, an editor falls back to the plain preview, which Esc closes.
   const previewMode = preview && (current ? preview : 'view');
   const busy = dialog !== null || (previewMode !== null && previewMode !== 'view');
+
+  /** Ctrl+K: the actions for the selection of this moment, then the Library's own (D-063). */
+  const paletteCommands = (): PaletteCommand[] => {
+    const list = ids;
+    const one = list.length === 1 ? byId.get(list[0]!) : undefined;
+    const allPinned = selected.length > 0 && selected.every((item) => item.pinned);
+    const entries: [MessageKey, string, () => void, boolean][] = [
+      ['shelf.menu.copy', 'Ctrl+C', () => void copy(list), list.length > 0],
+      ['shelf.menu.preview', 'Space', () => setPreview('view'), one !== undefined],
+      ['shelf.menu.edit', 'E', () => openEditor('text'), one?.kind === 'text'],
+      ['shelf.menu.markup', 'M', () => openEditor('markup'), one?.kind === 'image'],
+      ['shelf.menu.crop', 'C', () => openEditor('crop'), one?.kind === 'image'],
+      ['shelf.menu.copyText', 'Ctrl+Shift+C', copyText, one?.kind === 'image'],
+      ['shelf.menu.openLink', 'Ctrl+O', () => one && openLinkOf(one.id), one?.kind === 'link'],
+      ['shelf.menu.refreshLink', '', () => one && refreshPreview(one.id), one?.kind === 'link'],
+      [allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', 'P', () => togglePin(list), list.length > 0 && !inTrash],
+      ['library.action.name', 'Alt+P', () => openDialog({ type: 'name', ids: list }), list.length > 0 && !inTrash],
+      ['library.action.folder', 'Shift+P', () => openDialog({ type: 'folder', ids: list }), list.length > 0 && !inTrash],
+      ['library.action.tag', 'Ctrl+Shift+T', () => openDialog({ type: 'tag', ids: list }), list.length > 0 && !inTrash],
+      ['library.action.export', 'Ctrl+Shift+E', () => exportSelection(list), list.length > 0],
+      ['shelf.menu.trash', 'Delete', () => askTrash(list), list.length > 0 && !inTrash],
+      ['library.action.restore', 'R', () => restore(list), list.length > 0 && inTrash],
+      ['library.action.deleteForever', 'Delete', () => askDeleteForever(list), list.length > 0 && inTrash],
+      ['shelf.menu.undo', 'Ctrl+Z', undo, true],
+      ['library.newNote', 'Ctrl+N', addNote, true],
+      ['library.folder.new', 'Ctrl+Shift+N', addFolder, true],
+      ['library.import', '', importSome, true],
+      ['palette.searchLibrary', 'Ctrl+F', () => searchBox.current?.focus(), true],
+      ['palette.kindAll', 'Ctrl+0', () => setFilters((f) => ({ ...f, kind: 'all' })), true],
+      ['palette.kindImages', 'Ctrl+1', () => setFilters((f) => ({ ...f, kind: 'image' })), true],
+      ['palette.kindTexts', 'Ctrl+2', () => setFilters((f) => ({ ...f, kind: 'text' })), true],
+      ['palette.kindLinks', 'Ctrl+3', () => setFilters((f) => ({ ...f, kind: 'link' })), true],
+      ['library.filter.pinned', 'F', () => setFilters((f) => ({ ...f, pinnedOnly: !f.pinnedOnly })), true],
+      ['palette.gridView', '', () => saveLayout({ view: 'grid' }), true],
+      ['palette.listView', '', () => saveLayout({ view: 'list' }), true],
+      ['library.emptyTrash', '', askEmptyTrash, counts.trash > 0],
+      ['palette.goAll', '', () => setSection({ type: 'all' }), true],
+      ['palette.goRecent', '', () => setSection({ type: 'recent' }), true],
+      ['palette.goPinned', '', () => setSection({ type: 'pinned' }), true],
+      ['palette.goUnsorted', '', () => setSection({ type: 'unsorted' }), true],
+      ['palette.goTrash', '', () => setSection({ type: 'trash' }), true],
+      ['palette.settings', '', () => void openSettings().catch(fail), true],
+    ];
+    return entries
+      .filter(([, , , enabled]) => enabled)
+      .map(([label, shortcut, run], i) => ({ id: `${i}-${label}`, label: t(label), shortcut: shortcut || undefined, run }));
+  };
 
   const onItemsKey = (e: ReactKeyboardEvent<HTMLDivElement>) => {
     if (busy) return;
@@ -371,6 +462,8 @@ export function LibraryApp() {
       if (ctrl && !alt && !shift && letter === 'a') dispatch({ type: 'selectAll' });
       else if (ctrl && !alt && !shift && letter === 'c') void copy(ids);
       else if (ctrl && shift && !alt && letter === 't') openDialog({ type: 'tag', ids });
+      else if (ctrl && shift && !alt && letter === 'c') copyText();
+      else if (ctrl && !shift && !alt && letter === 'o' && current) openLinkOf(current.id);
       else if (alt && !ctrl && !shift && letter === 'p') openDialog({ type: 'name', ids });
       else if (shift && !ctrl && !alt && letter === 'p') openDialog({ type: 'folder', ids });
       else if (!ctrl && !alt && !shift && letter === 'p') togglePin(ids);
@@ -401,12 +494,21 @@ export function LibraryApp() {
       setPreview(null);
       return;
     }
-    if (isEditable(e.target)) return;
     const ctrl = e.ctrlKey || e.metaKey;
+    // Ctrl+K works from anywhere in the window, the search box included.
+    if (ctrl && !e.shiftKey && !e.altKey && letterOf(e) === 'k') {
+      e.preventDefault();
+      openDialog({ type: 'palette', commands: paletteCommands() });
+      return;
+    }
+    if (isEditable(e.target)) return;
     const letter = letterOf(e);
     const digit = /^Digit([0-3])$/.exec(e.code)?.[1];
     let handled = true;
-    if (ctrl && !e.shiftKey && !e.altKey && digit !== undefined) setFilters((f) => ({ ...f, kind: KINDS[Number(digit)]![0] }));
+    if (ctrl && !e.shiftKey && !e.altKey && letter === 'f') {
+      searchBox.current?.focus();
+      searchBox.current?.select();
+    } else if (ctrl && !e.shiftKey && !e.altKey && digit !== undefined) setFilters((f) => ({ ...f, kind: KINDS[Number(digit)]![0] }));
     else if (ctrl && !e.altKey && letter === 'n') {
       if (e.shiftKey) addFolder();
       else addNote();
@@ -475,8 +577,14 @@ export function LibraryApp() {
         ? `# ${tags.get(section.id)?.name ?? ''}`
         : t(SECTION_NAME[section.type]!);
   const domains = useMemo(() => domainsOf(inSectionItems), [inSectionItems]);
-  const sortValue = `${layout.sort}:${layout.descending ? 'desc' : 'asc'}`;
-  const emptyText = inTrash ? t('library.empty.trash') : inSectionItems.length === 0 ? t('library.empty.section') : t('library.empty.filters');
+  const sortValue = found && byRelevance ? 'relevance' : `${layout.sort}:${layout.descending ? 'desc' : 'asc'}`;
+  const emptyText = found
+    ? t('library.empty.search')
+    : inTrash
+      ? t('library.empty.trash')
+      : inSectionItems.length === 0
+        ? t('library.empty.section')
+        : t('library.empty.filters');
 
   const viewProps = {
     paneRef: itemsPane,
@@ -520,6 +628,32 @@ export function LibraryApp() {
             {heading}
             <small>{visible.length === 1 ? t('shelf.row.countOne') : t('shelf.row.count', { count: visible.length })}</small>
           </h1>
+          <input
+            ref={searchBox}
+            className={styles.search}
+            type="search"
+            value={query}
+            placeholder={`${t('library.search')} (Ctrl+F)`}
+            aria-label={t('library.search')}
+            spellCheck={false}
+            onChange={(e) => {
+              if (!query.trim()) setByRelevance(true);
+              setQuery(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                // Esc clears first, then hands the keys back to the items.
+                if (query) setQuery('');
+                else itemsPane.current?.focus();
+              } else if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                dispatch({ type: 'edge', end: 'first' });
+                itemsPane.current?.focus();
+              }
+            }}
+          />
           <div className={styles.segment} role="group" aria-label={t('library.filter.kind')}>
             {KINDS.map(([kind, label], i) => (
               <button
@@ -607,10 +741,16 @@ export function LibraryApp() {
             aria-label={t('library.sort')}
             value={sortValue}
             onChange={(e) => {
+              if (e.target.value === 'relevance') {
+                setByRelevance(true);
+                return;
+              }
+              setByRelevance(false);
               const [sort, dir] = e.target.value.split(':');
               saveLayout({ sort: sort as SortKey, descending: dir === 'desc' });
             }}
           >
+            {found && <option value="relevance">{t('library.sort.relevance')}</option>}
             {SORTS.map(([value, label]) => (
               <option key={value} value={value}>
                 {t(label)}
@@ -630,9 +770,14 @@ export function LibraryApp() {
               {t('library.emptyTrash')}
             </button>
           ) : (
-            <button type="button" className={styles.tool} title={`${t('library.newNote')} (Ctrl+N)`} onClick={addNote}>
-              + {t('library.newNote')}
-            </button>
+            <>
+              <button type="button" className={styles.tool} title={`${t('library.newNote')} (Ctrl+N)`} onClick={addNote}>
+                + {t('library.newNote')}
+              </button>
+              <button type="button" className={styles.tool} onClick={importSome}>
+                {t('library.import')}
+              </button>
+            </>
           )}
         </div>
         {layout.view === 'grid' ? (
@@ -661,6 +806,8 @@ export function LibraryApp() {
         onTrash={() => askTrash(ids)}
         onRestore={() => restore(ids)}
         onDeleteForever={() => askDeleteForever(ids)}
+        onOpenLink={openLinkOf}
+        onRefreshLink={refreshPreview}
       />
       {preview && (
         <Preview
@@ -672,8 +819,11 @@ export function LibraryApp() {
             itemsPane.current?.focus();
           }}
           onUndo={undo}
+          onOpenLink={openLinkOf}
+          onRefreshLink={refreshPreview}
         />
       )}
+      {dialog?.type === 'palette' && <CommandPalette commands={dialog.commands} onClose={closeDialog} />}
       {dialog?.type === 'folder' && (
         <FolderPicker
           folders={data.folders}

@@ -7,6 +7,7 @@ use crate::{
     store::{
         identity::{edited_identity, text_identity},
         items::Kind,
+        search,
     },
 };
 
@@ -48,12 +49,15 @@ pub fn set_image_edit(
     thumb_ext: &str,
     now: i64,
 ) -> Result<()> {
+    // The picture changed, so its text is read again (D-056); until then the old text is gone,
+    // in case the edit hid it.
     conn.execute(
-        "UPDATE items SET edit_width = ?2, edit_height = ?3, thumb_ext = ?4, edited_at = ?5
+        "UPDATE items SET edit_width = ?2, edit_height = ?3, thumb_ext = ?4, edited_at = ?5,
+                          ocr_state = 0, ocr_text = NULL
          WHERE id = ?1",
         params![id, size.map(|s| s.0), size.map(|s| s.1), thumb_ext, now],
     )?;
-    Ok(())
+    search::index(conn, id)
 }
 
 /// The whole text of a text or link card (the shelf only receives a preview).
@@ -95,7 +99,7 @@ pub fn update_text(conn: &Connection, id: i64, body: &str) -> Result<()> {
     if changed == 0 {
         return Err(AppError::NotEditable);
     }
-    Ok(())
+    search::index(conn, id)
 }
 
 #[cfg(test)]

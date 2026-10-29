@@ -2,8 +2,9 @@ import { memo, type CSSProperties, type MouseEvent, type PointerEvent } from 're
 import { PinIcon } from '../../components/PinIcon';
 import { getLanguage, t } from '../../i18n';
 import { mediaUrl, type ShelfItem } from '../../ipc';
+import { highlight } from '../../search/highlight';
 import styles from './Card.module.css';
-import { age, aspectRatio, letterTile, linkDetail, tilt } from './paper';
+import { age, aspectRatio, duration, isVideoLink, letterTile, linkDetail, linkHeading, tilt } from './paper';
 
 /** A short animation on one card; it ends by itself. */
 export type Effect = 'copied' | 'pinning' | 'unpinning' | 'peeling' | 'restoring' | 'settle' | 'gone';
@@ -18,6 +19,9 @@ export interface CardProps {
   /** Position in the row, for the staggered settle after opening (capped by the caller). */
   order: number;
   now: number;
+  /** Words of the shelf search to mark; null while not searching. */
+  terms: string[] | null;
+  withoutAccents: boolean;
   onClick: (id: number, event: MouseEvent) => void;
   onContextMenu: (id: number, event: MouseEvent) => void;
   onDoubleClick: (id: number) => void;
@@ -30,10 +34,12 @@ function label(item: ShelfItem): string {
   let text: string;
   if (item.kind === 'image') {
     text = item.title ?? t('shelf.card.image', { size: `${item.width ?? '?'}×${item.height ?? '?'}` });
+  } else if (item.kind === 'video') {
+    text = t('shelf.card.video', { title: item.title ?? '', length: duration(item.durationMs) });
   } else if (item.kind === 'text') {
     text = t('shelf.card.text', { text: item.title ?? (item.preview ?? '').trim().split('\n')[0] ?? '' });
   } else {
-    text = t('shelf.card.link', { domain: item.title ?? item.domain ?? item.url ?? '' });
+    text = t('shelf.card.link', { domain: linkHeading(item) });
   }
   return item.pinned ? `${text}, ${t('shelf.card.pinned')}` : text;
 }
@@ -43,12 +49,35 @@ function charCount(count: number): string {
   return count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: formatted });
 }
 
-function Body({ item, now }: { item: ShelfItem; now: number }) {
-  if (item.kind === 'image') {
+/** Text with the searched words marked, the way the concept shows them. */
+function Marked({ text, terms, withoutAccents }: { text: string; terms: string[] | null; withoutAccents: boolean }) {
+  if (!terms) return <>{text}</>;
+  return (
+    <>
+      {highlight(text, terms, withoutAccents).map((part, i) => (part.hit ? <mark key={i}>{part.text}</mark> : part.text))}
+    </>
+  );
+}
+
+interface BodyProps {
+  item: ShelfItem;
+  now: number;
+  terms: string[] | null;
+  withoutAccents: boolean;
+}
+
+function Body({ item, now, terms, withoutAccents }: BodyProps) {
+  if (item.kind === 'image' || item.kind === 'video') {
     return (
       <div className={styles.ph}>
         {item.hasThumb && (
           <img src={mediaUrl('thumb', item.id, item.thumbVersion)} alt="" draggable={false} loading="lazy" decoding="async" />
+        )}
+        {item.kind === 'video' && (
+          <>
+            <span className={styles.play} aria-hidden="true" />
+            <span className={styles.duration}>{duration(item.durationMs)}</span>
+          </>
         )}
       </div>
     );
@@ -56,7 +85,9 @@ function Body({ item, now }: { item: ShelfItem; now: number }) {
   if (item.kind === 'text') {
     return (
       <>
-        <div className={styles.txt}>{item.preview}</div>
+        <div className={styles.txt}>
+          <Marked text={item.preview ?? ''} terms={terms} withoutAccents={withoutAccents} />
+        </div>
         <div className={styles.meta}>
           <span>{charCount(item.charCount ?? 0)}</span>
           <span>{age(item.lastCopiedAt, now, getLanguage())}</span>
@@ -65,19 +96,41 @@ function Body({ item, now }: { item: ShelfItem; now: number }) {
     );
   }
   const tile = letterTile(item.domain);
+  const heading = linkHeading(item);
   return (
-    <div className={styles.lkBody}>
-      <span className={styles.fav} style={{ background: tile.colour }} aria-hidden="true">
-        {tile.letter}
-      </span>
-      <div className={styles.lkTitle}>{item.title ?? item.domain ?? item.url}</div>
-      <span className={styles.lkDetail}>{item.title ? item.domain : linkDetail(item.url)}</span>
-    </div>
+    <>
+      {item.linkImage && (
+        <div className={styles.lkThumb}>
+          <img src={mediaUrl('link-image', item.id, item.linkVersion)} alt="" draggable={false} loading="lazy" decoding="async" />
+          {isVideoLink(item.url) && <span className={styles.play} aria-hidden="true" />}
+        </div>
+      )}
+      <div className={styles.lkBody}>
+        {item.linkIcon ? (
+          <img className={styles.fav} src={mediaUrl('link-icon', item.id, item.linkVersion)} alt="" draggable={false} />
+        ) : (
+          <span className={styles.fav} style={{ background: tile.colour }} aria-hidden="true">
+            {tile.letter}
+          </span>
+        )}
+        <div className={styles.lkTitle}>
+          <Marked text={heading} terms={terms} withoutAccents={withoutAccents} />
+        </div>
+        <span className={styles.lkDetail}>
+          <Marked
+            text={(heading === item.domain ? linkDetail(item.url) : item.domain) ?? ''}
+            terms={terms}
+            withoutAccents={withoutAccents}
+          />
+        </span>
+      </div>
+    </>
   );
 }
 
 function CardView(props: CardProps) {
-  const { item, cursor, selected, badge, effect, order, now, onClick, onContextMenu, onDoubleClick, onPointerDown } = props;
+  const { item, cursor, selected, badge, effect, order, now, terms, withoutAccents } = props;
+  const { onClick, onContextMenu, onDoubleClick, onPointerDown } = props;
   const style = {
     '--r': `${tilt(item.id, 'r', 3).toFixed(2)}deg`,
     '--ta': `${tilt(item.id, 't', 6).toFixed(2)}deg`,
@@ -108,7 +161,7 @@ function CardView(props: CardProps) {
             <i />
           </span>
           <PinIcon className={styles.pin} />
-          <Body item={item} now={now} />
+          <Body item={item} now={now} terms={terms} withoutAccents={withoutAccents} />
           {badge !== null && (
             <span className={styles.num} aria-hidden="true">
               {badge}

@@ -362,3 +362,86 @@ shortcuts and images as `.png` (edited images flattened), named like staged file
 (`Panopin-<date>-<n>.<ext>`) and never overwriting a file. Exporting from the shelf keeps the board
 open while the dialog has the focus and for 600 ms after it, because a late focus event would
 otherwise close it.
+
+## D-056 Text in images — Accepted
+`Windows.Media.Ocr` reads every image once, newest first, on a thread of its own at background
+priority (CPU, disk and memory). It reads in Turkish when that OCR language is installed, else
+English, else the user's own languages; Settings shows which, and how to add one. An edited image
+is read as it looks now, so a pixelated area stays unreadable; editing clears the old text and the
+image is read again. A failed read is not retried. Ctrl+Shift+C copies the text, reading the image
+on the spot when the queue has not reached it yet. The text goes into the search index and never
+into the logs. On the development PC a test picture with Turkish text was read word for word in
+60 ms.
+
+## D-057 Link previews — Accepted
+Off until the user turns them on. Each copied link is visited once, one at a time, through the
+network guard of D-010 (tested in `links/guard.rs`, including names that resolve to this machine).
+The page is only tokenised with `html5gum` 0.8.4 (MIT), never run; the `<head>` gives the title,
+description, site name, picture and icon (Open Graph first, then Twitter cards, then `<title>`),
+and the character set comes from the header or a `<meta>` (`encoding_rs`). YouTube videos ask
+oEmbed for title, channel and picture. Pictures are decoded with limits (8192 px a side, 256 MB)
+and re-encoded — at most 512 px, JPEG or PNG; icons 64 px PNG — into the item's media folder, so no
+remote bytes are ever served; the webview gets them by item id. A link is waiting, done, failed or
+refused (never visited); "Refresh preview" sends it back to waiting. Ctrl+O opens only http and
+https links, with the default browser.
+
+## D-058 Screen recordings — Accepted
+The Snipping Tool's `Videos\Screen Recordings` (created when missing) and the extra watched folders
+are watched for MP4 files once the source is on; a recording may take a minute to be written. Its
+identity is the SHA-256 of its bytes, read in chunks, and Panopin keeps its own copy, so the
+original is never touched. The poster frame comes from the shell thumbnail provider and the length
+and frame size from the property system (D-024): a 4.1 s sample gave its poster, length and size.
+On the shelf recordings sit in the image row with a play mark and their length; the preview plays
+them from Panopin's copy, answered in ranges of at most 2 MB, so long recordings never load whole
+(`media-src` allows only the media scheme). They are copied, dragged and exported as files.
+"Import…" in the Library takes pictures and recordings.
+
+## D-059 Search — Accepted
+Rust folds the title (the user's and the page's), the body (text or link address, the first
+200 000 characters) and the rest (note, tags, site, domain, text in images) into the FTS5 table,
+in a plain and an accent-free copy (D-017). Every word typed is a prefix and all must match. The
+shelf's search (Shift+S or its global shortcut) shows one box below the board; the rows show only
+the matching cards, newest first, with counts per kind, the matched words marked and a chip for
+accent-free search. Enter or the arrows go to the results, Esc clears and closes. The Library's
+search (Ctrl+F) works with the section and the filters and sorts by relevance (bm25, titles weigh
+most) unless another order is chosen. The index is rebuilt in batches after an upgrade. With
+10 500 items in a debug build (SQLite always built optimised), the slowest query, a single letter,
+took 8.7 ms and the others under 3 ms; the test fails above 50 ms.
+
+## D-060 Look and system settings — Accepted
+Library and Settings are created transparent wherever Mica is possible, so the setting can switch
+Mica on and off while they are open; the page paints its own background when it is off. The
+Windows accent colour comes from `UISettings` (`AccentDark1` on light surfaces, `AccentLight2` on
+dark ones) and follows changes at once. Animations are either off, whatever Windows says, or
+follow Windows' animation effects. "Start with Windows" uses `tauri-plugin-autostart` 2.7.0 (the
+user's Run key); the setting is the truth and the entry follows it at every start. Edge opening is
+a low-level mouse hook on a thread of its own, only while the setting is on. Update checks are a
+setting now; the checking itself arrives with the updater in Phase 7, and Settings says so.
+
+## D-061 Shortcut recorder and global shortcuts — Accepted
+All six global shortcuts work: shelf, shelf with search, snip, Library, copy the last image, pause
+or resume capture. While Settings records one, Panopin releases all of its own; saving,
+cancelling (Esc), switching windows or a refusal brings them back. Keys are named by their position
+(`KeyboardEvent.code`), so the layout does not matter, and a global shortcut needs Win, Ctrl or
+Alt. Backspace or Delete turns a shortcut off. The same keys twice are refused, and so are keys
+another app holds: the old shortcut then stays. Ctrl+Alt without Win is saved with a warning,
+because AltGr sends it (D-020).
+
+## D-062 Screen snip — Accepted
+The snip shortcut opens the Windows Snipping Tool overlay (`ms-screenclip:`). The next picture it
+puts on the clipboard within two minutes opens on the shelf, under the cursor, in the crop editor.
+No shortcut gave Panopin the right to come forward at that moment, so it sends a neutral key first
+(D-046's 0xE8), which Windows accepts as the latest input; edge opening does the same.
+
+## D-063 Command palette — Accepted
+Ctrl+K opens the palette on the shelf (with or without the preview), in the Library and in
+Settings. It is built when it opens, so its commands act on that moment's selection, and it lists
+the actions that apply, each with its current shortcut. Every typed word must appear in a command's
+name (Turkish-aware). The markup, crop and text editors keep their own keys, so the palette is not
+offered inside an editor.
+
+## D-064 Third-party list — Accepted
+`npm run third-party` lists every npm production package and every crate of the Windows build with
+its licence (`npm query .prod`, `cargo tree`) into `src/windows/settings/third-party.json`, which
+Settings → About shows. Run it after changing dependencies. The release (Phase 7) adds
+`THIRD_PARTY_NOTICES` with the licence texts.

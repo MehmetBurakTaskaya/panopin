@@ -119,6 +119,12 @@ mod imp {
         }
     }
 
+    /// Lets Panopin bring a window forward when no shortcut or click gave it that right: the
+    /// process that sent the last input may take the foreground, so a neutral key is sent first.
+    pub fn claim_foreground() {
+        send(&[key(MASK_KEY, false), key(MASK_KEY, true)]);
+    }
+
     /// Injects keystrokes; returns false when Windows dropped them.
     pub fn send(inputs: &[INPUT]) -> bool {
         // SAFETY: the slice holds fully initialised INPUT structures of the declared size.
@@ -147,6 +153,8 @@ mod imp {
     }
 
     pub fn mask_alt_release() {}
+
+    pub fn claim_foreground() {}
 }
 
 #[cfg(not(windows))]

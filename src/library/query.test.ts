@@ -33,6 +33,13 @@ function item(extra: Partial<LibraryItem>): LibraryItem {
     byteSize: null,
     folders: [],
     tags: [],
+    linkTitle: null,
+    linkDescription: null,
+    linkSite: null,
+    linkImage: false,
+    linkIcon: false,
+    linkVersion: 0,
+    durationMs: null,
     ...extra,
   };
 }

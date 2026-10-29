@@ -126,6 +126,9 @@ struct OpenEvent {
     muted: bool,
     /// A message key the board shows, e.g. why a paste did not happen.
     notice: Option<&'static str>,
+    /// A card to put the cursor on, and the editor to open on it (a new snip: crop).
+    focus: Option<i64>,
+    editor: Option<&'static str>,
 }
 
 #[derive(Clone, Serialize)]
@@ -155,17 +158,29 @@ pub fn toggle_from_tray(app: &AppHandle) -> Result<()> {
 }
 
 pub fn open(app: &AppHandle, search: bool) -> Result<()> {
-    show(app, search, None)
+    show(app, search, None, None)
+}
+
+/// Opens the shelf on one card with its editor; used for a new snip (D-062). No shortcut gave
+/// Panopin the right to come forward, so it claims it first.
+pub fn open_on(app: &AppHandle, id: i64, editor: &'static str) -> Result<()> {
+    focus::claim_foreground();
+    show(app, false, None, Some((id, editor)))
 }
 
 /// Opens the shelf with a message on the board, e.g. after a refused paste.
 // Only the Windows paste path refuses after closing so far; macOS joins in Phase 8.
 #[cfg_attr(not(windows), allow(dead_code))]
 pub fn open_with_notice(app: &AppHandle, notice: &'static str) -> Result<()> {
-    show(app, false, Some(notice))
+    show(app, false, Some(notice), None)
 }
 
-fn show(app: &AppHandle, search: bool, notice: Option<&'static str>) -> Result<()> {
+fn show(
+    app: &AppHandle,
+    search: bool,
+    notice: Option<&'static str>,
+    on: Option<(i64, &'static str)>,
+) -> Result<()> {
     let Some(window) = app.get_webview_window(LABEL) else {
         return Ok(());
     };
@@ -198,6 +213,8 @@ fn show(app: &AppHandle, search: bool, notice: Option<&'static str>) -> Result<(
         search,
         muted,
         notice,
+        focus: on.map(|(id, _)| id),
+        editor: on.map(|(_, editor)| editor),
     };
     app.emit_to(LABEL, "shelf:open", event)?;
     Ok(())

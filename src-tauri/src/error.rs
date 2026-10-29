@@ -27,6 +27,8 @@ pub enum AppError {
     InvalidName,
     #[error("that name is already used")]
     NameTaken,
+    #[error("another app already uses this key combination")]
+    ShortcutUnavailable,
     #[cfg(windows)]
     #[error("Windows error: {0}")]
     Windows(#[from] windows::core::Error),

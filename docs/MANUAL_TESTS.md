@@ -203,6 +203,45 @@ keyboard model in vitest. Everything below needs the real app.
 - [ ] F6 and Shift+F6 cycle sidebar, items and details; Tab moves between controls; Narrator reads
       the tree, the items and the selection.
 
+## Search, OCR, links, recordings, palette and Settings (Phase 6)
+
+Checked on the development PC (2026-10-29): Windows OCR read a sample picture with Turkish text
+word for word; real link previews came back for example.com, a GitHub repository and a YouTube
+video through the network guard; a Windows sample MP4 gave its poster, length and frame size.
+Checked in a browser with the real components and a mocked backend: the shelf search (box, counts,
+chips, marks, Enter to the results, Esc), the Library search with relevance sorting, the palette
+on the shelf, in the Library and in Settings, and every Settings tab. Automated: search folding
+and the 10 000-item timing, the network guard (SSRF), page parsing, OCR and link queues, range
+answers for recordings, shortcut recording and the Settings flows. Everything below needs the
+real app.
+
+- [ ] Shift+S and Win+Alt+C open the search box below the board; "istanbul" finds "İstanbul",
+      "ışık" finds "IŞIK"; with "Ignore accents" on, "cicek" finds "çiçek"; hidden rows stay out.
+- [ ] Ctrl+F in the Library searches with the section and filters; "Relevance" sorts while searching.
+- [ ] Ten minutes after copying screenshots with text, the text is found by search; Ctrl+Shift+C
+      copies it; a pixelated area of an edited image is not found.
+- [ ] With link previews on: a news page, a GitHub page and a YouTube video get title, site,
+      picture and icon on the card and in the preview; Ctrl+O opens the browser; "Refresh preview".
+      With them off, nothing goes out (check with a network monitor if possible).
+- [ ] Links to localhost, 192.168.x.x, http:// or with ?token= get no preview.
+- [ ] Screen recordings on: a Snipping Tool recording appears in the image row with poster and
+      length; Space plays it, seeking works; Ctrl+C pastes it as a file in Explorer; drag and export.
+- [ ] "Import…" adds pictures and MP4 files; the originals are untouched.
+- [ ] Win+Alt+S opens the Snipping Tool; the snip opens on the shelf in the crop editor, with focus.
+- [ ] Settings → Shortcuts: record Win+Alt+L for the Library and use it; Esc cancels; Backspace
+      turns it off; keys another app holds are refused; Restore the defaults.
+- [ ] Copy the last image and pause/resume through their shortcuts (the tray icon changes).
+- [ ] Ctrl+K on the shelf, in the preview, in the Library and in Settings; each command runs on the
+      selection of the moment.
+- [ ] Settings → General: Start with Windows (sign out and in), edge opening (top and bottom edge,
+      not during a full-screen video), accent-free search.
+- [ ] Settings → Appearance: theme, Windows accent colour (change it in Windows; Panopin follows),
+      card size, Mica on and off while the Library is open, animations off.
+- [ ] Settings → Sources and History: watched folders, retention, Clear history counts, asks and
+      moves only unsaved items. Privacy: excluded apps, pause, link previews, OCR language hint.
+- [ ] Settings → About: version, links, third-party licences.
+- [ ] Idle CPU stays near 0 % with OCR finished and previews off; Task Manager memory is noted.
+
 ## Appearance and accessibility (Phase 3–5)
 
 - [ ] Mica on Windows 11; opaque fallback on Windows 10 22H2.

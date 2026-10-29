@@ -2,12 +2,15 @@
 
 use std::collections::VecDeque;
 
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, Row};
 use serde::Serialize;
 
 use crate::{
     error::Result,
-    store::items::{Kind, SAVED},
+    store::{
+        items::{Kind, SAVED},
+        search,
+    },
 };
 
 /// Characters of a text sent to the shelf; the full text stays in the store.
@@ -36,6 +39,16 @@ pub struct ShelfItem {
     pub edited: bool,
     /// Changes whenever the thumbnail is redrawn, so the webview does not show a cached one.
     pub thumb_version: i64,
+    /// A link's page title and site, once its preview has been fetched (D-057).
+    pub link_title: Option<String>,
+    pub link_description: Option<String>,
+    pub link_site: Option<String>,
+    pub link_image: bool,
+    pub link_icon: bool,
+    /// Changes whenever the link preview is fetched again.
+    pub link_version: i64,
+    /// Length of a screen recording.
+    pub duration_ms: Option<i64>,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize)]
@@ -50,43 +63,102 @@ pub(crate) fn domain_of(url: &str) -> Option<String> {
     Some(host.strip_prefix("www.").map(str::to_owned).unwrap_or(host))
 }
 
-pub fn list(conn: &Connection) -> Result<Shelf> {
-    let mut stmt = conn.prepare(
-        "SELECT id, title, text_body, url, COALESCE(edit_width, width), COALESCE(edit_height, height),
-                thumb_ext, pinned, last_copied_at, edit_width IS NOT NULL, COALESCE(edited_at, 0)
-         FROM items
-         WHERE kind = ?1 AND trashed_at IS NULL AND shelved = 1
-         ORDER BY last_copied_at DESC, id DESC
-         LIMIT ?2",
-    )?;
-    let mut row_of = |kind: Kind| -> Result<Vec<ShelfItem>> {
-        let rows = stmt.query_map(params![kind.as_str(), ROW_LIMIT as i64], |row| {
-            let body: Option<String> = row.get(2)?;
-            let url: Option<String> = row.get(3)?;
-            Ok(ShelfItem {
-                id: row.get(0)?,
-                kind,
-                title: row.get(1)?,
-                char_count: body.as_ref().map(|b| b.chars().count()),
-                preview: body.map(|b| b.chars().take(PREVIEW_CHARS).collect()),
-                domain: url.as_deref().and_then(domain_of),
-                url,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                has_thumb: row.get::<_, Option<String>>(6)?.is_some(),
-                pinned: row.get::<_, i64>(7)? == 1,
-                last_copied_at: row.get(8)?,
-                edited: row.get(9)?,
-                thumb_version: row.get(10)?,
-            })
-        })?;
-        Ok(rows.collect::<std::result::Result<Vec<_>, _>>()?)
-    };
-    Ok(Shelf {
-        image: row_of(Kind::Image)?,
-        text: row_of(Kind::Text)?,
-        link: row_of(Kind::Link)?,
+const COLUMNS: &str = "items.id, items.kind, items.title, items.text_body, items.url,
+    COALESCE(items.edit_width, items.width), COALESCE(items.edit_height, items.height),
+    items.thumb_ext, items.pinned, items.last_copied_at, items.edit_width IS NOT NULL,
+    COALESCE(items.edited_at, 0), items.link_title, items.link_site,
+    items.link_image_ext IS NOT NULL, items.link_icon_ext IS NOT NULL,
+    COALESCE(items.link_checked_at, 0), items.duration_ms, items.link_description";
+
+pub(crate) fn kind_of(name: &str) -> Kind {
+    match name {
+        "text" => Kind::Text,
+        "link" => Kind::Link,
+        "video" => Kind::Video,
+        _ => Kind::Image,
+    }
+}
+
+fn shelf_item(row: &Row<'_>) -> rusqlite::Result<ShelfItem> {
+    let body: Option<String> = row.get(3)?;
+    let url: Option<String> = row.get(4)?;
+    Ok(ShelfItem {
+        id: row.get(0)?,
+        kind: kind_of(&row.get::<_, String>(1)?),
+        title: row.get(2)?,
+        char_count: body.as_ref().map(|b| b.chars().count()),
+        preview: body.map(|b| b.chars().take(PREVIEW_CHARS).collect()),
+        domain: url.as_deref().and_then(domain_of),
+        url,
+        width: row.get(5)?,
+        height: row.get(6)?,
+        has_thumb: row.get::<_, Option<String>>(7)?.is_some(),
+        pinned: row.get::<_, i64>(8)? == 1,
+        last_copied_at: row.get(9)?,
+        edited: row.get(10)?,
+        thumb_version: row.get(11)?,
+        link_title: row.get(12)?,
+        link_site: row.get(13)?,
+        link_image: row.get(14)?,
+        link_icon: row.get(15)?,
+        link_version: row.get(16)?,
+        duration_ms: row.get(17)?,
+        link_description: row.get(18)?,
     })
+}
+
+/// The three rows; screen recordings sit with the images (D-058).
+const ROWS: [(&str, &str); 3] = [
+    ("image", "'image', 'video'"),
+    ("text", "'text'"),
+    ("link", "'link'"),
+];
+
+/// What is on the shelf, newest first. With a search expression only the matches (D-059).
+fn rows(conn: &Connection, matching: Option<&str>) -> Result<Shelf> {
+    let mut shelf = Shelf::default();
+    for (row, kinds) in ROWS {
+        let (from, filter) = match matching {
+            Some(_) => (
+                "search JOIN items ON items.id = search.rowid",
+                "search MATCH ?2 AND ",
+            ),
+            None => ("items", ""),
+        };
+        let sql = format!(
+            "SELECT {COLUMNS} FROM {from}
+             WHERE {filter}items.kind IN ({kinds}) AND items.trashed_at IS NULL AND items.shelved = 1
+             ORDER BY items.last_copied_at DESC, items.id DESC
+             LIMIT ?1"
+        );
+        let mut stmt = conn.prepare_cached(&sql)?;
+        let items = match matching {
+            Some(expression) => stmt
+                .query_map(params![ROW_LIMIT as i64, expression], shelf_item)?
+                .collect::<std::result::Result<Vec<_>, _>>()?,
+            None => stmt
+                .query_map(params![ROW_LIMIT as i64], shelf_item)?
+                .collect::<std::result::Result<Vec<_>, _>>()?,
+        };
+        match row {
+            "image" => shelf.image = items,
+            "text" => shelf.text = items,
+            _ => shelf.link = items,
+        }
+    }
+    Ok(shelf)
+}
+
+pub fn list(conn: &Connection) -> Result<Shelf> {
+    rows(conn, None)
+}
+
+/// The shelf's search: the matching cards of each row, newest first.
+pub fn search(conn: &Connection, query: &str, without_accents: bool) -> Result<Shelf> {
+    match search::expression(query, without_accents) {
+        Some(expression) => rows(conn, Some(&expression)),
+        None => Ok(Shelf::default()),
+    }
 }
 
 pub fn set_pinned(conn: &mut Connection, ids: &[i64], pinned: bool) -> Result<()> {
@@ -229,6 +301,50 @@ mod tests {
         );
         assert_eq!(shelf.link[0].domain.as_deref(), Some("example.com"));
         assert!(shelf.image.is_empty());
+    }
+
+    #[test]
+    fn search_keeps_the_rows_and_only_shelved_matches() {
+        let mut conn = store::open_in_memory().unwrap();
+        let old = add(&conn, Kind::Text, "Fatura Ocak", None, 1);
+        let new = add(&conn, Kind::Text, "fatura şubat", None, 2);
+        add(&conn, Kind::Text, "başka bir şey", None, 3);
+        let link = add(
+            &conn,
+            Kind::Link,
+            "https://fatura.example.com",
+            Some("https://fatura.example.com"),
+            4,
+        );
+        let gone = add(&conn, Kind::Text, "fatura mart", None, 5);
+        trash(&mut conn, &[gone], 6).unwrap();
+        let found = search(&conn, "FATURA", false).unwrap();
+        assert_eq!(
+            found.text.iter().map(|i| i.id).collect::<Vec<_>>(),
+            vec![new, old],
+            "newest first, Trash left out"
+        );
+        assert_eq!(found.link[0].id, link);
+        assert!(search(&conn, "  ", false).unwrap().text.is_empty());
+        assert!(search(&conn, "subat", false).unwrap().text.is_empty());
+        assert_eq!(search(&conn, "subat", true).unwrap().text[0].id, new);
+    }
+
+    #[test]
+    fn recordings_sit_in_the_image_row() {
+        let conn = store::open_in_memory().unwrap();
+        conn.execute(
+            "INSERT INTO items (kind, identity, created_at, last_copied_at, source, duration_ms, thumb_ext)
+             VALUES ('video', x'aa', 1, 1, 'folder', 61000, 'jpg')",
+            [],
+        )
+        .unwrap();
+        let shelf = list(&conn).unwrap();
+        assert_eq!(shelf.image.len(), 1);
+        assert_eq!(
+            (shelf.image[0].kind, shelf.image[0].duration_ms),
+            (Kind::Video, Some(61_000))
+        );
     }
 
     #[test]

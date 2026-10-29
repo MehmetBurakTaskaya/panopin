@@ -19,7 +19,7 @@ tauri = { version = "2.12.5", features = ["tray-icon", "image-png"] }
 tauri-plugin-global-shortcut = "2.4.1"
 tauri-plugin-log = "2.10.1"
 tauri-plugin-single-instance = "2.5.5"
-image = { version = "0.25.10", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
+image = { version = "0.25.10", default-features = false, features = ["bmp", "gif", "ico", "jpeg", "png", "webp"] }
 log = "0.4"
 rusqlite = { version = "0.41.1", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
@@ -31,13 +31,27 @@ unicode-normalization = "0.1.26"
 url = "2.5.8"
 tiny-skia = { version = "0.12.0", default-features = false, features = ["std", "simd"] }
 base64 = "0.23.1"
+# Link previews (D-009, D-010): the OS TLS stack, our own resolver and redirect checks.
+reqwest = { version = "0.13.5", default-features = false, features = ["native-tls"] }
+tokio = { version = "1.54.1", default-features = false, features = ["net", "rt", "sync", "time"] }
+html5gum = "0.8.4"
+encoding_rs = "0.8.42"
+tauri-plugin-autostart = "2.7.0"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.2", features = [
+    "Foundation",
+    "Foundation_Collections",
+    "Globalization",
+    "Graphics_Imaging",
+    "Media_Ocr",
+    "Storage_Streams",
     "UI_Shell",
+    "UI_ViewManagement",
     "Win32_Foundation",
     "Win32_Graphics_Gdi",
     "Win32_Security",
+    "Win32_Storage_EnhancedStorage",
     "Win32_Storage_FileSystem",
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
@@ -51,10 +65,12 @@ windows = { version = "0.62.2", features = [
     "Win32_System_SystemInformation",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
+    "Win32_System_WinRT",
     "Win32_UI_Accessibility",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_Shell",
     "Win32_UI_Shell_Common",
+    "Win32_UI_Shell_PropertiesSystem",
     "Win32_UI_WindowsAndMessaging",
 ] }
 # The `implement` macro (our drag drop source) names this crate directly.
@@ -62,6 +78,10 @@ windows-core = "0.62.2"
 
 [dev-dependencies]
 tempfile = "3.27.0"
+
+# SQLite is C code: built optimised in debug builds too, so search timings in tests are real.
+[profile.dev.package.libsqlite3-sys]
+opt-level = 3
 
 [profile.release]
 codegen-units = 1

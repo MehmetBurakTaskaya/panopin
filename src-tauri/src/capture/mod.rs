@@ -25,11 +25,11 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::{
     error::Result,
-    media::{decode, thumbnails, MediaStore},
+    media::{decode, thumbnails, video, MediaStore},
     settings::PAUSED_UNTIL_RESUMED,
     store::{
         identity,
-        items::{self, Counts, ImageRow, Kind, Source, TextCapture},
+        items::{self, Counts, ImageRow, Kind, Source, TextCapture, VideoRow},
         retention,
     },
     tray, AppState,
@@ -44,6 +44,7 @@ pub enum Event {
 /// Retention runs at start and then on this interval; the sleeping thread costs no CPU.
 const SWEEP_EVERY: Duration = Duration::from_secs(6 * 60 * 60);
 const IMAGE_EXTENSIONS: [&str; 6] = ["png", "jpg", "jpeg", "bmp", "gif", "webp"];
+const VIDEO_EXTENSIONS: [&str; 1] = ["mp4"];
 
 pub struct CaptureState {
     tx: Sender<Event>,
@@ -104,15 +105,29 @@ pub fn reconfigure(app: &AppHandle) {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
         watchers.clear(); // dropping a watcher stops it
-        if !settings.onboarded || !settings.sources.screenshots {
+        let sources = &settings.sources;
+        if !settings.onboarded || !(sources.screenshots || sources.screen_recordings) {
             return;
         }
         let mut folders = Vec::new();
-        match folder_watcher::screenshots_folder() {
-            Some(dir) => folders.push(dir),
-            None => log::warn!("the Windows Screenshots folder could not be resolved"),
+        if sources.screenshots {
+            match folder_watcher::screenshots_folder() {
+                Some(dir) => folders.push(dir),
+                None => log::warn!("the Windows Screenshots folder could not be resolved"),
+            }
         }
-        folders.extend(settings.watched_folders.iter().map(PathBuf::from));
+        if sources.screen_recordings {
+            match folder_watcher::recordings_folder() {
+                Some(dir) => folders.push(dir),
+                None => log::warn!("the Screen Recordings folder could not be resolved"),
+            }
+        }
+        // Extra folders hold screenshots, recordings or both; each file goes by its source.
+        for dir in settings.watched_folders.iter().map(PathBuf::from) {
+            if !folders.contains(&dir) {
+                folders.push(dir);
+            }
+        }
         for dir in folders {
             match folder_watcher::watch(dir, state.tx.clone()) {
                 Ok(watcher) => watchers.push(watcher),
@@ -164,6 +179,9 @@ pub fn counts(app: &AppHandle) -> Counts {
 }
 
 pub(crate) fn changed(app: &AppHandle) {
+    // New or edited images wait for their text to be read, new links for their preview.
+    crate::ocr::wake(app);
+    crate::links::wake(app);
     let counts = counts(app);
     tray::show_counts(app, counts);
     if let Err(err) = app.emit("items:changed", counts) {
@@ -208,18 +226,37 @@ fn handle(
                     now,
                 ),
                 Decision::Image(raw) => {
-                    save_clipboard_image(app, media, raw, source_app.as_deref(), now)
+                    save_clipboard_image(app, media, raw, source_app.as_deref(), now).map(|id| {
+                        // The picture the snip shortcut was waiting for opens in the crop editor.
+                        if crate::snip::take(app) {
+                            if let Err(err) = crate::shelf::open_on(app, id, "crop") {
+                                log::warn!("the snip could not be opened: {err}");
+                            }
+                        }
+                    })
                 }
             }
         }
         Event::File(path) => {
-            if !settings.onboarded || !settings.sources.screenshots || settings.is_paused(now) {
+            if !settings.onboarded || settings.is_paused(now) {
                 return;
             }
-            let Some(bytes) = ready_file(&path, imported) else {
-                return;
-            };
-            save_file_image(app, media, &path, &bytes, now)
+            if is_video_file(&path.to_string_lossy()) {
+                if !settings.sources.screen_recordings
+                    || written(&path, imported, VIDEO_WAIT_STEPS).is_none()
+                {
+                    return;
+                }
+                save_video(app, media, &path, Source::Folder, now)
+            } else {
+                if !settings.sources.screenshots {
+                    return;
+                }
+                let Some(bytes) = ready_file(&path, imported) else {
+                    return;
+                };
+                save_file_image(app, media, &path, &bytes, Source::Folder, now)
+            }
         }
     };
     match result {
@@ -265,7 +302,7 @@ fn save_clipboard_image(
     raw: RawImage,
     source_app: Option<&str>,
     now: i64,
-) -> Result<()> {
+) -> Result<i64> {
     let (pixels, original) = match raw {
         RawImage::Png(bytes) => (decode::decode(&bytes)?, bytes),
         RawImage::Dib(bytes) => {
@@ -290,6 +327,7 @@ fn save_file_image(
     media: &MediaStore,
     path: &Path,
     bytes: &[u8],
+    source: Source,
     now: i64,
 ) -> Result<()> {
     let ext = path
@@ -301,19 +339,21 @@ fn save_file_image(
         pixels: decode::decode(bytes)?,
         original: bytes,
         ext: &ext,
-        source: Source::Folder,
+        source,
         source_app: None,
         source_path: Some(&path_text),
     };
-    save_image(app, media, &image, now)
+    save_image(app, media, &image, now).map(drop)
 }
 
-fn save_image(app: &AppHandle, media: &MediaStore, image: &NewImage<'_>, now: i64) -> Result<()> {
+/// Stores a picture, or brings the same one forward; returns its id.
+fn save_image(app: &AppHandle, media: &MediaStore, image: &NewImage<'_>, now: i64) -> Result<i64> {
     let state = app.state::<AppState>();
     let (width, height) = image.pixels.dimensions();
     let identity = identity::image_identity(width, height, image.pixels.as_raw());
     if let Some(id) = state.with_db(|db| items::find(db, Kind::Image, &identity))? {
-        return state.with_db(|db| items::bump(db, id, now));
+        state.with_db(|db| items::bump(db, id, now))?;
+        return Ok(id);
     }
     let thumb = thumbnails::make(&image.pixels)?;
     let row = ImageRow {
@@ -332,7 +372,96 @@ fn save_image(app: &AppHandle, media: &MediaStore, image: &NewImage<'_>, now: i6
         let _ = state.with_db(|db| items::delete(db, id));
         return Err(err);
     }
+    Ok(id)
+}
+
+/// The shortcut "Copy the last image": the newest picture goes back on the clipboard.
+pub fn copy_last_image(app: &AppHandle) -> Result<()> {
+    let newest: Option<i64> = app.state::<AppState>().with_db(|db| {
+        use rusqlite::OptionalExtension;
+        Ok(db
+            .query_row(
+                "SELECT id FROM items WHERE kind = 'image' AND trashed_at IS NULL
+                 ORDER BY last_copied_at DESC, id DESC LIMIT 1",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?)
+    })?;
+    match newest {
+        Some(id) => crate::transfer::copy(app, &[id]),
+        None => Ok(()),
+    }
+}
+
+/// The shortcut "Pause or resume capture": pauses until resumed, or resumes.
+pub fn toggle_pause(app: &AppHandle) -> Result<()> {
+    let paused = app.state::<AppState>().settings().is_paused(now_ms());
+    set_pause(app, (!paused).then_some(PAUSED_UNTIL_RESUMED))
+}
+
+/// A recording: hashed and probed where it lies, then copied into managed storage (D-058).
+fn save_video(
+    app: &AppHandle,
+    media: &MediaStore,
+    path: &Path,
+    source: Source,
+    now: i64,
+) -> Result<()> {
+    let state = app.state::<AppState>();
+    let identity = identity::file_identity(path)?;
+    if let Some(id) = state.with_db(|db| items::find(db, Kind::Video, &identity))? {
+        return state.with_db(|db| items::bump(db, id, now));
+    }
+    let facts = video::probe(path);
+    let thumb = facts.poster.as_ref().map(thumbnails::make).transpose()?;
+    // Without frame-size properties the poster still gives the card its shape.
+    let poster_size = facts.poster.as_ref().map(RgbaImage::dimensions);
+    let path_text = path.to_string_lossy();
+    let row = VideoRow {
+        identity,
+        width: facts.width.or(poster_size.map(|s| s.0)),
+        height: facts.height.or(poster_size.map(|s| s.1)),
+        byte_size: fs::metadata(path)?.len(),
+        duration_ms: facts.duration_ms,
+        thumb_ext: thumb.as_ref().map(|t| t.ext),
+        source,
+        source_path: Some(&path_text),
+    };
+    let id = state.with_db(|db| items::insert_video(db, &row, now))?;
+    if let Err(err) = media.write_file(id, path, "mp4", thumb.as_ref()) {
+        let _ = state.with_db(|db| items::delete(db, id));
+        return Err(err);
+    }
     Ok(())
+}
+
+/// "Import…" in the Library: pictures and recordings the user chose. The files are only read.
+/// Returns how many were added (or brought forward when already there).
+pub fn import(app: &AppHandle, paths: &[PathBuf]) -> Result<usize> {
+    let media = media(app).ok_or(crate::error::AppError::NotReady)?;
+    let now = now_ms();
+    let mut count = 0;
+    for path in paths {
+        let name = path.to_string_lossy();
+        let result = if is_video_file(&name) {
+            save_video(app, &media, path, Source::Import, now)
+        } else if is_image_file(&name) {
+            fs::read(path)
+                .map_err(Into::into)
+                .and_then(|bytes| save_file_image(app, &media, path, &bytes, Source::Import, now))
+        } else {
+            continue;
+        };
+        match result {
+            Ok(()) => count += 1,
+            Err(err) => log::warn!("an imported file was skipped: {err}"),
+        }
+    }
+    if count > 0 {
+        changed(app);
+    }
+    Ok(count)
 }
 
 fn sweep(app: &AppHandle) {
@@ -355,6 +484,19 @@ fn sweep(app: &AppHandle) {
         }
         Err(err) => log::warn!("retention failed: {err}"),
     }
+}
+
+pub(crate) fn is_video_file(name: &str) -> bool {
+    Path::new(name).extension().is_some_and(|ext| {
+        VIDEO_EXTENSIONS
+            .iter()
+            .any(|known| ext.eq_ignore_ascii_case(known))
+    })
+}
+
+/// Files a watched folder reports: pictures and recordings.
+pub(crate) fn is_capture_file(name: &str) -> bool {
+    is_image_file(name) || is_video_file(name)
 }
 
 pub(crate) fn is_image_file(name: &str) -> bool {
@@ -380,29 +522,42 @@ pub(crate) fn utf16_until_nul(bytes: &[u8]) -> String {
     String::from_utf16_lossy(&units[..end])
 }
 
-/// Waits until a new screenshot file is completely written: its size holds still and nothing
-/// else has it open. This bounded wait only runs after a folder event. Files already imported
-/// with the same size and time are skipped.
-fn ready_file(path: &Path, imported: &mut HashMap<PathBuf, (u64, SystemTime)>) -> Option<Vec<u8>> {
+/// Steps of 200 ms to wait for a file to be written: about 10 s for a screenshot, a minute for a
+/// recording, which the Snipping Tool writes when the recording stops.
+const IMAGE_WAIT_STEPS: u32 = 50;
+const VIDEO_WAIT_STEPS: u32 = 300;
+
+/// Waits until a new file is completely written: its size holds still and nothing else has it
+/// open. This bounded wait only runs after a folder event. Files already imported with the same
+/// size and time are skipped (`None`).
+fn written(
+    path: &Path,
+    imported: &mut HashMap<PathBuf, (u64, SystemTime)>,
+    steps: u32,
+) -> Option<(u64, SystemTime)> {
     let mut last_len = None;
-    for _ in 0..50 {
+    for _ in 0..steps {
         let meta = fs::metadata(path).ok()?;
         let stamp = (meta.len(), meta.modified().ok()?);
         if meta.len() > 0 && last_len == Some(meta.len()) && unlocked(path) {
             if imported.get(path) == Some(&stamp) {
                 return None;
             }
-            let bytes = fs::read(path).ok()?;
             if imported.len() > 256 {
                 imported.clear();
             }
             imported.insert(path.to_path_buf(), stamp);
-            return Some(bytes);
+            return Some(stamp);
         }
         last_len = Some(meta.len());
         thread::sleep(Duration::from_millis(200));
     }
     None
+}
+
+fn ready_file(path: &Path, imported: &mut HashMap<PathBuf, (u64, SystemTime)>) -> Option<Vec<u8>> {
+    written(path, imported, IMAGE_WAIT_STEPS)?;
+    fs::read(path).ok()
 }
 
 #[cfg(windows)]

@@ -10,6 +10,8 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0003_shelved.sql"),
     include_str!("migrations/0004_edits.sql"),
     include_str!("migrations/0005_library.sql"),
+    include_str!("migrations/0006_search.sql"),
+    include_str!("migrations/0007_enrichment.sql"),
 ];
 
 #[cfg(test)]

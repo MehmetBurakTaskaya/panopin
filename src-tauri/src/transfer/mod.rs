@@ -51,7 +51,7 @@ impl ImageSource {
     }
 
     /// The picture as it leaves Panopin: with its crop and marks when it was edited.
-    fn pixels(&self) -> Result<RgbaImage> {
+    pub(crate) fn pixels(&self) -> Result<RgbaImage> {
         let original = decode::decode(&fs::read(&self.original)?)?;
         if !self.edited {
             return Ok(original);
@@ -69,6 +69,8 @@ pub struct Selection {
     pub texts: Vec<String>,
     /// Images in selection order.
     pub images: Vec<ImageSource>,
+    /// Recordings, handed out as files only (D-058).
+    pub files: Vec<PathBuf>,
 }
 
 /// One selected item on its way out, in selection order.
@@ -77,6 +79,7 @@ pub enum Outgoing {
     Text(String),
     Link(String),
     Image(ImageSource),
+    File(PathBuf),
 }
 
 pub fn gather(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Selection> {
@@ -85,6 +88,7 @@ pub fn gather(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Result<Sele
         match item {
             Outgoing::Text(text) | Outgoing::Link(text) => selection.texts.push(text),
             Outgoing::Image(image) => selection.images.push(image),
+            Outgoing::File(path) => selection.files.push(path),
         }
     }
     Ok(selection)
@@ -114,6 +118,10 @@ pub fn gather_items(conn: &Connection, media: &MediaStore, ids: &[i64]) -> Resul
                     edited,
                 }))
             }
+            Some((kind, _, _, Some(ext), _)) if kind == Kind::Video.as_str() => {
+                items.push(Outgoing::File(media.original(id, &ext)))
+            }
+            Some((kind, _, _, None, _)) if kind == Kind::Video.as_str() => {}
             // A link goes back as its clean URL; a text exactly as it was last copied.
             Some((kind, body, url, _, _)) if kind == Kind::Link.as_str() => {
                 items.extend(url.or(body).map(Outgoing::Link))
@@ -140,6 +148,7 @@ pub fn as_file(item: &Outgoing) -> Result<Staged> {
             Staged::Copy(image.original.clone())
         }
         Outgoing::Image(image) => Staged::Bytes(encode_png(&image.pixels()?)?, "png"),
+        Outgoing::File(path) => Staged::Copy(path.clone()),
     })
 }
 
@@ -177,8 +186,14 @@ pub fn prepare(selection: &Selection, staging: &Staging) -> Result<Formats> {
             encode_png(&pixels)?
         });
     }
-    if selection.images.len() > 1 {
-        let paths = stage_images(&selection.images, staging)?;
+    // Several images, or any recording: a file list as well.
+    if selection.images.len() > 1 || !selection.files.is_empty() {
+        let mut paths = if selection.images.len() > 1 {
+            stage_images(&selection.images, staging)?
+        } else {
+            Vec::new()
+        };
+        paths.extend(stage_files(&selection.files, staging)?);
         formats.files = Some(dropfiles(&paths));
     }
     Ok(formats)
@@ -195,6 +210,15 @@ pub fn stage_images(images: &[ImageSource], staging: &Staging) -> Result<Vec<Pat
             Staged::Copy(image.original.clone())
         });
     }
+    staging.stage(&items)
+}
+
+/// Neutrally named copies of recordings.
+pub fn stage_files(files: &[PathBuf], staging: &Staging) -> Result<Vec<PathBuf>> {
+    if files.is_empty() {
+        return Ok(Vec::new());
+    }
+    let items: Vec<Staged> = files.iter().cloned().map(Staged::Copy).collect();
     staging.stage(&items)
 }
 
@@ -306,7 +330,8 @@ pub fn drag(
         .state::<crate::AppState>()
         .with_db(|db| gather(db, &media, ids))?;
     let text = (!selection.texts.is_empty()).then(|| utf16z(&selection.texts.join("\r\n")));
-    let files = stage_images(&selection.images, &staging)?;
+    let mut files = stage_images(&selection.images, &staging)?;
+    files.extend(stage_files(&selection.files, &staging)?);
     if text.is_none() && files.is_empty() {
         return Ok(false);
     }
@@ -361,6 +386,43 @@ fn pick_folder(app: &AppHandle, window: &WebviewWindow, title: String) -> Result
         let _ = tx.send(result);
     })?;
     rx.recv().map_err(|_| AppError::Interrupted)?
+}
+
+/// A folder chosen in the Windows dialog, with a title from the strings (`None` = cancelled).
+pub fn pick_folder_titled(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    title_key: &str,
+) -> Result<Option<PathBuf>> {
+    let title = crate::i18n::t(crate::current_lang(app), title_key);
+    pick_folder(app, window, title)
+}
+
+/// "Import…": pictures and recordings, chosen in the Windows file dialog.
+#[cfg(windows)]
+pub fn pick_import(app: &AppHandle, window: &WebviewWindow) -> Result<Vec<PathBuf>> {
+    let lang = crate::current_lang(app);
+    let title = crate::i18n::t(lang, "library.import.pick");
+    let kind = crate::i18n::t(lang, "library.import.kind");
+    let (tx, rx) = std::sync::mpsc::channel();
+    let owner = window.clone();
+    app.run_on_main_thread(move || {
+        let result = owner.hwnd().map_err(AppError::from).and_then(|hwnd| {
+            folder_win::pick_files(
+                hwnd.0 as isize,
+                &title,
+                &kind,
+                "*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.webp;*.mp4",
+            )
+        });
+        let _ = tx.send(result);
+    })?;
+    rx.recv().map_err(|_| AppError::Interrupted)?
+}
+
+#[cfg(not(windows))]
+pub fn pick_import(_app: &AppHandle, _window: &WebviewWindow) -> Result<Vec<PathBuf>> {
+    Err(AppError::Unsupported)
 }
 
 #[cfg(not(windows))]
@@ -421,6 +483,15 @@ fn drag_now(
     _files: Vec<PathBuf>,
 ) -> Result<bool> {
     Err(AppError::Unsupported)
+}
+
+/// Puts a plain text on the clipboard, e.g. the text read from an image (Ctrl+Shift+C).
+pub fn copy_text(app: &AppHandle, text: &str) -> Result<()> {
+    let formats = Formats {
+        text: Some(utf16z(text)),
+        ..Formats::default()
+    };
+    write(app, &formats)
 }
 
 /// Copies the items; the shelf stays open.
@@ -565,6 +636,7 @@ mod tests {
                     edited: false,
                 })
                 .collect(),
+            files: Vec::new(),
         };
         let formats = prepare(&selection, &staging).unwrap();
         let png = formats.png.unwrap();

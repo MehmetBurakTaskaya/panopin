@@ -1,6 +1,11 @@
 //! Item identity. Text follows D-016, images D-015. Identity never changes stored content.
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    fs::File,
+    io::{self, Read},
+    path::Path,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use sha2::{Digest, Sha256};
 use unicode_normalization::UnicodeNormalization;
@@ -48,6 +53,23 @@ pub fn note_identity(now: i64) -> Identity {
     static NEXT: AtomicU64 = AtomicU64::new(0);
     let n = NEXT.fetch_add(1, Ordering::Relaxed);
     sha256(&[b"panopin-note\0", &now.to_le_bytes(), &n.to_le_bytes()])
+}
+
+/// Hash of a recording's bytes, read in chunks so large files never sit in memory (D-058).
+pub fn file_identity(path: &Path) -> io::Result<Identity> {
+    let mut file = File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0u8; 1 << 20];
+    loop {
+        let read = file.read(&mut buffer)?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&hasher.finalize());
+    Ok(out)
 }
 
 /// Hash of the decoded pixels, so the same picture from PNG, DIB or a saved file matches.

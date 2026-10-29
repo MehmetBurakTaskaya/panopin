@@ -5,9 +5,9 @@ import styles from './Pickers.module.css';
 
 /** Matches names the way Rust keys tags: the four Turkish i forms are one letter, case does not
  * count, accents do. */
-const fold = (text: string) => text.replace(/[İIı]/g, 'i').toLocaleLowerCase(getLanguage());
+export const fold = (text: string) => text.replace(/[İIı]/g, 'i').toLocaleLowerCase(getLanguage());
 
-function Dialog({ title, detail, children, onClose }: { title: string; detail?: string; children: ReactNode; onClose: () => void }) {
+export function Dialog({ title, detail, children, onClose }: { title: string; detail?: string; children: ReactNode; onClose: () => void }) {
   const id = useId();
   return (
     <div
@@ -36,7 +36,7 @@ interface ListKeys {
   extra?: (e: KeyboardEvent<HTMLInputElement>) => boolean;
 }
 
-function listKeys({ count, active, setActive, onEnter, onClose, extra }: ListKeys) {
+export function listKeys({ count, active, setActive, onEnter, onClose, extra }: ListKeys) {
   return (e: KeyboardEvent<HTMLInputElement>) => {
     // Typing in the box never reaches the window shortcuts behind it.
     e.stopPropagation();

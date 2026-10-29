@@ -61,7 +61,13 @@ describe('shelf keys', () => {
     expect(commandFor(press('p', { code: 'KeyP' }))).toEqual({ type: 'pin' });
     expect(commandFor(press('s', { code: 'KeyS' }))).toEqual({ type: 'takeDown' });
     expect(commandFor(press('f', { code: 'KeyF' }))).toEqual({ type: 'pinnedOnly' });
-    expect(commandFor(press('S', { code: 'KeyS', shiftKey: true }))).toBeNull();
+  });
+
+  it('opens the search, the palette and the link, and copies the text in an image', () => {
+    expect(commandFor(press('S', { code: 'KeyS', shiftKey: true }))).toEqual({ type: 'search' });
+    expect(commandFor(press('k', { code: 'KeyK', ctrlKey: true }))).toEqual({ type: 'palette' });
+    expect(commandFor(press('o', { code: 'KeyO', ctrlKey: true }))).toEqual({ type: 'openLink' });
+    expect(commandFor(press('C', { code: 'KeyC', ctrlKey: true, shiftKey: true }))).toEqual({ type: 'copyText' });
   });
 
   it('names, files, tags and exports items and opens the Library', () => {

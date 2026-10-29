@@ -44,12 +44,31 @@
   background: repeating-linear-gradient(180deg, transparent 0 15px, var(--rule) 15px 16px) 0 13px / 100% calc(100% - 34px) no-repeat,
     var(--paper);
 }
+.card[data-kind='video'] {
+  --tape: var(--tape-image);
+  padding: 5px;
+  width: calc((var(--ch) - 10px) * var(--ar) + 10px);
+}
 .card[data-kind='link'] {
   --tape: var(--tape-link);
   width: var(--lw);
   display: flex;
   flex-direction: column;
 }
+
+/* A link's picture above its title, as in the concept; small cards leave it out. */
+.lkThumb { flex: 0 0 44%; position: relative; overflow: hidden; border-radius: 2px 2px 0 0; background: var(--paper-2); }
+.lkThumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lkThumb + .lkBody { align-content: start; }
+:global(html[data-size='s']) .lkThumb { display: none; }
+:global(html[data-size='s']) .lkThumb + .lkBody { align-content: center; }
+img.fav { object-fit: contain; background: #fff; }
+
+/* Screen recordings: the poster with a play mark and the length. */
+.ph { position: relative; }
+.play { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); }
+.play::after { content: ''; position: absolute; left: 10px; top: 7px; border: 6px solid transparent; border-left: 9px solid #fff; border-right: 0; }
+.duration { position: absolute; right: 9px; bottom: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 9.5px/14px var(--font); }
 
 .ph { width: 100%; height: 100%; border-radius: 1px; overflow: hidden; background: var(--paper-2); }
 .ph img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -220,3 +239,6 @@
   .selected .card { outline: 3px solid Highlight; }
   .tape, .pin { forced-color-adjust: none; }
 }
+
+/* Words matched by the shelf search, as in the concept. */
+.card mark { color: inherit; background: linear-gradient(transparent 18%, var(--mark) 18% 90%, transparent 90%); border-radius: 2px; padding: 0 1px; margin: 0 -1px; }

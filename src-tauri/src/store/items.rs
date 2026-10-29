@@ -3,7 +3,10 @@
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result, store::identity::Identity};
+use crate::{
+    error::Result,
+    store::{identity::Identity, search},
+};
 
 /// D-042: a saved item (pinned, named, in a folder or tagged) never expires, and taking it off
 /// the shelf keeps it in the Library. A condition on the `items` table.
@@ -37,6 +40,8 @@ impl Kind {
 pub enum Source {
     Clipboard,
     Folder,
+    /// Chosen with "Import…" in the Library.
+    Import,
 }
 
 impl Source {
@@ -44,6 +49,7 @@ impl Source {
         match self {
             Source::Clipboard => "clipboard",
             Source::Folder => "folder",
+            Source::Import => "import",
         }
     }
 }
@@ -60,7 +66,7 @@ pub struct TextCapture<'a> {
 /// Inserts a text or link, or bumps the existing one with the same identity: the newest body
 /// replaces the old one, it moves to the front and out of Trash, while title, pin and note stay.
 pub fn upsert_text(conn: &Connection, capture: &TextCapture<'_>, now: i64) -> Result<i64> {
-    Ok(conn.query_row(
+    let id = conn.query_row(
         "INSERT INTO items (kind, identity, created_at, last_copied_at, source, source_app, text_body, url)
          VALUES (?1, ?2, ?3, ?3, 'clipboard', ?4, ?5, ?6)
          ON CONFLICT (kind, identity) DO UPDATE SET
@@ -80,7 +86,9 @@ pub fn upsert_text(conn: &Connection, capture: &TextCapture<'_>, now: i64) -> Re
             capture.url
         ],
         |row| row.get(0),
-    )?)
+    )?;
+    search::index(conn, id)?;
+    Ok(id)
 }
 
 pub fn find(conn: &Connection, kind: Kind, identity: &Identity) -> Result<Option<i64>> {
@@ -132,7 +140,43 @@ pub fn insert_image(conn: &Connection, row: &ImageRow<'_>, now: i64) -> Result<i
             row.thumb_ext
         ],
     )?;
-    Ok(conn.last_insert_rowid())
+    let id = conn.last_insert_rowid();
+    search::index(conn, id)?;
+    Ok(id)
+}
+
+/// A screen recording (D-058); the poster is its thumbnail.
+pub struct VideoRow<'a> {
+    pub identity: Identity,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub byte_size: u64,
+    pub duration_ms: Option<i64>,
+    pub thumb_ext: Option<&'a str>,
+    pub source: Source,
+    pub source_path: Option<&'a str>,
+}
+
+pub fn insert_video(conn: &Connection, row: &VideoRow<'_>, now: i64) -> Result<i64> {
+    conn.execute(
+        "INSERT INTO items (kind, identity, created_at, last_copied_at, source, source_path, width,
+                            height, byte_size, media_ext, thumb_ext, duration_ms)
+         VALUES ('video', ?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, 'mp4', ?8, ?9)",
+        params![
+            &row.identity[..],
+            now,
+            row.source.as_str(),
+            row.source_path,
+            row.width,
+            row.height,
+            i64::try_from(row.byte_size).unwrap_or(i64::MAX),
+            row.thumb_ext,
+            row.duration_ms
+        ],
+    )?;
+    let id = conn.last_insert_rowid();
+    search::index(conn, id)?;
+    Ok(id)
 }
 
 pub fn delete(conn: &Connection, id: i64) -> Result<()> {

@@ -37,5 +37,11 @@ export function testSettings(): Settings {
       inspectorWidth: 300,
       columns: { title: 360, kind: 110, tags: 200, added: 160 },
     },
+    searchWithoutAccents: false,
+    ocr: true,
+    launchAtLogin: false,
+    edgeOpen: false,
+    appearance: { systemAccent: true, material: true, animations: true },
+    updates: { autoCheck: false },
   };
 }

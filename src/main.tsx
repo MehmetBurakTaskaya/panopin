@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { followSettingsChanges, useSettings } from './state/settings';
 import './styles/tokens.css';
 import './styles/global.css';
+import { applyLook, followLook } from './look';
 import { applyTheme, followSystemTheme } from './theme';
 import { LibraryApp } from './windows/library/LibraryApp';
 import { OnboardingApp } from './windows/onboarding/OnboardingApp';
@@ -23,8 +24,12 @@ function View() {
 
 async function start(): Promise<void> {
   followSystemTheme();
-  useSettings.subscribe((state) => applyTheme(state.settings?.theme ?? 'system'));
+  useSettings.subscribe((state) => {
+    applyTheme(state.settings?.theme ?? 'system');
+    applyLook(state.settings);
+  });
   await useSettings.getState().load();
+  await followLook();
   await followSettingsChanges();
   const root = document.getElementById('root');
   if (!root) return;

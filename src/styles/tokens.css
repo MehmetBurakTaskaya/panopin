@@ -42,6 +42,7 @@
   --tape-text: 228 176 46;
   --tape-link: 240 114 92;
   --tape-alpha: 0.8;
+  --mark: rgba(255, 222, 60, 0.8);
 
   /* Card size (Settings → General); medium by default. */
   --mono: 'Cascadia Mono', Consolas, ui-monospace, monospace;
@@ -93,6 +94,7 @@
   --tape-text: 198 152 44;
   --tape-link: 208 102 84;
   --tape-alpha: 0.86;
+  --mark: rgba(255, 214, 40, 0.72);
 }
 
 :root[data-size='s'] {

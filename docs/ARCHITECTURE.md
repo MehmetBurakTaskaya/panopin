@@ -51,6 +51,7 @@ src-tauri/src
   store/
     mod.rs               open the database (WAL) and apply migrations
     library.rs           Library data, folders, tags, notes, Trash (D-053)
+    search.rs            the FTS5 index: folding, indexing, queries (D-017, D-059)
     migrations/          0001_init.sql, ... applied via PRAGMA user_version (D-012)
     models.rs            Item, Folder, Tag, ... (exported to TS with ts-rs, D-013)
     identity.rs          text and image identity hashes (D-016)
@@ -62,10 +63,14 @@ src-tauri/src
     thumbnails.rs        decode once, longest side 512 px (D-025)
     annotations.rs       non-destructive crop + markup layer (JSON)
     flatten.rs           full-resolution render only on copy/export/save
+    video.rs             recording poster, length and size from the shell (D-058)
     protocol.rs          custom URI scheme, serves by item id only (D-014)
     video.rs             poster frame + duration via the shell (D-024)
-  ocr/        windows.rs (Windows.Media.Ocr), macos.rs (Vision, Phase 8), queue.rs
-  links/      classify.rs, enrich.rs, net_guard.rs (D-010)
+  ocr/        mod.rs (queue), engine_win.rs (Windows.Media.Ocr); Vision in Phase 8 (D-056)
+  links/      mod.rs (queue, storage), guard.rs (network guard, D-010), page.rs (D-057)
+  look.rs                Mica support and the Windows accent colour (D-060)
+  edge.rs                edge opening: low-level mouse hook while enabled (D-022)
+  snip.rs                the snip shortcut and its crop editor (D-062)
   transfer/
     mod.rs               what a copy, paste or drag carries (D-045)
     staging.rs           neutrally named files handed to other apps
@@ -187,8 +192,10 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 - `src/edit/` holds the edit layer model, the geometry shared with Rust, the Canvas 2D drawing and
   the undo history; the preview and its editors live in `src/windows/shelf/preview/`.
 - `src/library/` holds the Library's sections, filters and sorting; `src/windows/library/` the
-  window (sidebar, grid and list, details); the name, folder and tag pickers in
-  `src/components/pickers/` serve the shelf and the Library.
+  window (sidebar, grid and list, details); the name, folder and tag pickers and the command
+  palette in `src/components/pickers/` serve the shelf, the Library and Settings.
+- `src/search/` marks matched words the way Rust folds them; `src/look.ts` applies Mica, the
+  accent colour and the animation setting in every window.
 - Memoised cards so unchanged cards do not re-render; the Library grid is virtualised
   (`@tanstack/react-virtual`), the shelf rows are capped at 300 cards instead (D-044).
 - Sounds: the Web Audio synthesis module proven in `docs/concept/mockup/sound.js`.

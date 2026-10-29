@@ -10,13 +10,15 @@ use crate::{
     capture::{self, now_ms},
     editing,
     error::{AppError, Result},
+    hotkeys, links,
     media::annotations::EditLayer,
+    ocr,
     settings::Settings,
     shelf,
     store::{
         items::Kind,
         library::{self, LibraryData},
-        retention,
+        retention, search,
         shelf::{self as shelf_store, Shelf, UndoStack},
     },
     transfer::{self, BoardRect, PasteOutcome},
@@ -30,6 +32,50 @@ pub struct ShelfUndo(Mutex<UndoStack>);
 #[tauri::command]
 pub fn list_shelf(state: State<'_, AppState>) -> Result<Shelf> {
     state.with_db(|db| shelf_store::list(db))
+}
+
+/// Shift+S on the shelf: the matching cards of each row, newest first (D-059).
+#[tauri::command]
+pub fn search_shelf(state: State<'_, AppState>, query: String) -> Result<Shelf> {
+    let without_accents = state.settings().search_without_accents;
+    state.with_db(|db| shelf_store::search(db, &query, without_accents))
+}
+
+/// Ctrl+Shift+C: copies the text in an image, reading it first when needed.
+#[tauri::command]
+pub async fn copy_image_text(app: AppHandle, id: i64) -> Result<ocr::TextCopy> {
+    tauri::async_runtime::spawn_blocking(move || ocr::copy_text(&app, id))
+        .await
+        .map_err(|_| AppError::Interrupted)?
+}
+
+/// "Refresh preview": the link is visited again. Returns whether previews are on at all.
+#[tauri::command]
+pub fn refresh_link(app: AppHandle, state: State<'_, AppState>, id: i64) -> Result<bool> {
+    state.with_db(|db| links::refresh(db, id))?;
+    links::wake(&app);
+    Ok(state.settings().link_previews)
+}
+
+/// Ctrl+O: opens a link in the default browser.
+#[tauri::command]
+pub fn open_link(state: State<'_, AppState>, id: i64) -> Result<()> {
+    state.with_db(|db| links::open(db, id))
+}
+
+/// Installed OCR languages for Settings.
+#[tauri::command]
+pub async fn ocr_status() -> Result<ocr::OcrStatus> {
+    tauri::async_runtime::spawn_blocking(ocr::status)
+        .await
+        .map_err(|_| AppError::Interrupted)
+}
+
+/// Ctrl+F in the Library: ids of the matching items, best match first.
+#[tauri::command]
+pub fn search_library(state: State<'_, AppState>, query: String) -> Result<Vec<i64>> {
+    let without_accents = state.settings().search_without_accents;
+    state.with_db(|db| search::find(db, &query, without_accents))
 }
 
 #[tauri::command]
@@ -116,6 +162,99 @@ pub struct Clearable {
 pub fn count_clearable(state: State<'_, AppState>, kinds: Vec<Kind>) -> Result<Clearable> {
     let (count, cutoff) = state.with_db(|db| retention::clearable(db, &kinds, now_ms()))?;
     Ok(Clearable { count, cutoff })
+}
+
+/// The shortcut recorder releases Panopin's shortcuts while it listens (D-061).
+#[tauri::command]
+pub fn suspend_shortcuts(app: AppHandle, suspended: bool) {
+    hotkeys::suspend(&app, suspended);
+}
+
+/// Saves one shortcut (`None` = off). A combination another app holds is refused and the old
+/// one stays.
+#[tauri::command]
+pub fn set_shortcut(
+    app: AppHandle,
+    action: hotkeys::Action,
+    accelerator: Option<String>,
+) -> Result<Settings> {
+    let key = match action {
+        hotkeys::Action::ToggleShelf => "shelf",
+        hotkeys::Action::OpenShelfSearch => "shelfSearch",
+        hotkeys::Action::Snip => "snip",
+        hotkeys::Action::OpenLibrary => "library",
+        hotkeys::Action::CopyLastImage => "copyLastImage",
+        hotkeys::Action::PauseCapture => "pauseCapture",
+    };
+    let previous = app.state::<AppState>().settings().shortcuts;
+    let next = crate::apply_settings(
+        &app,
+        serde_json::json!({ "shortcuts": { key: accelerator } }),
+    )?;
+    if accelerator.is_some() && hotkeys::unavailable(&app).contains(&action) {
+        crate::apply_settings(&app, serde_json::json!({ "shortcuts": previous }))?;
+        return Err(AppError::ShortcutUnavailable);
+    }
+    Ok(next)
+}
+
+/// Settings → Privacy: pause until a time (Unix ms), or resume with `None`.
+#[tauri::command]
+pub fn set_pause(app: AppHandle, until: Option<i64>) -> Result<()> {
+    // JavaScript numbers stop at 2^53; anything that far away means "until resumed".
+    let until = until.map(|at| {
+        if at >= (1 << 53) - 1 {
+            crate::settings::PAUSED_UNTIL_RESUMED
+        } else {
+            at
+        }
+    });
+    capture::set_pause(&app, until)
+}
+
+/// Mica support and the Windows accent colour (D-060).
+#[tauri::command]
+pub fn system_look() -> crate::look::SystemLook {
+    crate::look::current()
+}
+
+/// Settings → Sources: a folder to watch for screenshots and recordings.
+#[tauri::command]
+pub async fn pick_watch_folder(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+) -> Result<Option<String>> {
+    tauri::async_runtime::spawn_blocking(move || {
+        transfer::pick_folder_titled(&app, &window, "settings.sources.pick")
+            .map(|folder| folder.map(|f| f.display().to_string()))
+    })
+    .await
+    .map_err(|_| AppError::Interrupted)?
+}
+
+/// Settings → About: only these fixed pages open in the browser.
+#[tauri::command]
+pub fn open_project_link(which: String) -> Result<()> {
+    let url = match which.as_str() {
+        "website" => "https://mehmetburaktaskaya.com",
+        "github" => "https://github.com/MehmetBurakTaskaya/panopin",
+        "licence" => "https://github.com/MehmetBurakTaskaya/panopin/blob/main/LICENSE",
+        // Where Windows adds languages, OCR included.
+        "languages" => "ms-settings:regionlanguage",
+        _ => return Err(AppError::InvalidSetting("unknown link")),
+    };
+    links::open_url(url)
+}
+
+#[tauri::command]
+pub fn app_version(app: AppHandle) -> String {
+    app.package_info().version.to_string()
+}
+
+/// Shortcuts whose combination another app holds; Settings warns about them.
+#[tauri::command]
+pub fn unavailable_shortcuts(app: AppHandle) -> Vec<hotkeys::Action> {
+    hotkeys::unavailable(&app)
 }
 
 /// "Clear history", step 2: moves the items that are still unsaved and were copied before the
@@ -263,6 +402,24 @@ pub async fn export_items(
     tauri::async_runtime::spawn_blocking(move || transfer::export(&app, &window, &ids))
         .await
         .map_err(|_| AppError::Interrupted)?
+}
+
+/// "Import…" in the Library: pictures and recordings from files; returns how many came in.
+#[tauri::command]
+pub async fn import_files(app: AppHandle, window: tauri::WebviewWindow) -> Result<usize> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let paths = transfer::pick_import(&app, &window)?;
+        capture::import(&app, &paths)
+    })
+    .await
+    .map_err(|_| AppError::Interrupted)?
+}
+
+/// The palette's "Settings": the shelf steps aside and Settings comes forward.
+#[tauri::command]
+pub fn open_settings(app: AppHandle) -> Result<()> {
+    shelf::request_close(&app, false)?;
+    windows::open_settings(&app)
 }
 
 /// L on the shelf and the tray: the shelf steps aside and the Library comes forward.

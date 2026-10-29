@@ -1,13 +1,18 @@
 mod capture;
 mod commands;
+mod edge;
 mod editing;
 mod error;
 mod focus;
 mod hotkeys;
 mod i18n;
+mod links;
+mod look;
 mod media;
+mod ocr;
 mod settings;
 mod shelf;
+mod snip;
 mod store;
 mod system_state;
 mod transfer;
@@ -70,6 +75,15 @@ pub(crate) fn apply_settings(app: &AppHandle, patch: Value) -> Result<Settings> 
     if old.theme != new.theme {
         windows::apply_theme(app)?;
     }
+    if old.appearance.material != new.appearance.material {
+        windows::apply_material(app)?;
+    }
+    if old.launch_at_login != new.launch_at_login {
+        set_launch_at_login(app, new.launch_at_login);
+    }
+    if old.edge_open != new.edge_open || old.shelf_edge != new.shelf_edge {
+        edge::configure(app, new.edge_open, new.shelf_edge);
+    }
     if old.language != new.language || old.paused_until != new.paused_until {
         tray::refresh(app)?;
     }
@@ -78,6 +92,12 @@ pub(crate) fn apply_settings(app: &AppHandle, patch: Value) -> Result<Settings> 
     }
     if !old.onboarded && new.onboarded {
         windows::close_onboarding(app)?;
+    }
+    if !old.ocr && new.ocr {
+        ocr::wake(app);
+    }
+    if !old.link_previews && new.link_previews {
+        links::wake(app);
     }
     if old.onboarded != new.onboarded
         || old.sources != new.sources
@@ -108,17 +128,68 @@ fn setup(app: &AppHandle) -> Result<()> {
     let staging = transfer::Staging::new(dir.join("staging"));
     staging.clean();
     app.manage(staging);
+    rebuild_search_index(app);
     capture::start(app, &dir)?;
+    ocr::start(app)?;
+    links::start(app);
+    look::watch(app);
+    let settings = app.state::<AppState>().settings();
+    edge::configure(app, settings.edge_open, settings.shelf_edge);
+    // The setting is the truth; the registry entry follows it (it may point to an older copy).
+    set_launch_at_login(app, settings.launch_at_login);
     tray::create(app)?;
-    let failed = hotkeys::register_all(app, &shortcuts);
-    if !failed.is_empty() {
-        log::warn!("{} shortcut(s) could not be registered", failed.len());
+    let unavailable = hotkeys::register_all(app, &shortcuts);
+    if !unavailable.is_empty() {
+        log::warn!("{} shortcut(s) could not be registered", unavailable.len());
     }
     if !onboarded {
         windows::open_onboarding(app)?;
     }
     log::info!("Panopin {} started", app.package_info().version);
     Ok(())
+}
+
+/// Fills the search index when it is new or was built by an older version, a few hundred items
+/// per lock so captures never wait long. Items written meanwhile index themselves.
+fn rebuild_search_index(app: &AppHandle) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let state = app.state::<AppState>();
+        let run = || -> Result<bool> {
+            if !state.with_db(|db| store::search::outdated(db))? {
+                return Ok(false);
+            }
+            state.with_db(|db| store::search::clear(db))?;
+            let mut after = 0;
+            while let Some(last) =
+                state.with_db(|db| store::search::rebuild_batch(db, after, 300))?
+            {
+                after = last;
+            }
+            state.with_db(|db| store::search::mark_built(db))?;
+            Ok(true)
+        };
+        match run() {
+            Ok(true) => log::info!("search index rebuilt"),
+            Ok(false) => {}
+            Err(err) => log::error!("search index rebuild failed: {err}"),
+        }
+    });
+}
+
+/// Start at login (D-060), through the autostart plugin's entry in the user's Run key.
+fn set_launch_at_login(app: &AppHandle, on: bool) {
+    use tauri_plugin_autostart::ManagerExt;
+    let launcher = app.autolaunch();
+    let result = match (on, launcher.is_enabled()) {
+        (true, Ok(false)) => launcher.enable(),
+        (false, Ok(true)) => launcher.disable(),
+        (_, Ok(_)) => Ok(()),
+        (_, Err(err)) => Err(err),
+    };
+    if let Err(err) = result {
+        log::warn!("start at login could not be changed: {err}");
+    }
 }
 
 /// A second launch brings the running instance forward instead of starting a copy.
@@ -155,6 +226,10 @@ pub fn run() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             activate_existing(app)
         }))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
         .plugin(
             tauri_plugin_log::Builder::new()
                 .level(log::LevelFilter::Info)
@@ -173,6 +248,18 @@ pub fn run() {
                         Some(hotkeys::Action::OpenShelfSearch) => {
                             log_failure(shelf::open(app, true), "opening the shelf")
                         }
+                        Some(hotkeys::Action::Snip) => {
+                            log_failure(snip::start(app), "starting a snip")
+                        }
+                        Some(hotkeys::Action::OpenLibrary) => {
+                            log_failure(windows::open_library(app), "opening the Library")
+                        }
+                        Some(hotkeys::Action::CopyLastImage) => {
+                            log_failure(capture::copy_last_image(app), "copying the last image")
+                        }
+                        Some(hotkeys::Action::PauseCapture) => {
+                            log_failure(capture::toggle_pause(app), "pausing capture")
+                        }
                         None => {}
                     }
                 })
@@ -180,10 +267,16 @@ pub fn run() {
         )
         .manage(shelf::ShelfState::default())
         .manage(hotkeys::HotkeyState::default())
+        .manage(snip::SnipState::default())
         .manage(commands::ShelfUndo::default())
         .register_asynchronous_uri_scheme_protocol("media", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             let path = request.uri().path().to_owned();
+            let range = request
+                .headers()
+                .get("range")
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned);
             std::thread::spawn(move || {
                 let unavailable = || {
                     tauri::http::Response::builder()
@@ -193,7 +286,7 @@ pub fn run() {
                 };
                 let response = match (capture::media(&app), app.try_state::<AppState>()) {
                     (Some(store), Some(state)) => state
-                        .with_db(|db| Ok(media::serve(&store, db, &path)))
+                        .with_db(|db| Ok(media::serve(&store, db, &path, range.as_deref())))
                         .unwrap_or_else(|_| unavailable()),
                     _ => unavailable(),
                 };
@@ -231,6 +324,21 @@ pub fn run() {
             commands::count_clearable,
             commands::clear_history,
             commands::list_shelf,
+            commands::search_shelf,
+            commands::search_library,
+            commands::copy_image_text,
+            commands::ocr_status,
+            commands::refresh_link,
+            commands::open_link,
+            commands::import_files,
+            commands::suspend_shortcuts,
+            commands::set_shortcut,
+            commands::unavailable_shortcuts,
+            commands::system_look,
+            commands::set_pause,
+            commands::pick_watch_folder,
+            commands::open_project_link,
+            commands::app_version,
             commands::set_pinned,
             commands::take_down,
             commands::undo_take_down,
@@ -262,6 +370,7 @@ pub fn run() {
             commands::new_note,
             commands::export_items,
             commands::open_library,
+            commands::open_settings,
             commands::close_shelf,
             commands::shelf_hidden,
         ])

@@ -19,11 +19,14 @@ use windows::{
             FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING,
         },
         System::{Com::CoTaskMemFree, IO::CancelIoEx},
-        UI::Shell::{FOLDERID_Screenshots, SHGetKnownFolderPath, KF_FLAG_CREATE},
+        UI::Shell::{
+            FOLDERID_Screenshots, FOLDERID_Videos, SHGetKnownFolderPath, KF_FLAG_CREATE,
+            KF_FLAG_DEFAULT,
+        },
     },
 };
 
-use super::{is_image_file, Event};
+use super::{is_capture_file, Event};
 use crate::error::Result;
 
 const FILE_ACTION_ADDED: u32 = 1;
@@ -38,6 +41,20 @@ pub fn screenshots_folder() -> Option<PathBuf> {
         CoTaskMemFree(Some(path.0.cast_const().cast()));
         folder
     }
+}
+
+/// Where the Snipping Tool saves screen recordings: `Screen Recordings` in the Videos known
+/// folder. It is created when missing, so the first recording is not missed.
+pub fn recordings_folder() -> Option<PathBuf> {
+    let videos = unsafe {
+        let path = SHGetKnownFolderPath(&FOLDERID_Videos, KF_FLAG_DEFAULT, None).ok()?;
+        let folder = path.to_string().ok().map(PathBuf::from);
+        CoTaskMemFree(Some(path.0.cast_const().cast()));
+        folder
+    }?;
+    let folder = videos.join("Screen Recordings");
+    std::fs::create_dir_all(&folder).ok()?;
+    Some(folder)
 }
 
 struct RawHandle(HANDLE);
@@ -112,7 +129,7 @@ fn run(handle: RawHandle, dir: PathBuf, tx: Sender<Event>) {
         let bytes =
             unsafe { std::slice::from_raw_parts(buffer.as_ptr().cast::<u8>(), returned as usize) };
         for name in changed_names(bytes) {
-            if is_image_file(&name) && tx.send(Event::File(dir.join(name))).is_err() {
+            if is_capture_file(&name) && tx.send(Event::File(dir.join(name))).is_err() {
                 return;
             }
         }

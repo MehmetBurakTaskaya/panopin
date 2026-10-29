@@ -61,6 +61,8 @@
 .tool[aria-pressed='true'] { background: color-mix(in srgb, var(--accent) 22%, transparent); font-weight: 600; }
 .tool:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
 .tool:disabled { opacity: 0.45; }
+.search { width: 220px; height: 28px; padding: 0 9px; border: 1px solid var(--ui-line); border-radius: 6px; background: var(--ui-surface); color: var(--ui-ink); font: inherit; }
+.search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .select { height: 28px; padding: 0 6px; border: 1px solid var(--ui-line); border-radius: 6px; background: var(--ui-surface); color: var(--ui-ink); font: inherit; }
 .chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 4px 0 9px; border-radius: 12px; background: color-mix(in srgb, var(--accent) 16%, transparent); font-size: 12px; }
 .chip button { all: unset; width: 18px; height: 18px; border-radius: 9px; text-align: center; line-height: 18px; cursor: default; }
@@ -85,6 +87,9 @@
 .tile.cursor { outline: 2px solid var(--accent); outline-offset: 2px; }
 .thumb { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--ui-line) 50%, transparent); }
 .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 6px; object-fit: contain; }
+.thumb img.cover { padding: 0; object-fit: cover; }
+.thumb .duration { position: absolute; right: 8px; bottom: 8px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 10px/14px var(--font); }
+img.letter { object-fit: contain; background: #fff; box-shadow: 0 0 0 1px var(--ui-line); }
 .thumbText { align-self: stretch; justify-self: stretch; padding: 8px 10px; overflow: hidden; font: 11.5px/1.45 var(--font); white-space: pre-line; word-break: break-word; color: var(--ui-ink); }
 .thumbLink { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--ui-muted); }
 .tile .letter, .row .letter { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #fff; font: 700 17px var(--font); }

@@ -147,6 +147,35 @@ impl LibraryLayout {
     }
 }
 
+/// Look of the windows (D-060).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Appearance {
+    /// The Windows accent colour instead of Panopin's own blue.
+    pub system_accent: bool,
+    /// Mica behind the Library and Settings on Windows 11.
+    pub material: bool,
+    /// Off: no animations at all. On: they follow Windows' "Animation effects".
+    pub animations: bool,
+}
+
+impl Default for Appearance {
+    fn default() -> Self {
+        Self {
+            system_accent: true,
+            material: true,
+            animations: true,
+        }
+    }
+}
+
+/// Update checks reach the network, so they are off until the user turns them on.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Updates {
+    pub auto_check: bool,
+}
+
 /// Global shortcuts in Tauri accelerator syntax (`Super` is the Windows key); `None` means off.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -256,6 +285,15 @@ pub struct Settings {
     pub shelf_edge: ShelfEdge,
     pub sounds: Sounds,
     pub library: LibraryLayout,
+    /// Search also ignores the Turkish accents: "cicek" finds "çiçek".
+    pub search_without_accents: bool,
+    /// Text in images is read in the background (Windows OCR).
+    pub ocr: bool,
+    pub launch_at_login: bool,
+    /// Resting the pointer on the shelf's screen edge opens it (D-022).
+    pub edge_open: bool,
+    pub appearance: Appearance,
+    pub updates: Updates,
 }
 
 impl Default for Settings {
@@ -282,6 +320,12 @@ impl Default for Settings {
             shelf_edge: ShelfEdge::default(),
             sounds: Sounds::default(),
             library: LibraryLayout::default(),
+            search_without_accents: false,
+            ocr: true,
+            launch_at_login: false,
+            edge_open: false,
+            appearance: Appearance::default(),
+            updates: Updates::default(),
         }
     }
 }
@@ -311,6 +355,7 @@ impl Settings {
         if self.sounds.volume > 100 {
             return Err(AppError::InvalidSetting("volume is 0 to 100"));
         }
+        crate::hotkeys::validate(&self.shortcuts)?;
         if !self.library.widths_ok() {
             return Err(AppError::InvalidSetting(
                 "panel and column widths are 60 to 1600 px",
@@ -392,6 +437,9 @@ mod tests {
         assert!(s.sources.clipboard_text && s.sources.screenshots);
         assert!(!s.sources.screen_recordings);
         assert!(!s.link_previews);
+        assert!(!s.updates.auto_check, "the network is opt-in");
+        assert!(!s.launch_at_login && !s.edge_open && !s.search_without_accents);
+        assert!(s.ocr && s.appearance.material && s.appearance.animations);
         assert_eq!(s.retention.text, Some(30));
         assert_eq!(s.retention.trash, Some(30));
         for app in [

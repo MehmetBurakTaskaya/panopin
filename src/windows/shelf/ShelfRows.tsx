@@ -13,6 +13,9 @@ export interface ShelfRowsProps {
   /** Takes focus on opening, so screen readers follow the cursor through aria-activedescendant. */
   gridRef: Ref<HTMLDivElement>;
   shelf: Shelf;
+  /** Folded words of the shelf search, marked on the cards; null while not searching. */
+  terms: string[] | null;
+  withoutAccents: boolean;
   model: ShelfModel;
   hidden: Record<Kind, boolean>;
   pinnedOnly: boolean;
@@ -113,6 +116,8 @@ export function ShelfRows(props: ShelfRowsProps) {
                   effect={effects.get(item.id) ?? null}
                   order={Math.min(index, 12)}
                   now={now}
+                  terms={props.terms}
+                  withoutAccents={props.withoutAccents}
                   onClick={props.onCardClick}
                   onContextMenu={props.onCardContextMenu}
                   onDoubleClick={props.onCardDoubleClick}
@@ -120,7 +125,9 @@ export function ShelfRows(props: ShelfRowsProps) {
                 />
               ))}
               {items.length === 0 && (
-                <p className={styles.rowEmpty}>{t(pinnedOnly ? 'shelf.row.pinnedEmpty' : 'shelf.row.empty')}</p>
+                <p className={styles.rowEmpty}>
+                  {t(props.terms ? 'shelf.search.none' : pinnedOnly ? 'shelf.row.pinnedEmpty' : 'shelf.row.empty')}
+                </p>
               )}
             </div>
           </div>

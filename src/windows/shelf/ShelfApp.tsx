@@ -11,16 +11,22 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { t } from '../../i18n';
+import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
 import { FolderPicker, NamePrompt, TagPicker } from '../../components/pickers/Pickers';
 import {
   addToFolder,
   closeShelf,
+  copyImageText,
   copyItems,
   createFolder,
   exportItems,
   libraryGroups,
   openLibrary,
+  openLink,
+  openSettings,
   pasteItems,
+  refreshLink,
+  rowOf,
   revertEdit,
   setPinned,
   setTitle,
@@ -39,6 +45,8 @@ import {
 import { commandFor, type Command } from '../../keyboard/shelfKeys';
 import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type ShelfModel } from '../../keyboard/shelfModel';
 import { displayTitle } from '../../library/query';
+import { reducedMotion as reducedMotionSetting } from '../../look';
+import { queryTerms } from '../../search/highlight';
 import { formatShortcut } from '../../shortcuts';
 import { configure, play, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
@@ -47,11 +55,12 @@ import cardStyles from './Card.module.css';
 import { ConfirmTrash } from './ConfirmTrash';
 import { ContextMenu, type MenuEntry, type MenuPlacement } from './ContextMenu';
 import { EmptyState } from './EmptyState';
+import { SearchBox } from './SearchBox';
 import { Preview, type PreviewMode } from './preview/Preview';
 import { trackSave, whenSaved } from './preview/saves';
 import styles from './Shelf.module.css';
 import { ShelfRows } from './ShelfRows';
-import { rowsOf, useShelfData } from './useShelfData';
+import { rowsOf, useShelfData, useShelfSearch } from './useShelfData';
 
 // Matches the CSS transitions: open ~420 ms ease-out, close ~200 ms.
 const SETTLE_MS = 430;
@@ -65,7 +74,8 @@ type ModelAction = Action | { type: 'reset'; rows: Rows };
 
 const ALL_ROWS: Record<Kind, boolean> = { image: false, text: false, link: false };
 
-const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Off in Settings, or reduced motion in Windows (D-060).
+const reducedMotion = reducedMotionSetting;
 const wait = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, reducedMotion() ? 0 : ms));
 
 function modelReducer(model: ShelfModel, action: ModelAction): ShelfModel {
@@ -82,6 +92,7 @@ interface Toast {
   key: number;
   x: number;
   y: number;
+  text: string;
 }
 
 /** Alt+P, Shift+P and Ctrl+Shift+T: the same pickers as in the Library. */
@@ -103,13 +114,26 @@ function CheckIcon() {
 export function ShelfApp() {
   useSettings((s) => s.lang);
   const settings = useSettings((s) => s.settings);
+  const update = useSettings((s) => s.update);
   const edge = settings?.shelfEdge ?? 'top';
   const [phase, setPhase] = useState<Phase>('hidden');
   const { shelf, refresh } = useShelfData();
+  // Shift+S: while something is typed the rows show only the matches (D-059).
+  const withoutAccents = settings?.searchWithoutAccents ?? false;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const results = useShelfSearch(searchOpen ? query : '', withoutAccents);
+  const shown = searchOpen && results ? results : shelf;
+  const terms = useMemo(
+    () => (searchOpen && results ? queryTerms(query, withoutAccents) : null),
+    [searchOpen, results, query, withoutAccents],
+  );
+  const [searchTop, setSearchTop] = useState(0);
+  const searchInput = useRef<HTMLInputElement>(null);
   // Row toggles (Shift+I/T/L) and the pinned filter (F) last for the session, like the board itself.
   const [hidden, setHidden] = useState(ALL_ROWS);
   const [pinnedOnly, setPinnedOnly] = useState(false);
-  const rows = useMemo(() => rowsOf(shelf, hidden, pinnedOnly), [shelf, hidden, pinnedOnly]);
+  const rows = useMemo(() => rowsOf(shown, hidden, pinnedOnly), [shown, hidden, pinnedOnly]);
   const [model, dispatch] = useReducer(modelReducer, rows, (initial: Rows) => openModel(initial));
   const [effects, setEffects] = useState<ReadonlyMap<number, Effect>>(new Map());
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -117,6 +141,8 @@ export function ShelfApp() {
   const [menu, setMenu] = useState<{ at: MenuPlacement; ids: number[] } | null>(null);
   const [confirm, setConfirm] = useState<number[] | null>(null);
   const [picker, setPicker] = useState<Picker | null>(null);
+  // Ctrl+K: built when it opens, so its commands act on that moment's selection.
+  const [palette, setPalette] = useState<PaletteCommand[] | null>(null);
   // Space opens the preview of the card under the cursor; E, M and C open its editors.
   const [preview, setPreview] = useState<PreviewMode | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -134,6 +160,23 @@ export function ShelfApp() {
   }, [settings]);
 
   useEffect(() => dispatch({ type: 'setRows', rows }), [rows]);
+
+  useLayoutEffect(() => {
+    if (!searchOpen) return;
+    const place = () => {
+      const rect = board.current?.getBoundingClientRect();
+      const height = window.innerHeight;
+      if (!rect) return setSearchTop(height / 2);
+      setSearchTop(
+        edge === 'top'
+          ? Math.min(height - 64, Math.max(height / 2, rect.bottom + 72))
+          : Math.max(64, Math.min(height / 2, rect.top - 72)),
+      );
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [searchOpen, edge, rows]);
 
   /** Starts a short card animation; `idleOnly` leaves cards that are already animating alone. */
   const flash = useCallback((ids: number[], effect: Effect, ms: number, idleOnly = false) => {
@@ -154,18 +197,18 @@ export function ShelfApp() {
   }, []);
 
   // Event handlers read the newest state through this ref, so they can stay stable for memoised cards.
-  const latest = useRef({ model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, picker, preview });
+  const latest = useRef({ model, shown, rows, hidden, pinnedOnly, phase, menu, confirm, picker, palette, preview, searchOpen });
   useLayoutEffect(() => {
-    latest.current = { model, shelf, rows, hidden, pinnedOnly, phase, menu, confirm, picker, preview };
+    latest.current = { model, shown, rows, hidden, pinnedOnly, phase, menu, confirm, picker, palette, preview, searchOpen };
   });
 
   const current = useMemo(() => {
     const id = cursorId(model);
-    return id === null ? null : (KINDS.flatMap((kind) => shelf[kind]).find((item) => item.id === id) ?? null);
-  }, [model, shelf]);
+    return id === null ? null : (KINDS.flatMap((kind) => shown[kind]).find((item) => item.id === id) ?? null);
+  }, [model, shown]);
 
   const itemsOf = (ids: number[]): ShelfItem[] => {
-    const all = new Map(KINDS.flatMap((kind) => latest.current.shelf[kind]).map((item) => [item.id, item] as const));
+    const all = new Map(KINDS.flatMap((kind) => latest.current.shown[kind]).map((item) => [item.id, item] as const));
     return ids.map((id) => all.get(id)).filter((item): item is ShelfItem => !!item);
   };
 
@@ -179,11 +222,11 @@ export function ShelfApp() {
 
   const fail = (err: unknown) => setNotice(t('shelf.error', { error: String(err) }));
 
-  const toastAt = (id: number) => {
+  const toastAt = (id: number, text = t('shelf.copied')) => {
     const rect = document.getElementById(cardDomId(id))?.getBoundingClientRect();
     if (!rect) return;
     const key = performance.now();
-    setToasts((list) => [...list, { key, x: rect.left + rect.width / 2, y: rect.top - 6 }]);
+    setToasts((list) => [...list, { key, x: rect.left + rect.width / 2, y: rect.top - 6, text }]);
     window.setTimeout(() => setToasts((list) => list.filter((toast) => toast.key !== key)), TOAST_MS);
   };
 
@@ -287,7 +330,24 @@ export function ShelfApp() {
     }
   };
 
+  const openSearch = () => {
+    setSearchOpen(true);
+    window.requestAnimationFrame(() => {
+      searchInput.current?.focus();
+      searchInput.current?.select();
+    });
+  };
+
+  /** Esc in the box, or on the results: the query goes and every card comes back. */
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setQuery('');
+    grid.current?.focus({ preventScroll: true });
+  };
+
   const undo = async () => {
+    // A card coming back must be visible, so the search makes way.
+    if (latest.current.searchOpen) closeSearch();
     let ids: number[];
     try {
       ids = await undoTakeDown();
@@ -301,7 +361,7 @@ export function ShelfApp() {
     const restored = KINDS.flatMap((kind) => next[kind]).filter((item) => ids.includes(item.id));
     // A restored card must be visible: show its row and leave the pinned filter if needed.
     const nextHidden = { ...latest.current.hidden };
-    for (const item of restored) nextHidden[item.kind] = false;
+    for (const item of restored) nextHidden[rowOf(item.kind)] = false;
     const nextPinnedOnly = latest.current.pinnedOnly && restored.every((item) => item.pinned);
     setHidden(nextHidden);
     setPinnedOnly(nextPinnedOnly);
@@ -338,6 +398,34 @@ export function ShelfApp() {
 
   const revert = (id: number) => {
     trackSave(revertEdit(id)).catch(fail);
+  };
+
+  /** Ctrl+Shift+C: the text Windows OCR read in the image under the cursor. */
+  const copyText = async () => {
+    const id = cursorId(latest.current.model);
+    const item = id === null ? undefined : itemsOf([id])[0];
+    if (!item || item.kind !== 'image') return;
+    try {
+      const outcome = await copyImageText(item.id);
+      if (outcome === 'copied') {
+        play('copy');
+        flash([item.id], 'copied', 450);
+        toastAt(item.id, t('shelf.ocr.copied'));
+      } else {
+        setNotice(t(outcome === 'noText' ? 'shelf.ocr.none' : 'shelf.ocr.unavailable'));
+      }
+    } catch (err) {
+      fail(err);
+    }
+  };
+
+  /** Ctrl+O: the browser comes forward, so the shelf closes on its own. */
+  const openLinkOf = (id: number) => {
+    if (itemsOf([id])[0]?.kind === 'link') openLink(id).catch(fail);
+  };
+
+  const refreshPreview = (id: number) => {
+    refreshLink(id).then((on) => !on && setNotice(t('shelf.link.previewsOff')), fail);
   };
 
   /** Naming or filing pins the items; the ones not pinned yet get the pin's knock. */
@@ -426,6 +514,9 @@ export function ShelfApp() {
       case 'menu':
         openMenuAtCursor();
         return;
+      case 'palette':
+        setPalette(paletteCommands());
+        return;
       case 'name':
       case 'folder':
       case 'tag':
@@ -437,9 +528,21 @@ export function ShelfApp() {
       case 'library':
         openLibrary().catch(fail);
         return;
+      case 'search':
+        openSearch();
+        return;
+      case 'copyText':
+        void copyText();
+        return;
+      case 'openLink': {
+        const id = cursorId(latest.current.model);
+        if (id !== null) openLinkOf(id);
+        return;
+      }
       case 'escape':
-        // Esc closes the top layer first: the preview, then the board.
+        // Esc closes the top layer first: the preview, then the search, then the board.
         if (latest.current.preview) setPreview(null);
+        else if (latest.current.searchOpen) closeSearch();
         else void closeShelf();
         return;
     }
@@ -452,10 +555,17 @@ export function ShelfApp() {
     const single = items.length === 1 ? items[0] : undefined;
     const kindEntries: MenuEntry[] = [];
     if (single?.kind === 'text') kindEntries.push({ label: 'shelf.menu.edit', shortcut: 'E', run: () => setPreview('text') });
+    if (single?.kind === 'link') {
+      kindEntries.push(
+        { label: 'shelf.menu.openLink', shortcut: `${ctrl}+O`, run: () => openLinkOf(single.id) },
+        { label: 'shelf.menu.refreshLink', shortcut: '', run: () => refreshPreview(single.id) },
+      );
+    }
     if (single?.kind === 'image') {
       kindEntries.push(
         { label: 'shelf.menu.markup', shortcut: 'M', run: () => setPreview('markup') },
         { label: 'shelf.menu.crop', shortcut: 'C', run: () => setPreview('crop') },
+        { label: 'shelf.menu.copyText', shortcut: `${ctrl}+Shift+C`, run: () => void copyText() },
       );
       if (single.edited) kindEntries.push({ label: 'shelf.menu.revert', shortcut: '', run: () => revert(single.id) });
     }
@@ -475,6 +585,28 @@ export function ShelfApp() {
     ];
   };
 
+  /** The palette: the card actions for the selection, then the shelf's own (D-063). */
+  const paletteCommands = (): PaletteCommand[] => {
+    const ids = targetIds();
+    const fromMenu = ids.length > 0 ? menuEntries(ids) : [];
+    const own: MenuEntry[] = [
+      { label: 'shelf.search.label', shortcut: 'Shift+S', run: openSearch },
+      { label: 'library.filter.pinned', shortcut: 'F', run: () => setPinnedOnly((on) => !on) },
+      { label: 'palette.rowImages', shortcut: 'Shift+I', run: () => toggleRow('image') },
+      { label: 'palette.rowTexts', shortcut: 'Shift+T', run: () => toggleRow('text') },
+      { label: 'palette.rowLinks', shortcut: 'Shift+L', run: () => toggleRow('link') },
+      { label: 'tray.library', shortcut: 'L', run: () => void openLibrary().catch(fail) },
+      { label: 'palette.settings', shortcut: '', run: () => void openSettings().catch(fail) },
+      { label: 'palette.closeShelf', shortcut: 'Esc', run: () => void closeShelf() },
+    ];
+    return [...fromMenu, ...own].map((entry, i) => ({
+      id: `${i}-${entry.label}`,
+      label: t(entry.label),
+      shortcut: entry.shortcut || undefined,
+      run: entry.run,
+    }));
+  };
+
   const handlers = useRef({ run, copy });
   useLayoutEffect(() => {
     handlers.current = { run, copy };
@@ -490,12 +622,27 @@ export function ShelfApp() {
       setMenu(null);
       setConfirm(null);
       setPicker(null);
+      setPalette(null);
       setPreview(null);
       setNotice(payload.notice ? t(payload.notice) : null);
+      setQuery('');
+      setSearchOpen(payload.search);
       dispatch({ type: 'reset', rows: latest.current.rows });
       setPhase('open');
       play('open');
       grid.current?.focus({ preventScroll: true });
+      if (payload.search) window.requestAnimationFrame(() => searchInput.current?.focus());
+      // A new snip: its card may be newer than the rows, so they are read first.
+      const focus = payload.focus;
+      if (focus !== null) {
+        void refresh().then((next) => {
+          if (!next) return;
+          const { hidden: rowsHidden, pinnedOnly: onlyPinned } = latest.current;
+          dispatch({ type: 'reset', rows: rowsOf(next, rowsHidden, onlyPinned) });
+          dispatch({ type: 'click', id: focus });
+          if (payload.editor) setPreview(payload.editor);
+        });
+      }
       // Keys work at once; the mouse waits until the board has landed, then the cards settle.
       settleTimer = window.setTimeout(() => {
         setPhase('settled');
@@ -511,7 +658,10 @@ export function ShelfApp() {
       setMenu(null);
       setConfirm(null);
       setPicker(null);
+      setPalette(null);
       setPreview(null);
+      setSearchOpen(false);
+      setQuery('');
       play('close');
       // Rust hides the window only if no newer open happened in the meantime.
       window.setTimeout(() => void shelfHidden(payload.generation), reducedMotion() ? 0 : CLOSE_MS);
@@ -521,14 +671,16 @@ export function ShelfApp() {
       void opened.then((unlisten) => unlisten());
       void closed.then((unlisten) => unlisten());
     };
-  }, [flash]);
+  }, [flash, refresh]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const state = latest.current;
-      // Closed boards, the menu, the confirmation and the pickers handle their own keys; typing in
-      // an IME too.
-      if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm || state.picker) return;
+      // Closed boards, the menu, the confirmation, the pickers and the palette handle their own
+      // keys; typing in an IME too.
+      if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm || state.picker || state.palette) {
+        return;
+      }
       // The text, markup and crop editors handle their own keys; typing never reaches the shelf.
       if ((state.preview && state.preview !== 'view') || isEditable(event.target)) return;
       if (event.isComposing) return;
@@ -613,7 +765,11 @@ export function ShelfApp() {
   const hints = <span className={styles.engrave}>{t('shelf.hints')}</span>;
 
   return (
-    <div className={styles.layer} data-edge={edge} onContextMenu={(event) => event.preventDefault()}>
+    <div
+      className={`${styles.layer} ${searchOpen ? styles.searching : ''}`}
+      data-edge={edge}
+      onContextMenu={(event) => event.preventDefault()}
+    >
       <div className={styles.backdrop} onClick={() => phase === 'settled' && void closeShelf()} />
       <div className={wrapClass}>
         <section ref={board} className={styles.board} aria-label={t('shelf.label')}>
@@ -633,7 +789,9 @@ export function ShelfApp() {
             ) : (
               <ShelfRows
                 gridRef={grid}
-                shelf={shelf}
+                shelf={shown}
+                terms={terms}
+                withoutAccents={withoutAccents}
                 model={model}
                 hidden={hidden}
                 pinnedOnly={pinnedOnly}
@@ -664,13 +822,50 @@ export function ShelfApp() {
       {toasts.map((toast) => (
         <div key={toast.key} className={styles.toast} role="status" style={{ left: toast.x, top: toast.y }}>
           <CheckIcon />
-          {t('shelf.copied')}
+          {toast.text}
         </div>
       ))}
       {preview && (phase === 'open' || phase === 'settled') && (
-        <Preview item={current} mode={preview} onMode={setPreview} onClose={() => setPreview(null)} onUndo={() => void undo()} />
+        <Preview
+          item={current}
+          mode={preview}
+          onMode={setPreview}
+          onClose={() => setPreview(null)}
+          onUndo={() => void undo()}
+          onOpenLink={openLinkOf}
+          onRefreshLink={refreshPreview}
+        />
       )}
       {menu && <ContextMenu at={menu.at} entries={menuEntries(menu.ids)} onClose={() => setMenu(null)} />}
+      {searchOpen && isOpen && (
+        <SearchBox
+          inputRef={searchInput}
+          query={query}
+          counts={results ? { image: rows.image.length, text: rows.text.length, link: rows.link.length } : null}
+          hidden={hidden}
+          withoutAccents={withoutAccents}
+          top={searchTop}
+          onQuery={setQuery}
+          onAccents={() => {
+            void update({ searchWithoutAccents: !withoutAccents });
+            searchInput.current?.focus();
+          }}
+          onResults={() => {
+            dispatch({ type: 'reset', rows: latest.current.rows });
+            grid.current?.focus({ preventScroll: true });
+          }}
+          onClose={closeSearch}
+        />
+      )}
+      {palette && (
+        <CommandPalette
+          commands={palette}
+          onClose={() => {
+            setPalette(null);
+            grid.current?.focus({ preventScroll: true });
+          }}
+        />
+      )}
       {picker?.type === 'name' && (
         <NamePrompt
           items={itemsOf(picker.ids).map((item) => ({ id: item.id, title: item.title, label: displayTitle(item) }))}

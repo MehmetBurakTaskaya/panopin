@@ -5,8 +5,13 @@ pub mod annotations;
 pub mod decode;
 pub mod flatten;
 pub mod thumbnails;
+pub mod video;
 
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    io::{Read, Seek, SeekFrom},
+    path::{Path, PathBuf},
+};
 
 use rusqlite::{Connection, OptionalExtension};
 use tauri::http::Response;
@@ -20,13 +25,80 @@ fn content_type(ext: &str) -> &'static str {
         "gif" => "image/gif",
         "webp" => "image/webp",
         "bmp" => "image/bmp",
+        "mp4" => "video/mp4",
         _ => "application/octet-stream",
     }
 }
 
-/// Serves `media://localhost/<thumb|original>/<id>` (D-014). The webview only ever names an item
+/// Serves `media://localhost/<thumb|original|link-image|link-icon>/<id>` (D-014). The webview only ever names an item
 /// id; the file path comes from the database, so nothing outside the managed folder is reachable.
-pub fn serve(store: &MediaStore, db: &Connection, path: &str) -> Response<Vec<u8>> {
+/// The webview asks for recordings a range at a time; at most this much is answered at once.
+const RANGE_CHUNK: u64 = 2 * 1024 * 1024;
+
+/// `bytes=start-end` (end optional) against a file of `len` bytes.
+fn byte_range(header: &str, len: u64) -> Option<(u64, u64)> {
+    let spec = header.trim().strip_prefix("bytes=")?;
+    let (start, end) = spec.split_once('-')?;
+    let start: u64 = start.trim().parse().ok()?;
+    if start >= len {
+        return None;
+    }
+    let end = match end.trim() {
+        "" => len - 1,
+        end => end.parse::<u64>().ok()?.min(len - 1),
+    };
+    (start <= end).then(|| (start, end.min(start + RANGE_CHUNK - 1)))
+}
+
+/// A recording, answered in ranges so it plays and seeks without being read whole.
+fn serve_video(file: &Path, range: Option<&str>) -> Response<Vec<u8>> {
+    let fail = |status: u16| {
+        Response::builder()
+            .status(status)
+            .body(Vec::new())
+            .unwrap_or_default()
+    };
+    let Ok(mut handle) = fs::File::open(file) else {
+        return fail(404);
+    };
+    let Ok(len) = handle.metadata().map(|m| m.len()) else {
+        return fail(404);
+    };
+    if len == 0 {
+        return fail(404);
+    }
+    let (start, end) = match range {
+        Some(header) => match byte_range(header, len) {
+            Some(range) => range,
+            None => {
+                return Response::builder()
+                    .status(416)
+                    .header("Content-Range", format!("bytes */{len}"))
+                    .body(Vec::new())
+                    .unwrap_or_default()
+            }
+        },
+        None => (0, (RANGE_CHUNK - 1).min(len - 1)),
+    };
+    let mut bytes = vec![0u8; (end - start + 1) as usize];
+    if handle.seek(SeekFrom::Start(start)).is_err() || handle.read_exact(&mut bytes).is_err() {
+        return fail(500);
+    }
+    Response::builder()
+        .status(206)
+        .header("Content-Type", "video/mp4")
+        .header("Accept-Ranges", "bytes")
+        .header("Content-Range", format!("bytes {start}-{end}/{len}"))
+        .body(bytes)
+        .unwrap_or_default()
+}
+
+pub fn serve(
+    store: &MediaStore,
+    db: &Connection,
+    path: &str,
+    range: Option<&str>,
+) -> Response<Vec<u8>> {
     let empty = |status: u16| {
         Response::builder()
             .status(status)
@@ -40,9 +112,12 @@ pub fn serve(store: &MediaStore, db: &Connection, path: &str) -> Response<Vec<u8
     else {
         return empty(400);
     };
+    // Link pictures were re-encoded by Panopin (D-057); they live next to the item's media.
     let column = match variant {
         "thumb" => "thumb_ext",
         "original" => "media_ext",
+        "link-image" => "link_image_ext",
+        "link-icon" => "link_icon_ext",
         _ => return empty(404),
     };
     let ext: Option<String> = db
@@ -59,6 +134,9 @@ pub fn serve(store: &MediaStore, db: &Connection, path: &str) -> Response<Vec<u8
         return empty(404);
     };
     let file = store.dir(id).join(format!("{variant}.{ext}"));
+    if ext == "mp4" {
+        return serve_video(&file, range);
+    }
     match fs::read(file) {
         Ok(bytes) => Response::builder()
             .header("Content-Type", content_type(&ext))
@@ -97,6 +175,27 @@ impl MediaStore {
         fs::create_dir_all(&tmp)?;
         fs::write(tmp.join(format!("original.{original_ext}")), original)?;
         fs::write(tmp.join(format!("thumb.{}", thumb.ext)), &thumb.bytes)?;
+        let dest = self.dir(id);
+        let _ = fs::remove_dir_all(&dest);
+        fs::rename(&tmp, &dest)?;
+        Ok(())
+    }
+
+    /// Copies a file (a recording) into place with its thumbnail, through a temporary folder.
+    pub fn write_file(
+        &self,
+        id: i64,
+        source: &Path,
+        ext: &str,
+        thumb: Option<&thumbnails::Thumbnail>,
+    ) -> Result<()> {
+        let tmp = self.root.join(format!(".tmp-{id}"));
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir_all(&tmp)?;
+        fs::copy(source, tmp.join(format!("original.{ext}")))?;
+        if let Some(thumb) = thumb {
+            fs::write(tmp.join(format!("thumb.{}", thumb.ext)), &thumb.bytes)?;
+        }
         let dest = self.dir(id);
         let _ = fs::remove_dir_all(&dest);
         fs::rename(&tmp, &dest)?;
@@ -174,5 +273,27 @@ mod tests {
         store.remove(7);
         store.remove(7); // already gone: no error
         assert!(!store.dir(7).exists());
+    }
+
+    #[test]
+    fn recordings_are_served_a_range_at_a_time() {
+        assert_eq!(byte_range("bytes=0-", 10), Some((0, 9)));
+        assert_eq!(byte_range("bytes=4-6", 10), Some((4, 6)));
+        assert_eq!(byte_range("bytes=4-99", 10), Some((4, 9)));
+        assert_eq!(byte_range("bytes=10-", 10), None);
+        assert_eq!(byte_range("bytes=7-3", 10), None);
+        assert_eq!(byte_range("items=0-1", 10), None);
+        let big = 10 * RANGE_CHUNK;
+        assert_eq!(byte_range("bytes=0-", big), Some((0, RANGE_CHUNK - 1)));
+
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("original.mp4");
+        fs::write(&file, b"0123456789").unwrap();
+        let partial = serve_video(&file, Some("bytes=2-5"));
+        assert_eq!(partial.status(), 206);
+        assert_eq!(partial.body(), b"2345");
+        assert_eq!(partial.headers()["Content-Range"], "bytes 2-5/10");
+        assert_eq!(serve_video(&file, Some("bytes=20-")).status(), 416);
+        assert_eq!(serve_video(&file, None).body().len(), 10);
     }
 }
