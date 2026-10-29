@@ -27,7 +27,7 @@ function scan(dir) {
       scan(path);
     } else if (/\.(tsx?|rs)$/.test(entry) && !/\.test\.tsx?$/.test(entry)) {
       // Rust unit tests live at the end of each file and use made-up keys on purpose.
-      const source = readFileSync(path, 'utf8').split('#[cfg(test)]\nmod tests')[0];
+      const source = readFileSync(path, 'utf8').split(/#\[cfg\(test\)\]\r?\nmod tests/)[0];
       for (const [, key] of source.matchAll(pattern)) {
         if (!(key in en)) problems.push(`${relative(root, path)} uses unknown key "${key}"`);
       }
