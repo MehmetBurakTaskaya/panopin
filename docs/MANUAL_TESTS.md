@@ -16,6 +16,31 @@ Run `python -m http.server 4317 --directory docs/concept` and open `http://local
 - [ ] Shift+S search: "istanbul" finds "İstanbul", "ışık" finds "IŞIK", "cicek" finds "çiçek".
 - [ ] Empty state and the reduced-motion option.
 
+## Phase 1: skeleton
+
+Automated run on the development PC (2026-10-29, Windows 11 25H2 build 26200, one 1920×1080 monitor
+at 100 %, Turkish Q, debug build) with simulated key presses and screen captures:
+
+- [x] Win+Alt+V opens the empty cork shelf on the monitor under the cursor, and Panopin takes focus.
+- [x] The overlay is transparent around the board (no black background).
+- [x] Esc slides the shelf away and focus returns to the previous app.
+- [x] Open → close → open within about 100 ms leaves the shelf open (the stale close is ignored).
+- [x] The UI follows the Turkish system language.
+- [x] `%APPDATA%\Panopin\data.db` is created in WAL mode; the log holds only lifecycle lines.
+
+Still to check by hand:
+
+- [ ] Tray icon: left click toggles the shelf; the menu shows "Rafı göster", "Ayarlar…", "Çıkış".
+- [ ] Clicking outside the board (desktop, taskbar, another window) closes the shelf.
+- [ ] A tray click while the shelf is open closes it and does not reopen it.
+- [ ] Settings → Dil: switching to English updates Settings, the shelf and the tray menu at once, and
+      survives a restart.
+- [ ] Starting Panopin a second time does not start a copy; the shelf (or the open Settings window)
+      comes forward.
+- [ ] Win+Alt+C opens the shelf too (search focus arrives in Phase 6).
+- [ ] With Windows "Animation effects" off, the shelf appears and disappears without sliding.
+- [ ] Alt+F4 on the shelf slides it away instead of quitting.
+
 ## Global shortcuts and keyboard layouts (Phase 1–3)
 
 - [ ] On Turkish Q: Win+Alt+V toggles the shelf, Win+Alt+C opens it with search focused, Win+Alt+S starts a snip.

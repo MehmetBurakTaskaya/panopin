@@ -29,7 +29,10 @@ Checked against crates.io, npm, GitHub releases and nodejs.org. Re-verify at the
 ## D-003 Package manager — Accepted
 npm, because it ships with Node and needs no extra install.
 
-## D-004 Shelf as one transparent overlay window — Open (spike in Phase 1)
+## D-004 Shelf as one transparent overlay window — Accepted on Windows 11, Open on Windows 10
+Phase 1 result (Windows 11 25H2, build 26200, 1920×1080 at 100 %): the overlay opens on the cursor's
+monitor, takes focus from the hotkey, shows no black background, and Esc hands focus back to the
+previous app. Windows 10 22H2 and multi-monitor/DPI setups are still untested.
 The shelf window covers the work area of the cursor's monitor; board, search, preview, palette and
 menus are layers in one webview. Gives a single keyboard model and Esc stack, and "click outside
 closes" for free. Risks: open Tauri issues about black backgrounds on transparent windows, and
@@ -81,7 +84,8 @@ the previous schema.
 
 ## D-013 Shared IPC types — Accepted
 `ts-rs` (MIT) exports Rust models to TypeScript during `cargo test`; CI fails if the generated files
-differ from the committed ones.
+differ from the committed ones. Introduced in Phase 2 with the item model; Phase 1's only shared type
+(settings) is mirrored by hand in `src/ipc.ts`.
 
 ## D-014 Media protocol — Accepted
 A custom URI scheme serves `item/<id>/<variant>` resolved through the database. The webview never
@@ -167,3 +171,31 @@ after the draft is published. The signing key exists only in GitHub Secrets.
 ## D-029 Portable ZIP — Accepted
 The portable build keeps data in `%APPDATA%` like the installed one. A "data next to the exe" mode
 is in the backlog. Whether the portable build shows the updater is decided in Phase 7.
+
+## D-030 Frontend toolchain (Phase 1) — Accepted
+React 19.3, Vite 8.3, Vitest 5.0, ESLint 10 with typescript-eslint 8.72, Zustand 5. TypeScript stays
+on **6.0.x**: typescript-eslint supports TypeScript below 6.1, so TypeScript 7 (the new native
+compiler) waits until the lint toolchain supports it. Node.js 26.13 LTS, Rust 1.99.1.
+
+## D-031 Build directory on long paths — Accepted
+MSVC build tools can fail when paths exceed 260 characters. When the checkout path is long, local
+builds set `CARGO_TARGET_DIR` to a short folder (for example `%LOCALAPPDATA%\panopin-build`). CI
+checkouts are short and need nothing special.
+
+## D-032 Licence checks — Accepted
+`cargo deny check` enforces the licence allow-list (MIT, Apache-2.0, BSD-2/3-Clause, ISC, Zlib, Unicode-3.0,
+MPL-2.0) for Rust crates exactly. `npm run check:licenses`
+checks every production npm package (the code that ships in the app); dev-only tooling is never
+distributed and is not checked.
+
+## D-033 Phase 1 settings window — Accepted
+Phase 1 ships a small Settings window: language (applies instantly in every window and the tray) and
+a read-only list of shortcuts. The full tabbed Settings window arrives in Phase 6.
+
+## D-034 Tray click after a focus-loss close — Accepted
+Clicking the tray icon first moves focus away from the shelf, which closes it. A tray click within
+400 ms of such a close is treated as the same gesture, so the shelf does not immediately reopen.
+
+## D-035 Phase 1 storage access — Accepted
+A single SQLite connection behind a mutex serves Phase 1 (settings only). The dedicated writer
+thread from ARCHITECTURE §4 arrives with capture in Phase 2.

@@ -1,0 +1,66 @@
+/* Design tokens, ported from the approved concept (docs/concept/mockup). Textures are generated
+   in code (SVG feTurbulence); no external images. */
+:root {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --hand: 'Segoe Print', 'Ink Free', 'Bradley Hand', cursive;
+  --ease-out: cubic-bezier(0.16, 0.9, 0.28, 1.04);
+  --frame: 18px;
+
+  color-scheme: light;
+  --accent: #005fb8;
+  --ui-window: #f3f3f3;
+  --ui-surface: #fbfbfb;
+  --ui-ink: #1b1b1b;
+  --ui-muted: #5e5e5e;
+  --ui-line: rgba(0, 0, 0, 0.09);
+  --cork: #c18f58;
+  --cork-hi: #d8ab76;
+  --pits: 0.55;
+  --grains: 0.45;
+  --wood-hi: #d39d6b;
+  --wood-1: #ab7444;
+  --wood-2: #8c5a30;
+  --wood-3: #5a3618;
+  --engrave: #3d2310;
+  --engrave-hi: rgba(255, 226, 190, 0.3);
+  --paper: #fffdf7;
+  --paper-2: #f3ede1;
+  --ink: #2b2520;
+  --ink-2: #6a6056;
+  --rule: rgba(70, 130, 190, 0.2);
+  --shadow-card: 0 1px 1px rgba(45, 22, 4, 0.28), 0 5px 10px -3px rgba(45, 22, 4, 0.38),
+    0 14px 24px -10px rgba(45, 22, 4, 0.42);
+
+  --pits-tex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='.68' numOctaves='2' seed='11' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .16  0 0 0 0 .08  0 0 0 0 .02  0 0 0 -9 3.85'/></filter><rect width='240' height='240' filter='url(%23p)'/></svg>");
+  --mottle-tex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='480' height='480'><filter id='m'><feTurbulence type='fractalNoise' baseFrequency='.012' numOctaves='3' seed='4' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .2  0 0 0 0 .1  0 0 0 0 .03  0 0 0 2.2 -.95'/></filter><rect width='480' height='480' filter='url(%23m)'/></svg>");
+  --grains-tex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='q'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='1' seed='23' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 .93  0 0 0 0 .8  0 0 0 10 -5.9'/></filter><rect width='200' height='200' filter='url(%23q)'/></svg>");
+  --grain-h: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='40'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.004 .55' numOctaves='3' seed='7' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .16  0 0 0 0 .08  0 0 0 0 .02  0 0 0 -2 1.15'/></filter><rect width='600' height='40' filter='url(%23g)'/></svg>");
+  --grain-v: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='600'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.55 .004' numOctaves='3' seed='9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .16  0 0 0 0 .08  0 0 0 0 .02  0 0 0 -2 1.15'/></filter><rect width='40' height='600' filter='url(%23g)'/></svg>");
+}
+
+:root[data-scheme='dark'] {
+  color-scheme: dark;
+  --accent: #60cdff;
+  --ui-window: #202020;
+  --ui-surface: #2b2b2b;
+  --ui-ink: #f2f2f2;
+  --ui-muted: #b3b3b3;
+  --ui-line: rgba(255, 255, 255, 0.1);
+  --cork: #684d3b;
+  --cork-hi: #7a5f4b;
+  --pits: 0.55;
+  --grains: 0.12;
+  --wood-hi: #86603f;
+  --wood-1: #5f3f27;
+  --wood-2: #4a301c;
+  --wood-3: #26170b;
+  --engrave: #170d05;
+  --engrave-hi: rgba(255, 220, 180, 0.14);
+  --paper: #ebe5d9;
+  --paper-2: #ddd5c6;
+  --ink: #211c18;
+  --ink-2: #574e45;
+  --shadow-card: 0 1px 1px rgba(0, 0, 0, 0.45), 0 6px 12px -3px rgba(0, 0, 0, 0.55),
+    0 16px 26px -10px rgba(0, 0, 0, 0.6);
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Least privilege for Panopin windows: events only. App commands are listed in src-tauri/src/lib.rs.",
+  "windows": ["shelf", "settings"],
+  "permissions": ["core:event:default"]
+}

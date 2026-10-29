@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Draft app icon: a paper card held by a red pushpin. Final icon arrives in Phase 7. -->
+  <defs>
+    <radialGradient id="pin" cx="38%" cy="32%" r="72%">
+      <stop offset="0" stop-color="#ff9a86"/>
+      <stop offset=".38" stop-color="#e8402b"/>
+      <stop offset="1" stop-color="#951a0d"/>
+    </radialGradient>
+  </defs>
+  <g transform="rotate(-7 128 150)">
+    <rect x="40" y="70" width="176" height="162" rx="16" fill="#000" fill-opacity=".18" transform="translate(6 8)"/>
+    <rect x="40" y="70" width="176" height="162" rx="16" fill="#f7f0e3" stroke="#6b4a2d" stroke-width="9"/>
+    <path d="M76 136h104M76 176h68" stroke="#b39a7a" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <ellipse cx="136" cy="86" rx="30" ry="10" fill="#000" fill-opacity=".2"/>
+  <circle cx="128" cy="64" r="38" fill="url(#pin)" stroke="#7a1409" stroke-width="5"/>
+  <ellipse cx="114" cy="50" rx="12" ry="8" fill="#fff" fill-opacity=".55"/>
+</svg>
