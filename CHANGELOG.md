@@ -6,6 +6,8 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-30
+
 ### Added
 
 - **Eight more languages.** German, Spanish, French, Brazilian Portuguese, Russian, Japanese, Korean
@@ -71,6 +73,7 @@ The first release, for Windows 10 22H2 and Windows 11 (x64).
 - **Installer and portable ZIP.** A per-user installer that needs no administrator rights and no
   clicks: opened, it installs and starts Panopin, in English or Turkish. And a portable ZIP.
 
-[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MehmetBurakTaskaya/panopin/releases/tag/v1.0.0
