@@ -19,6 +19,17 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - Windows ARM64 build
 - winget and Scoop packages
 
+## Not on macOS yet (D-073)
+
+- Watching the screenshot folder
+- Screen recordings (macOS saves them as `.mov`)
+- Dragging cards out of the shelf and the Library
+- The export and import dialogs
+- Opening the shelf from the screen edge
+- Window materials and the system accent colour
+- Quiet sounds while a full-screen app is in front
+- A signed and notarised `.dmg` (needs an Apple Developer account)
+
 ## Ideas from Phase 0
 
 - Portable mode that keeps data next to the executable (see D-029).

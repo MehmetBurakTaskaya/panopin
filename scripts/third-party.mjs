@@ -23,11 +23,16 @@ const npm = JSON.parse(run('npm query .prod'))
   // `location` is relative; npm masks parts of absolute paths that look like ids.
   .map((node) => ({ name: node.name, version: node.version, license: licenseOf(node), dir: path.join(root, node.location) }));
 
-// Every crate the Windows build links, as Cargo resolves it.
-const tree = run('cargo tree -e normal --target x86_64-pc-windows-msvc --prefix none --format "{p}|{l}"', `${root}/src-tauri`);
+// Every crate the Windows and macOS builds link, as Cargo resolves them.
+const TARGETS = ['x86_64-pc-windows-msvc', 'aarch64-apple-darwin', 'x86_64-apple-darwin'];
+const tree = TARGETS.map((target) =>
+  run(`cargo tree -e normal --target ${target} --prefix none --format "{p}|{l}"`, `${root}/src-tauri`),
+).join('\n');
 const crateDirs = new Map(
-  JSON.parse(run('cargo metadata --format-version 1 --locked --filter-platform x86_64-pc-windows-msvc', `${root}/src-tauri`))
-    .packages.map((p) => [`${p.name}@${p.version}`, { dir: path.dirname(p.manifest_path), file: p.license_file, authors: p.authors }]),
+  JSON.parse(run('cargo metadata --format-version 1 --locked', `${root}/src-tauri`)).packages.map((p) => [
+    `${p.name}@${p.version}`,
+    { dir: path.dirname(p.manifest_path), file: p.license_file, authors: p.authors },
+  ]),
 );
 const rust = tree
   .split(/\r?\n/)
@@ -106,9 +111,10 @@ const sections = [...groups.entries()]
   );
 const notices = `Third-party notices for Panopin ${version}
 
-Panopin is released under the MIT licence (see LICENSE). It is built with the ${packages.rust.length} Rust
-crates and ${packages.npm.length} npm packages listed below, under their own licences. Each section
-gives one licence text and the packages that ship it.
+Panopin is released under the MIT licence (see LICENSE). Its Windows and macOS builds use the
+${packages.rust.length} Rust crates and ${packages.npm.length} npm packages listed below, under their own licences. Each
+section gives one licence text and the packages that ship it. Where a package offers a choice of
+licences, the texts it ships are given.
 
 ${sections.join('\n')}${
   apacheTerms ? `\n${rule}\nApache License, Version 2.0: terms and conditions\n${'-'.repeat(80)}\n\n${apacheTerms}\n` : ''

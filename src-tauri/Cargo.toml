@@ -49,7 +49,7 @@ objc2-foundation = { version = "0.3.2", default-features = false, features = ["s
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "NSPasteboard", "NSWorkspace", "NSRunningApplication"] }
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString", "CFDictionary", "CFNumber"] }
 objc2-core-graphics = { version = "0.3.2", default-features = false, features = ["std", "libc", "CGEvent", "CGEventTypes", "CGEventSource", "CGRemoteOperation"] }
-objc2-application-services = { version = "0.3.2", default-features = false, features = ["std", "libc", "AXUIElement", "AXError"] }
+objc2-application-services = { version = "0.3.2", default-features = false, features = ["std", "libc", "HIServices", "AXUIElement", "AXError"] }
 objc2-vision = { version = "0.3.2", default-features = false, features = ["std", "VNRequest", "VNRecognizeTextRequest", "VNObservation", "VNRequestHandler", "VNTypes"] }
 
 [target.'cfg(windows)'.dependencies]
