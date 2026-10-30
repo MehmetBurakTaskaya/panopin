@@ -2,6 +2,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
 import { t, type LanguageSetting, type MessageKey } from '../../i18n';
+import { detectPlatform } from '../../shortcuts';
 import {
   checkForUpdates,
   setPause,
@@ -25,6 +26,7 @@ import { UpdatesTab } from './UpdatesTab';
 export const TABS = ['general', 'sources', 'history', 'shortcuts', 'appearance', 'privacy', 'updates', 'about'] as const;
 export type TabId = (typeof TABS)[number];
 
+const ON_MAC = detectPlatform() === 'mac';
 const LANGUAGES: LanguageSetting[] = ['system', 'en', 'tr'];
 const CARD_SIZES: CardSize[] = ['s', 'm', 'l'];
 const EDGES: ShelfEdge[] = ['top', 'bottom'];
@@ -54,10 +56,12 @@ function GeneralTab({ settings }: { settings: Settings }) {
           options={EDGES.map((edge) => [edge, t(`settings.shelfEdge.${edge}`)])}
           onChange={(value) => void update({ shelfEdge: value as ShelfEdge })}
         />
+        {/* Edge opening watches the pointer with a Windows hook; macOS has no such opener yet. */}
         <Toggle
           label={t('settings.edgeOpen')}
           hint={t('settings.edgeOpenHelp')}
-          checked={settings.edgeOpen}
+          checked={settings.edgeOpen && !ON_MAC}
+          disabled={ON_MAC}
           onChange={(on) => void update({ edgeOpen: on })}
         />
         <Toggle

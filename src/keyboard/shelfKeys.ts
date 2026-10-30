@@ -81,6 +81,8 @@ export function commandFor(event: KeyInput): Command | null {
       if (alt) return null;
       return ctrl ? { type: 'paste' } : { type: 'copyAndReturn' };
     case 'Backspace':
+      // ⌘⌫ moves to Trash, as in Finder: a Mac's Delete key needs fn.
+      if (event.metaKey && !event.ctrlKey && !alt) return { type: 'trash' };
       return ctrl || alt ? null : { type: 'undo' };
     case 'Delete':
       return ctrl || alt ? null : { type: 'trash' };

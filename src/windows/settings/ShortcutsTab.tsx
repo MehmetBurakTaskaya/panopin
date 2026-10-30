@@ -58,7 +58,10 @@ function useRecorder(onDone: (message: string | null) => void) {
       if ((e.key === 'Backspace' || e.key === 'Delete') && plain) return save(null);
       const accelerator = acceleratorFrom(e);
       if (accelerator) save(accelerator);
-      else setHeld([e.metaKey && 'Win', e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift'].filter(Boolean).join('+'));
+      else {
+        const mods = [e.metaKey && 'Super', e.ctrlKey && 'Ctrl', e.altKey && 'Alt', e.shiftKey && 'Shift'].filter(Boolean);
+        setHeld(mods.length > 0 ? formatShortcut(mods.join('+')) : '');
+      }
     };
     const onBlur = () => finish(null);
     window.addEventListener('keydown', onKey, true);

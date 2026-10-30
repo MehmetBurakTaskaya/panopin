@@ -230,6 +230,29 @@ fn own_hwnd(_window: &WebviewWindow) -> Option<isize> {
     None
 }
 
+/// On macOS the overlay also opens over full-screen apps and stays out of Cmd+` (D-073); Tauri
+/// only lets it join every Space. Runs once in setup, on the main thread.
+#[cfg(target_os = "macos")]
+pub fn float_over_full_screen(app: &AppHandle) {
+    use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+    let Some(Ok(raw)) = app
+        .get_webview_window(LABEL)
+        .map(|window| window.ns_window())
+    else {
+        return;
+    };
+    // SAFETY: Tauri hands out the live NSWindow of the shelf, and setup runs on the main thread.
+    let Some(ns_window) = (unsafe { raw.cast::<NSWindow>().as_ref() }) else {
+        return;
+    };
+    ns_window.setCollectionBehavior(
+        ns_window.collectionBehavior()
+            | NSWindowCollectionBehavior::CanJoinAllSpaces
+            | NSWindowCollectionBehavior::FullScreenAuxiliary
+            | NSWindowCollectionBehavior::IgnoresCycle,
+    );
+}
+
 /// Starts the slide-out. `restore` hands focus back to the window that was in front before:
 /// right for Esc, Enter and the shortcut, wrong when the user clicked another window.
 pub fn request_close(app: &AppHandle, restore: bool) -> Result<()> {

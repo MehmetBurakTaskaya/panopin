@@ -9,8 +9,10 @@ describe('formatShortcut', () => {
     expect(formatShortcut('Delete', 'windows')).toBe('Delete');
   });
 
-  it('uses macOS symbols', () => {
-    expect(formatShortcut('Super+Alt+V', 'mac')).toBe('⌘⌥V');
+  it('uses macOS symbols in the macOS order', () => {
+    expect(formatShortcut('Super+Alt+V', 'mac')).toBe('⌥⌘V');
+    expect(formatShortcut('Super+Shift+Control+k', 'mac')).toBe('⌃⇧⌘K');
+    expect(formatShortcut('Ctrl+Enter', 'mac')).toBe('⌃Enter');
   });
 
   it('detects the platform from the user agent', () => {
@@ -50,5 +52,7 @@ describe('shortcut recorder', () => {
     expect(clashesWithAltGr('Ctrl+Alt+Q')).toBe(true);
     expect(clashesWithAltGr('Super+Ctrl+Alt+Q')).toBe(false);
     expect(clashesWithAltGr('Super+Alt+V')).toBe(false);
+    // Mac keyboards have no AltGr.
+    expect(clashesWithAltGr('Ctrl+Alt+Q', 'mac')).toBe(false);
   });
 });

@@ -296,6 +296,17 @@ pub struct Settings {
     pub updates: Updates,
 }
 
+/// Password managers whose copies are never kept, named as each system lists its apps.
+#[cfg(windows)]
+const EXCLUDED_BY_DEFAULT: [&str; 4] = [
+    "KeePass.exe",
+    "KeePassXC.exe",
+    "1Password.exe",
+    "Bitwarden.exe",
+];
+#[cfg(not(windows))]
+const EXCLUDED_BY_DEFAULT: [&str; 3] = ["KeePassXC", "1Password", "Bitwarden"];
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -305,14 +316,7 @@ impl Default for Settings {
             onboarded: false,
             sources: Sources::default(),
             watched_folders: Vec::new(),
-            excluded_apps: [
-                "KeePass.exe",
-                "KeePassXC.exe",
-                "1Password.exe",
-                "Bitwarden.exe",
-            ]
-            .map(String::from)
-            .to_vec(),
+            excluded_apps: EXCLUDED_BY_DEFAULT.map(String::from).to_vec(),
             retention: Retention::default(),
             link_previews: false,
             paused_until: None,
@@ -442,12 +446,16 @@ mod tests {
         assert!(s.ocr && s.appearance.material && s.appearance.animations);
         assert_eq!(s.retention.text, Some(30));
         assert_eq!(s.retention.trash, Some(30));
-        for app in [
+        #[cfg(windows)]
+        let managers = [
             "KeePass.exe",
             "KeePassXC.exe",
             "1Password.exe",
             "Bitwarden.exe",
-        ] {
+        ];
+        #[cfg(not(windows))]
+        let managers = ["KeePassXC", "1Password", "Bitwarden"];
+        for app in managers {
             assert!(s.excluded_apps.iter().any(|a| a == app), "{app}");
         }
     }

@@ -1,4 +1,5 @@
-//! What Windows says about the look (D-060): whether Mica is available and the accent colour.
+//! What the system says about the look (D-060, D-073): whether Mica is available and the accent
+//! colour.
 //! A change of the accent colour in Windows reaches every window at once.
 
 use serde::Serialize;
@@ -35,7 +36,39 @@ pub fn current() -> SystemLook {
     }
 }
 
-#[cfg(not(windows))]
+/// The accent chosen in System Settings → Appearance (D-073). Windows materials have no macOS
+/// counterpart here yet, and the accent is read again whenever a window opens.
+#[cfg(target_os = "macos")]
+pub fn current() -> SystemLook {
+    use objc2_app_kit::{NSColor, NSColorSpace};
+    let accent = NSColor::controlAccentColor()
+        .colorUsingColorSpace(&NSColorSpace::sRGBColorSpace())
+        .map(|color| {
+            [
+                color.redComponent(),
+                color.greenComponent(),
+                color.blueComponent(),
+            ]
+        });
+    SystemLook {
+        mica: false,
+        // As on Windows: a little darker on light surfaces, lighter on dark ones.
+        accent_light: accent.map(|rgb| shade(rgb, 0.0, 0.12)),
+        accent_dark: accent.map(|rgb| shade(rgb, 1.0, 0.25)),
+    }
+}
+
+/// `rgb` (0–1) moved `amount` of the way to `toward` (0 = black, 1 = white), as `#rrggbb`.
+#[cfg(any(test, target_os = "macos"))]
+fn shade(rgb: [f64; 3], toward: f64, amount: f64) -> String {
+    let [r, g, b] = rgb.map(|channel| {
+        let channel = channel.clamp(0.0, 1.0);
+        ((channel + (toward - channel) * amount) * 255.0).round() as u8
+    });
+    format!("#{r:02x}{g:02x}{b:02x}")
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 pub fn current() -> SystemLook {
     SystemLook::default()
 }
@@ -68,3 +101,16 @@ pub fn watch(app: &AppHandle) {
 
 #[cfg(not(windows))]
 pub fn watch(_app: &AppHandle) {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn shades_move_towards_black_or_white() {
+        assert_eq!(shade([0.0, 0.478, 1.0], 0.0, 0.0), "#007aff");
+        assert_eq!(shade([1.0, 1.0, 1.0], 0.0, 0.5), "#808080");
+        assert_eq!(shade([0.0, 0.0, 0.0], 1.0, 0.25), "#404040");
+        assert_eq!(shade([1.2, -0.1, 0.5], 0.0, 0.0), "#ff0080");
+    }
+}

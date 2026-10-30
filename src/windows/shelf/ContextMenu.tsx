@@ -1,9 +1,11 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { t, type MessageKey } from '../../i18n';
+import { formatShortcut } from '../../shortcuts';
 import styles from './Shelf.module.css';
 
 export interface MenuEntry {
   label: MessageKey;
+  /** In accelerator form ("CommandOrControl+O"), shown in the user's key names. */
   shortcut: string;
   run: () => void;
 }
@@ -85,7 +87,7 @@ export function ContextMenu({ at, entries, onClose }: { at: MenuPlacement; entri
             }}
           >
             <span>{t(entry.label)}</span>
-            <kbd>{entry.shortcut}</kbd>
+            <kbd>{entry.shortcut && formatShortcut(entry.shortcut)}</kbd>
           </button>
         ))}
       </div>

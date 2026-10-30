@@ -1,5 +1,6 @@
 import { t } from '../../../i18n';
 import { mediaUrl, type ShelfItem } from '../../../ipc';
+import { formatShortcut } from '../../../shortcuts';
 import { duration, isVideoLink, letterTile, linkHeading } from '../paper';
 import { icons } from './icons';
 import { ImagePreview } from './ImagePreview';
@@ -61,7 +62,7 @@ function LinkPreview({ item, onClose, onOpen, onRefresh }: LinkPreviewProps) {
           </button>
         )}
         {onOpen && (
-          <button type="button" className={`${styles.button} ${styles.primary}`} title="Ctrl+O" onClick={() => onOpen(item.id)}>
+          <button type="button" className={`${styles.button} ${styles.primary}`} title={formatShortcut('CommandOrControl+O')} onClick={() => onOpen(item.id)}>
             {t('preview.openLink')}
           </button>
         )}

@@ -547,11 +547,14 @@ use; Vision needs no main thread.
 | Folder and file dialogs | common item dialog | `NSOpenPanel` on the main thread, its message carrying the title; imports limited to the known extensions through `UTType` (`objc2-uniform-type-identifiers`) |
 | Paste into the previous app | `SendInput` Ctrl+V | the app is brought back (`NSRunningApplication`) and Cmd+V is posted with `CGEvent`. macOS asks for Accessibility permission the first time; without it the item stays on the clipboard and the shelf says how to allow it. A focused `AXSecureTextField` is never pasted into |
 | Global shortcuts | Win+Alt+V/C/S | the same accelerators become Cmd+Option+V/C/S. Cmd+Option+V is Finder's "Move here", so **the owner decides** whether macOS keeps it |
-| In-app keys | Ctrl+… | Cmd+… (the key tables already accept either) |
+| In-app keys | Ctrl+… | Cmd+… (the key tables already accept either); ⌘⌫ also moves to Trash, as in Finder, since a Mac's Delete key needs fn |
+| Texts | — | strings that name Windows, its keys or "this PC" have a `key.mac` variant in the locale files, which the webviews use on a Mac; menus and hints name keys as macOS does (⌥⌘V, ⇧⌘T, ⌫); the AltGr warning is off; excluded apps start as KeePassXC, 1Password and Bitwarden |
+| Accent colour | `UISettings`, followed live | `NSColor.controlAccentColor` in sRGB, a little darker for light and lighter for dark surfaces; read again when a window opens |
+| Shelf over full-screen apps | topmost overlay | the shelf's `NSWindow` also gets `FullScreenAuxiliary` and `IgnoresCycle` at start; Tauri only lets it join every Space |
 | Tray | notification area icon | menu bar template icon that macOS tints; no Dock icon (accessory app) |
 | Screen snip | Snipping Tool overlay | `screencapture -i -c` |
 | Start at login | Run key | LaunchAgent (autostart plugin) |
 | Distribution | NSIS installer, portable ZIP | universal `.dmg`, not notarised: "System Settings → Privacy & Security → Open Anyway". Releases carry it once the `PANOPIN_MACOS` variable is `true` (D-068) |
 
-Not on macOS yet (BACKLOG): screen recordings, drag-out, edge opening, Mica-like materials, quiet
-sounds during full-screen apps and the accent colour.
+Not on macOS yet (BACKLOG): screen recordings, drag-out, edge opening (Settings shows it as
+unavailable), Mica-like materials and quiet sounds during full-screen apps.

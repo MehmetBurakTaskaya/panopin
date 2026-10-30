@@ -7,8 +7,23 @@ export function detectPlatform(userAgent: string = navigator.userAgent): Platfor
 
 const NAMES: Record<Platform, Record<string, string>> = {
   windows: { super: 'Win', alt: 'Alt', control: 'Ctrl', ctrl: 'Ctrl', shift: 'Shift', commandorcontrol: 'Ctrl' },
-  mac: { super: '⌘', alt: '⌥', control: '⌃', ctrl: '⌃', shift: '⇧', commandorcontrol: '⌘' },
+  mac: {
+    super: '⌘',
+    alt: '⌥',
+    control: '⌃',
+    ctrl: '⌃',
+    shift: '⇧',
+    commandorcontrol: '⌘',
+    backspace: '⌫',
+    delete: '⌦',
+  },
 };
+
+/** Moving to Trash: Delete, or ⌘⌫ on a Mac, as in Finder (the Delete key needs fn there). */
+export const TRASH_SHORTCUT = detectPlatform() === 'mac' ? 'Super+Backspace' : 'Delete';
+
+// macOS writes modifiers in one order: Control, Option, Shift, Command.
+const MAC_ORDER = ['⌃', '⌥', '⇧', '⌘'];
 
 export function formatShortcut(accelerator: string, platform: Platform = detectPlatform()): string {
   const parts = accelerator.split('+').map((part) => {
@@ -16,7 +31,9 @@ export function formatShortcut(accelerator: string, platform: Platform = detectP
     // Letters read as capitals; named keys keep their name: Enter, Space, Delete.
     return name ?? (part.length === 1 ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1));
   });
-  return parts.join(platform === 'mac' ? '' : '+');
+  if (platform !== 'mac') return parts.join('+');
+  const rank = (part: string) => (MAC_ORDER.includes(part) ? MAC_ORDER.indexOf(part) : MAC_ORDER.length);
+  return parts.sort((a, b) => rank(a) - rank(b)).join('');
 }
 
 export interface RecordedKey {
@@ -45,8 +62,12 @@ export function acceleratorFrom(event: RecordedKey): string | null {
   return [...parts.filter(Boolean), key].join('+');
 }
 
-/** Ctrl+Alt without Win is what AltGr sends, so such a shortcut can block a typed character. */
-export function clashesWithAltGr(accelerator: string): boolean {
+/**
+ * Ctrl+Alt without Win is what AltGr sends on Windows, so such a shortcut can block a typed
+ * character. Mac keyboards have no AltGr.
+ */
+export function clashesWithAltGr(accelerator: string, platform: Platform = detectPlatform()): boolean {
+  if (platform === 'mac') return false;
   const parts = accelerator.split('+');
   return parts.includes('Ctrl') && parts.includes('Alt') && !parts.includes('Super');
 }

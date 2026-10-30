@@ -61,6 +61,7 @@ import {
   type KindFilter,
   type Section,
 } from '../../library/query';
+import { TRASH_SHORTCUT } from '../../shortcuts';
 import { useSettings } from '../../state/settings';
 import { Preview, type PreviewMode } from '../shelf/preview/Preview';
 import { trackSave, whenSaved } from '../shelf/preview/saves';
@@ -372,31 +373,31 @@ export function LibraryApp() {
     const one = list.length === 1 ? byId.get(list[0]!) : undefined;
     const allPinned = selected.length > 0 && selected.every((item) => item.pinned);
     const entries: [MessageKey, string, () => void, boolean][] = [
-      ['shelf.menu.copy', 'Ctrl+C', () => void copy(list), list.length > 0],
+      ['shelf.menu.copy', 'CommandOrControl+C', () => void copy(list), list.length > 0],
       ['shelf.menu.preview', 'Space', () => setPreview('view'), one !== undefined],
       ['shelf.menu.edit', 'E', () => openEditor('text'), one?.kind === 'text'],
       ['shelf.menu.markup', 'M', () => openEditor('markup'), one?.kind === 'image'],
       ['shelf.menu.crop', 'C', () => openEditor('crop'), one?.kind === 'image'],
-      ['shelf.menu.copyText', 'Ctrl+Shift+C', copyText, one?.kind === 'image'],
-      ['shelf.menu.openLink', 'Ctrl+O', () => one && openLinkOf(one.id), one?.kind === 'link'],
+      ['shelf.menu.copyText', 'CommandOrControl+Shift+C', copyText, one?.kind === 'image'],
+      ['shelf.menu.openLink', 'CommandOrControl+O', () => one && openLinkOf(one.id), one?.kind === 'link'],
       ['shelf.menu.refreshLink', '', () => one && refreshPreview(one.id), one?.kind === 'link'],
       [allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', 'P', () => togglePin(list), list.length > 0 && !inTrash],
       ['library.action.name', 'Alt+P', () => openDialog({ type: 'name', ids: list }), list.length > 0 && !inTrash],
       ['library.action.folder', 'Shift+P', () => openDialog({ type: 'folder', ids: list }), list.length > 0 && !inTrash],
-      ['library.action.tag', 'Ctrl+Shift+T', () => openDialog({ type: 'tag', ids: list }), list.length > 0 && !inTrash],
-      ['library.action.export', 'Ctrl+Shift+E', () => exportSelection(list), list.length > 0],
-      ['shelf.menu.trash', 'Delete', () => askTrash(list), list.length > 0 && !inTrash],
+      ['library.action.tag', 'CommandOrControl+Shift+T', () => openDialog({ type: 'tag', ids: list }), list.length > 0 && !inTrash],
+      ['library.action.export', 'CommandOrControl+Shift+E', () => exportSelection(list), list.length > 0],
+      ['shelf.menu.trash', TRASH_SHORTCUT, () => askTrash(list), list.length > 0 && !inTrash],
       ['library.action.restore', 'R', () => restore(list), list.length > 0 && inTrash],
-      ['library.action.deleteForever', 'Delete', () => askDeleteForever(list), list.length > 0 && inTrash],
-      ['shelf.menu.undo', 'Ctrl+Z', undo, true],
-      ['library.newNote', 'Ctrl+N', addNote, true],
-      ['library.folder.new', 'Ctrl+Shift+N', addFolder, true],
+      ['library.action.deleteForever', TRASH_SHORTCUT, () => askDeleteForever(list), list.length > 0 && inTrash],
+      ['shelf.menu.undo', 'CommandOrControl+Z', undo, true],
+      ['library.newNote', 'CommandOrControl+N', addNote, true],
+      ['library.folder.new', 'CommandOrControl+Shift+N', addFolder, true],
       ['library.import', '', importSome, true],
-      ['palette.searchLibrary', 'Ctrl+F', () => searchBox.current?.focus(), true],
-      ['palette.kindAll', 'Ctrl+0', () => setFilters((f) => ({ ...f, kind: 'all' })), true],
-      ['palette.kindImages', 'Ctrl+1', () => setFilters((f) => ({ ...f, kind: 'image' })), true],
-      ['palette.kindTexts', 'Ctrl+2', () => setFilters((f) => ({ ...f, kind: 'text' })), true],
-      ['palette.kindLinks', 'Ctrl+3', () => setFilters((f) => ({ ...f, kind: 'link' })), true],
+      ['palette.searchLibrary', 'CommandOrControl+F', () => searchBox.current?.focus(), true],
+      ['palette.kindAll', 'CommandOrControl+0', () => setFilters((f) => ({ ...f, kind: 'all' })), true],
+      ['palette.kindImages', 'CommandOrControl+1', () => setFilters((f) => ({ ...f, kind: 'image' })), true],
+      ['palette.kindTexts', 'CommandOrControl+2', () => setFilters((f) => ({ ...f, kind: 'text' })), true],
+      ['palette.kindLinks', 'CommandOrControl+3', () => setFilters((f) => ({ ...f, kind: 'link' })), true],
       ['library.filter.pinned', 'F', () => setFilters((f) => ({ ...f, pinnedOnly: !f.pinnedOnly })), true],
       ['palette.gridView', '', () => saveLayout({ view: 'grid' }), true],
       ['palette.listView', '', () => saveLayout({ view: 'list' }), true],
@@ -448,6 +449,13 @@ export function LibraryApp() {
       case 'Delete':
         if (inTrash) askDeleteForever(ids);
         else askTrash(ids);
+        break;
+      case 'Backspace':
+        // ⌘⌫ does the same, as in Finder: a Mac's Delete key needs fn.
+        if (e.metaKey && !e.ctrlKey && !alt) {
+          if (inTrash) askDeleteForever(ids);
+          else askTrash(ids);
+        } else handled = false;
         break;
       case 'Escape':
         if (preview) setPreview(null);

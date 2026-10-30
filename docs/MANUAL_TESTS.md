@@ -333,6 +333,13 @@ passed and the owner sets the repository variable `PANOPIN_MACOS` to `true` (D-0
       With it, Cmd+V reaches TextEdit, Notes, Safari and Terminal; a password field is never
       pasted into.
 - [ ] Words in a screenshot are found by search (Vision), in Turkish and English.
+- [ ] No text names Windows, Ctrl or "this PC": Settings says "Open at login", "Same as macOS"
+      and "Use the macOS accent colour"; hints and menus show ⌘Enter, ⌥⌘V, ⇧⌘T and ⌘⌫; edge
+      opening is shown as not available. (Checked in a browser with the real components, a
+      mocked backend and a Mac user agent: Settings, shelf hints and the card menu.)
+- [ ] ⌘⌫ moves the selected cards to Trash on the shelf and in the Library; ⌫ alone undoes.
+- [ ] With "Use the macOS accent colour" on, the accent follows System Settings → Appearance
+      after the window is opened again.
 - [ ] Export… (Library and shelf), Import… and Settings → Sources → Add folder open the macOS
       panel above the window that asked; Import offers only pictures and MP4 files; Cancel
       changes nothing.

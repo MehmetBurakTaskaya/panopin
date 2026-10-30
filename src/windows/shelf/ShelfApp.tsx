@@ -47,7 +47,7 @@ import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type Shelf
 import { displayTitle } from '../../library/query';
 import { reducedMotion as reducedMotionSetting } from '../../look';
 import { queryTerms } from '../../search/highlight';
-import { formatShortcut } from '../../shortcuts';
+import { TRASH_SHORTCUT } from '../../shortcuts';
 import { configure, play, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
 import { cardDomId, type Effect } from './Card';
@@ -550,7 +550,6 @@ export function ShelfApp() {
   };
 
   const menuEntries = (ids: number[]): MenuEntry[] => {
-    const ctrl = formatShortcut('CommandOrControl');
     const items = itemsOf(ids);
     const allPinned = items.every((item) => item.pinned);
     const single = items.length === 1 ? items[0] : undefined;
@@ -558,7 +557,7 @@ export function ShelfApp() {
     if (single?.kind === 'text') kindEntries.push({ label: 'shelf.menu.edit', shortcut: 'E', run: () => setPreview('text') });
     if (single?.kind === 'link') {
       kindEntries.push(
-        { label: 'shelf.menu.openLink', shortcut: `${ctrl}+O`, run: () => openLinkOf(single.id) },
+        { label: 'shelf.menu.openLink', shortcut: 'CommandOrControl+O', run: () => openLinkOf(single.id) },
         { label: 'shelf.menu.refreshLink', shortcut: '', run: () => refreshPreview(single.id) },
       );
     }
@@ -566,22 +565,22 @@ export function ShelfApp() {
       kindEntries.push(
         { label: 'shelf.menu.markup', shortcut: 'M', run: () => setPreview('markup') },
         { label: 'shelf.menu.crop', shortcut: 'C', run: () => setPreview('crop') },
-        { label: 'shelf.menu.copyText', shortcut: `${ctrl}+Shift+C`, run: () => void copyText() },
+        { label: 'shelf.menu.copyText', shortcut: 'CommandOrControl+Shift+C', run: () => void copyText() },
       );
       if (single.edited) kindEntries.push({ label: 'shelf.menu.revert', shortcut: '', run: () => revert(single.id) });
     }
     return [
-      { label: 'shelf.menu.copy', shortcut: `${ctrl}+C`, run: () => void copy(ids, ids[0] ?? null) },
-      { label: 'shelf.menu.paste', shortcut: `${ctrl}+Enter`, run: () => void paste(ids) },
+      { label: 'shelf.menu.copy', shortcut: 'CommandOrControl+C', run: () => void copy(ids, ids[0] ?? null) },
+      { label: 'shelf.menu.paste', shortcut: 'CommandOrControl+Enter', run: () => void paste(ids) },
       { label: 'shelf.menu.preview', shortcut: 'Space', run: () => setPreview('view') },
       ...kindEntries,
       { label: allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', shortcut: 'P', run: () => void togglePin(ids) },
       { label: 'library.action.name', shortcut: 'Alt+P', run: () => void openPicker('name', ids) },
       { label: 'library.action.folder', shortcut: 'Shift+P', run: () => void openPicker('folder', ids) },
-      { label: 'library.action.tag', shortcut: `${ctrl}+Shift+T`, run: () => void openPicker('tag', ids) },
-      { label: 'library.action.export', shortcut: `${ctrl}+Shift+E`, run: () => void exportSelection(ids) },
+      { label: 'library.action.tag', shortcut: 'CommandOrControl+Shift+T', run: () => void openPicker('tag', ids) },
+      { label: 'library.action.export', shortcut: 'CommandOrControl+Shift+E', run: () => void exportSelection(ids) },
       { label: 'shelf.menu.takeDown', shortcut: 'S', run: () => void remove(ids, false) },
-      { label: 'shelf.menu.trash', shortcut: 'Delete', run: () => setConfirm(ids) },
+      { label: 'shelf.menu.trash', shortcut: TRASH_SHORTCUT, run: () => setConfirm(ids) },
       { label: 'shelf.menu.undo', shortcut: 'Backspace', run: () => void undo() },
     ];
   };

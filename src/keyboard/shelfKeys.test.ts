@@ -93,6 +93,8 @@ describe('shelf keys', () => {
   it('maps undo, trash, the menu keys and Escape', () => {
     expect(commandFor(press('Backspace'))).toEqual({ type: 'undo' });
     expect(commandFor(press('Delete'))).toEqual({ type: 'trash' });
+    expect(commandFor(press('Backspace', { metaKey: true }))).toEqual({ type: 'trash' });
+    expect(commandFor(press('Backspace', { ctrlKey: true }))).toBeNull();
     expect(commandFor(press('ContextMenu'))).toEqual({ type: 'menu' });
     expect(commandFor(press('F10', { shiftKey: true }))).toEqual({ type: 'menu' });
     expect(commandFor(press('F10'))).toBeNull();
