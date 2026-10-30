@@ -312,8 +312,11 @@ with conflicting styles). Everything below needs a Windows session.
 - [x] Uninstalling without "Delete the application data" keeps `%APPDATA%\Panopin`; with it, the
       folder is gone. The "Start with Windows" entry is removed both times. (live 2026-10-30: without
       it; ticking it would have deleted the development data, so not checked)
-- [ ] Tag `v1.0.0`: the draft release has `Panopin-Setup-x64.exe`, `Panopin-Portable-x64.zip`,
-      `latest.json` and `SHA256SUMS.txt`, and the hashes match the downloads.
+- [x] Tag `v1.0.0`: the draft release has `Panopin-Setup-x64.exe`, `Panopin-Portable-x64.zip`,
+      `latest.json` and `SHA256SUMS.txt`, and the hashes match the downloads. (2026-10-30: also
+      the update signature in `latest.json` checked against the app's public key, and the
+      release's installer opened like a double-click over the installed copy: no click needed,
+      Panopin started again, data kept)
 - [ ] The website on Windows offers "Download for Windows", on a phone "See all downloads"; the
       language switch remembers its choice. The embed shows both languages on
       mehmetburaktaskaya.com.
