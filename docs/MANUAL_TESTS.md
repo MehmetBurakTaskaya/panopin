@@ -21,6 +21,13 @@ The run found four bugs, all fixed and checked again:
 - Item ids could be given again after a delete for good, showing an old picture (D-071).
 - Pictures stayed in the webview's disk cache after their items were deleted (D-072).
 
+The same scripts ran again on a 1.0.0 build that includes the macOS work (commit fd9a49c),
+installed over the previous one with the data kept: Phases 1–6 (53), the extra checks (21, now
+also the card menu naming Ctrl+C, Ctrl+Enter and Delete) and a watched folder (4: a new picture
+there becomes an image card, a text file does not, the settings come back unchanged). 78 checks
+passed. In the first pass another window took the focus during three shelf sections; those
+sections passed when run again. Installing, updating and uninstalling were not repeated.
+
 ## Phase 0: concept mockup
 
 Run `python -m http.server 4317 --directory docs/concept` and open `http://localhost:4317/mockup/`.
@@ -312,8 +319,10 @@ with conflicting styles). Everything below needs a Windows session.
 
 CI builds the app on `macos-latest`, runs the Rust tests there (the folder watcher and the
 screenshot mark on a real file system among them) and checks the code with clippy. Nothing below
-has run on a Mac yet (D-073). macOS 13 or later. Releases carry the `.dmg` once this list has
-passed and the owner sets the repository variable `PANOPIN_MACOS` to `true` (D-068).
+has run on a Mac yet (D-073). macOS 13 or later. To try it, start Actions → Mac test build → Run
+workflow and download the `.dmg` from the run's artifacts (kept for 14 days). Releases carry the
+`.dmg` once this list has passed and the owner sets the repository variable `PANOPIN_MACOS` to
+`true` (D-068).
 
 - [ ] The `.dmg` opens; Panopin starts after "Open Anyway" in System Settings → Privacy &
       Security. The menu bar shows the pushpin, tinted for light and dark menu bars; there is no

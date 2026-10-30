@@ -474,9 +474,9 @@ uninstaller remove the "Start with Windows" entry and, only when "Delete the app
 is ticked, `%APPDATA%\Panopin` as well; Tauri itself removes only its identifier folders. Neither
 happens during an update.
 
-## D-067 Icon — Proposed (the owner chooses)
+## D-067 Icon — Accepted
 A note pinned to a cork tile in a wooden frame, candidate B of three (A: the note alone, C: a round
-cork badge), shown to the owner on 2026-10-30. One SVG, `src-tauri/icons/app-icon.svg`, is the
+cork badge), chosen by the owner on 2026-10-30. One SVG, `src-tauri/icons/app-icon.svg`, is the
 source of every size: `npm run icons` runs `tauri icon` for the app icon and draws the four tray
 states (normal; paused: greyed with a pause badge; update on offer: a blue dot; both) at 16, 20,
 24 and 32 px. Panopin uses the picture that matches Windows' small-icon size, so the tray never
@@ -493,7 +493,7 @@ notes. The workflow then adds the portable ZIP (`Panopin.exe`, `LICENSE.txt`,
 `Panopin-Portable-x64.zip`) so `releases/latest/download/<file>` links never change, `latest.json`
 and `SHA256SUMS.txt`. The owner publishes the draft. The universal macOS `.dmg` (Phase 8, D-073)
 is built only when the repository variable `PANOPIN_MACOS` is `true`, which the owner sets once
-the Mac build has been tried on a Mac; until then releases and `latest.json` are Windows only. Code
+the test build from `mac-test.yml` has been tried on a Mac; until then releases and `latest.json` are Windows only. Code
 signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a Changelog
 and versions follow SemVer.
 
@@ -546,7 +546,7 @@ use; Vision needs no main thread.
 | Copying | text, PNG, DIB, file list | text, PNG, file URLs |
 | Folder and file dialogs | common item dialog | `NSOpenPanel` on the main thread, its message carrying the title; imports limited to the known extensions through `UTType` (`objc2-uniform-type-identifiers`) |
 | Paste into the previous app | `SendInput` Ctrl+V | the app is brought back (`NSRunningApplication`) and Cmd+V is posted with `CGEvent`. macOS asks for Accessibility permission the first time; without it the item stays on the clipboard and the shelf says how to allow it. A focused `AXSecureTextField` is never pasted into |
-| Global shortcuts | Win+Alt+V/C/S | the same accelerators become Cmd+Option+V/C/S. Cmd+Option+V is Finder's "Move here", so **the owner decides** whether macOS keeps it |
+| Global shortcuts | Win+Alt+V/C/S | the same accelerators become Cmd+Option+V/C/S. Cmd+Option+V is also Finder's "Move Item Here", which does not reach Finder while Panopin runs; the owner kept it on 2026-10-30, and Settings can change it |
 | In-app keys | Ctrl+… | Cmd+… (the key tables already accept either); ⌘⌫ also moves to Trash, as in Finder, since a Mac's Delete key needs fn |
 | Texts | — | strings that name Windows, its keys or "this PC" have a `key.mac` variant in the locale files, which the webviews use on a Mac; menus and hints name keys as macOS does (⌥⌘V, ⇧⌘T, ⌫); the AltGr warning is off; excluded apps start as KeePassXC, 1Password and Bitwarden |
 | Accent colour | `UISettings`, followed live | `NSColor.controlAccentColor` in sRGB, a little darker for light and lighter for dark surfaces; read again when a window opens |
@@ -554,7 +554,7 @@ use; Vision needs no main thread.
 | Tray | notification area icon | menu bar template icon that macOS tints; no Dock icon (accessory app) |
 | Screen snip | Snipping Tool overlay | `screencapture -i -c` |
 | Start at login | Run key | LaunchAgent (autostart plugin) |
-| Distribution | NSIS installer, portable ZIP | universal `.dmg`, not notarised: "System Settings → Privacy & Security → Open Anyway". Releases carry it once the `PANOPIN_MACOS` variable is `true` (D-068) |
+| Distribution | NSIS installer, portable ZIP | universal `.dmg`, ad-hoc signed (`signingIdentity` `-`, which Apple silicon needs for apps from the internet) but not notarised: "System Settings → Privacy & Security → Open Anyway". `mac-test.yml`, started by hand, builds a test `.dmg` as a workflow artifact; releases carry the `.dmg` once the `PANOPIN_MACOS` variable is `true` (D-068) |
 
 Not on macOS yet (BACKLOG): screen recordings, drag-out (a card dragged on a Mac stays where it
 is), edge opening (Settings shows it as unavailable), Mica-like materials and quiet sounds during

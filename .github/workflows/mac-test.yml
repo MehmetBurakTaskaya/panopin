@@ -1,0 +1,49 @@
+name: Mac test build
+
+# Builds the universal macOS .dmg without releasing it, so the Mac version can be tried on a Mac
+# before the repository variable PANOPIN_MACOS adds it to releases (D-073). It runs only when
+# started by hand (Actions → Mac test build → Run workflow); the .dmg stays under the run's
+# artifacts for 14 days.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dmg:
+    name: macOS universal .dmg
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Rust toolchain for both Mac architectures
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # A test build installs no updates, so it needs no update packages and no update key.
+      - name: Build
+        run: |
+          npm run tauri build -- --target universal-apple-darwin --config '{"bundle":{"createUpdaterArtifacts":false}}'
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg "Panopin-${version}-${GITHUB_SHA::7}-macOS-test.dmg"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: Panopin-*-macOS-test.dmg
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
