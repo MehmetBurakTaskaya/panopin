@@ -30,7 +30,7 @@ window holds everything, with folders, tags, notes and search.
 
 - **A cork board of your own.** Copies are taped to the board, the ones you keep get a pushpin,
   and small paper-and-cork sounds go with it (they can be turned off).
-- **Native and light.** Built with Tauri and Rust. The installer is about 3.5 MB
+- **Native and light.** Built with Tauri and Rust. The installer is about 3.4 MB
   and Panopin uses almost no CPU while idle: the clipboard is followed through Windows events, never
   polled.
 - **Respects privacy.** Copies that password managers and Windows mark as private are never
@@ -77,7 +77,8 @@ when you press "Update and restart". Your items and settings stay.
 drag Panopin into Applications. Panopin is not notarised by Apple, so macOS blocks its first
 opening:
 
-1. Open Panopin. When macOS says it could not verify Panopin, choose **Done** (not Move to Trash).
+1. Open Panopin. When macOS says it could not verify Panopin, close the warning with **Done** or
+   **Cancel**, whichever your macOS shows (not Move to Trash).
 2. Open **System Settings → Privacy & Security**, scroll down and choose **Open Anyway** next to
    Panopin. The button stays there for about an hour after you tried to open it.
 3. Choose **Open Anyway** again and enter your password. From then on Panopin opens like any app.

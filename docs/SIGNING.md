@@ -72,7 +72,8 @@ conditions (signpath.org/terms, read on 2026-10-30) and where Panopin stands:
 The Mac app is signed ad hoc (`signingIdentity` `-` in `src-tauri/tauri.macos.conf.json`), which
 Apple silicon needs, but it has no Developer ID and is not notarised. macOS 15 and later therefore
 block its first opening with "Apple could not verify Panopin". The README gives the way through:
-choose **Done**, then **System Settings → Privacy & Security → Open Anyway** and the password. A
+close the warning (**Done** on macOS 15 and later, **Cancel** before), then **System Settings →
+Privacy & Security → Open Anyway** and the password. A
 Developer ID certificate and notarisation need the Apple Developer Program (99 USD a year); the
 owner decided on 2026-10-30 not to join for now (D-075). If that changes:
 

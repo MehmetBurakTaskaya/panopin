@@ -30,7 +30,7 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
 
 - **Kendine ait bir mantar pano.** Kopyaladıkların bantla tutturulur, saklamak istediklerine
   raptiye saplanır; kâğıt ve mantar sesleri eşlik eder (kapatılabilir).
-- **Native ve hafif.** Tauri ve Rust ile yazıldı. Kurulum dosyası yaklaşık 3,5 MB;
+- **Native ve hafif.** Tauri ve Rust ile yazıldı. Kurulum dosyası yaklaşık 3,4 MB;
   Panopin boştayken neredeyse hiç işlemci kullanmaz, çünkü pano yoklanmaz, Windows olaylarıyla izlenir.
 - **Gizliliğe saygılı.** Parola yöneticilerinin ve Windows'un gizli olarak işaretlediği kopyalar
   hiç kaydedilmez. Hariç tutulan uygulamalar listesi ve 5 dakika, 1 saat ya da sen açana kadar
@@ -77,8 +77,8 @@ haber verir; indirmeyi sen yaparsın.
 aç ve Panopin'i Uygulamalar klasörüne sürükle. Panopin Apple onaylı (notarised) değil, bu yüzden
 macOS ilk açılışı engeller:
 
-1. Panopin'i aç. macOS onu doğrulayamadığını söyleyince **Bitti**'yi seç (Çöp Sepeti'ne Taşı'yı
-   değil).
+1. Panopin'i aç. macOS onu doğrulayamadığını söyleyince uyarıyı macOS'unda hangisi varsa **Bitti**
+   ya da **Vazgeç** ile kapat (Çöp Sepeti'ne Taşı ile değil).
 2. **Sistem Ayarları → Gizlilik ve Güvenlik**'i aç, aşağı kaydır ve Panopin'in yanındaki **Yine de
    Aç**'ı seç. Düğme, açmayı denedikten sonra yaklaşık bir saat orada kalır.
 3. Yine **Yine de Aç**'ı seç ve Mac'inin parolasını gir. Bundan sonra Panopin her uygulama gibi

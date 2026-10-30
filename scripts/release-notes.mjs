@@ -19,9 +19,9 @@ const notes = (end === -1 ? rest : rest.slice(0, end)).trim();
 
 const mac = `
 - **Panopin-macOS.dmg**: for macOS 13 or later, on Apple silicon and Intel. Open it and drag Panopin
-  into Applications. Panopin is not notarised by Apple, so macOS blocks its first opening: choose
-  **Done** when macOS says it could not verify Panopin, then open **System Settings → Privacy &
-  Security**, scroll down, choose **Open Anyway** next to Panopin and enter your password.
+  into Applications. Panopin is not notarised by Apple, so macOS blocks its first opening: close the
+  warning (Done or Cancel, not Move to Trash), then open **System Settings → Privacy & Security**,
+  scroll down, choose **Open Anyway** next to Panopin and enter your password.
   \`Panopin-macOS.app.tar.gz\` is what updates install.`;
 
 const downloads = `### Downloads
