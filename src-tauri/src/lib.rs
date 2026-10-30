@@ -300,12 +300,8 @@ pub fn run() {
             });
         })
         .setup(|app| {
-            // A menu bar app on macOS: no Dock icon and no app menu (D-073).
             #[cfg(target_os = "macos")]
-            {
-                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
-                shelf::float_over_full_screen(app.handle());
-            }
+            shelf::prepare_overlay(app.handle());
             // updates::start reads the plugin's state, so it is registered first (D-065).
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;
@@ -396,14 +392,25 @@ pub fn run() {
         ])
         .build(tauri::generate_context!());
     match app {
-        Ok(app) => app.run(|app, event| {
-            // Staged files are only for the session that handed them out.
-            if let tauri::RunEvent::Exit = event {
-                if let Some(staging) = app.try_state::<transfer::Staging>() {
-                    staging.clean();
+        Ok(app) => {
+            // A menu bar app on macOS: no Dock icon and no app menu (D-073). Set before the event
+            // loop starts: the launch applies the stored policy, and a change made in setup can
+            // come before the launch and be overwritten.
+            #[cfg(target_os = "macos")]
+            let app = {
+                let mut app = app;
+                app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+                app
+            };
+            app.run(|app, event| {
+                // Staged files are only for the session that handed them out.
+                if let tauri::RunEvent::Exit = event {
+                    if let Some(staging) = app.try_state::<transfer::Staging>() {
+                        staging.clean();
+                    }
                 }
-            }
-        }),
+            });
+        }
         Err(err) => {
             log::error!("Panopin could not start: {err}");
             eprintln!("Panopin could not start: {err}");

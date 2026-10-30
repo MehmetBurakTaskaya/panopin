@@ -32,15 +32,22 @@ wait_for() {
   until "$@" > /dev/null 2>&1; do [ "$SECONDS" -ge "$end" ] && return 1; sleep 0.3; done
 }
 
-UI() { osascript "$HERE/ui.applescript" "$@" 2>> "$OUT/osascript.log"; }
 PB="$OUT/pbtool"
+AX="$OUT/axtool"
+UI() { osascript "$HERE/ui.applescript" "$@" 2>> "$OUT/osascript.log"; }
+pid() { pgrep -x panopin | head -n 1; }
+# AXT <command> [arguments]: the Accessibility helper, aimed at the running Panopin
+AXT() { "$AX" "$1" "$(pid)" "${@:2}" 2>> "$OUT/ax.log"; }
 sql() { sqlite3 "$DB" "$1" 2>> "$OUT/sqlite.log"; }
 # setting <key> <JSON value>, with Panopin stopped
 setting() { sql "UPDATE settings SET value = json_set(value, '\$.$1', json('$2')) WHERE key = 'app';"; }
 shot() { screencapture -x "$OUT/shots/$1.png"; }
 key() { UI key "$@" > /dev/null; sleep 0.7; }
 front_is() { [ "$(UI front)" = "$1" ]; }
-window_is_open() { UI windows | grep -q "$1"; }
+window_is_open() { AXT shown | grep -q "$1"; }
+shelf_shown() { AXT shown | grep -q -x Panopin; }
+shelf_hidden() { ! shelf_shown; }
+shelf_has_keys() { AXT focus | grep -q '^Panopin|'; }
 running() { pgrep -x panopin > /dev/null; }
 stopped() { ! pgrep -x panopin > /dev/null; }
 start_app() { open "$APP"; wait_for 30 running; sleep 4; }
@@ -50,11 +57,11 @@ has_text() { [ "$(sql "SELECT COUNT(*) FROM items WHERE text_body = '$1';")" = 1
 # new_count <base id> <extra condition> <count>: exactly that many items after the base id
 new_count() { [ "$(sql "SELECT COUNT(*) FROM items WHERE id > $1 $2;")" = "$3" ]; }
 textedit() { open -a TextEdit "$OUT/note.txt"; wait_for 15 front_is com.apple.TextEdit; sleep 1; }
-open_shelf() { key 9 "option command"; wait_for 6 front_is "$ID"; }
+open_shelf() { key 9 "option command"; wait_for 6 shelf_shown && sleep 0.8; }
 # Letters outside the search box are shelf actions (P pins, L opens the Library): type only into it.
-search_focused() { UI focus | grep -q -E 'AXTextField|AXSearchField'; }
+search_focused() { AXT focus | grep -q -E 'AXTextField|AXSearchField'; }
 type_in_search() {
-  if wait_for 3 search_focused; then UI type "$1" > /dev/null; else fail "the search box has the focus" "focused: $(UI focus)"; return 1; fi
+  if wait_for 3 search_focused; then UI type "$1" > /dev/null; else fail "the search box has the keyboard" "focus: $(AXT focus)"; return 1; fi
 }
 # grant <service> <system|user>: allows Panopin a privacy service the way the runner image does
 grant() {
@@ -67,8 +74,18 @@ grant() {
     sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES($row);"
   fi
 }
+onboarded() { [ "$(sql "SELECT json_extract(value, '\$.onboarded') FROM settings WHERE key = 'app';")" = 1 ]; }
+# finish_first_run: presses Start in the first-run window
+finish_first_run() {
+  wait_for 20 window_is_open Welcome
+  sleep 2
+  AXT press Welcome Start > /dev/null
+  wait_for 10 onboarded
+}
 
-swiftc -O -o "$PB" "$HERE/pasteboard.swift" 2> "$OUT/swiftc.log" || { fail "the test helper builds" "$(tail -3 "$OUT/swiftc.log")"; exit 1; }
+for tool in pasteboard:pbtool ax:axtool; do
+  swiftc -O -o "$OUT/${tool#*:}" "$HERE/${tool%%:*}.swift" 2>> "$OUT/swiftc.log" || { fail "the test helper ${tool%%:*} builds" "$(tail -3 "$OUT/swiftc.log")"; exit 1; }
+done
 : > "$OUT/note.txt"
 note "macOS $(sw_vers -productVersion), $(uname -m), Panopin $(defaults read "$APP/Contents/Info" CFBundleShortVersionString 2>/dev/null)"
 note "app architectures: $(lipo -archs "$APP/Contents/MacOS/panopin" 2>&1)"
@@ -91,12 +108,10 @@ check "Panopin starts" "" running
 wait_for 20 window_is_open Welcome
 sleep 2
 shot first-run
-UI texts Welcome > "$OUT/texts/first-run.txt"
+AXT texts Welcome > "$OUT/texts/first-run.txt"
 mac_onboarding() { grep -q '⇧⌘3' "$OUT/texts/first-run.txt" && grep -q 'this Mac' "$OUT/texts/first-run.txt"; }
 check "the first-run window speaks of ⇧⌘3 and this Mac" "$(head -c 200 "$OUT/texts/first-run.txt" | tr '\n' '|')" mac_onboarding
-UI click Welcome Start > /dev/null
-onboarded() { [ "$(sql "SELECT json_extract(value, '\$.onboarded') FROM settings WHERE key = 'app';")" = 1 ]; }
-if wait_for 10 onboarded; then
+if finish_first_run; then
   pass "Start ends the first run"
 else
   fail "Start ends the first run" "set in the database instead"
@@ -178,18 +193,23 @@ textedit
 T3="PANOPIN-LIVE shelf $RUN"
 printf '%s' "$T3" | pbcopy
 wait_for 6 has_text "$T3"
-if open_shelf; then pass "⌥⌘V opens the shelf in front"; else fail "⌥⌘V opens the shelf in front" "front: $(UI front)"; fi
-sleep 1
+# The clipboard holds something else, so only the shelf can put the card's text back on it.
+"$PB" marked org.nspasteboard.ConcealedType "elsewhere"
+if open_shelf; then pass "⌥⌘V opens the shelf"; else fail "⌥⌘V opens the shelf" "windows: $(AXT shown | tr '\n' ' ')"; fi
+check "the shelf has the keyboard" "focus: $(AXT focus); front: $(UI front)" shelf_has_keys
+note "app in front while the shelf is open: $(UI front)"
 shot shelf
-UI texts Panopin > "$OUT/texts/shelf.txt"
+AXT texts Panopin > "$OUT/texts/shelf.txt"
 check "the shelf's hints name Mac keys" "$(head -c 200 "$OUT/texts/shelf.txt" | tr '\n' '|')" grep -q '⌘Enter' "$OUT/texts/shelf.txt"
 key 53
-check "Esc closes it and TextEdit comes back" "front: $(UI front)" wait_for 5 front_is com.apple.TextEdit
+check "Esc closes the shelf" "" wait_for 5 shelf_hidden
+check "and TextEdit is in front" "front: $(UI front)" front_is com.apple.TextEdit
 open_shelf
 key 125
 key 36
-if [ "$(pbpaste)" = "$T3" ]; then pass "Enter copies the text card"; else fail "Enter copies the text card" "clipboard: $(pbpaste | head -c 80)"; fi
-check "and TextEdit comes back" "front: $(UI front)" wait_for 5 front_is com.apple.TextEdit
+copied() { [ "$(pbpaste)" = "$T3" ]; }
+if wait_for 4 copied; then pass "Enter copies the text card"; else fail "Enter copies the text card" "clipboard: $(pbpaste | head -c 80)"; fi
+check "the shelf closes and TextEdit is in front" "front: $(UI front)" wait_for 5 front_is com.apple.TextEdit
 sleep 2
 check "Panopin's own copy is not kept again" "" has_text "$T3"
 if [ "$ax" = 1 ]; then
@@ -214,25 +234,27 @@ else
 fi
 textedit
 key 8 "option command"
-wait_for 6 front_is "$ID"
+wait_for 6 shelf_shown
 sleep 1
 type_in_search "PANOPIN-LIVE"
 sleep 1.5
 shot search
-UI texts Panopin > "$OUT/texts/search.txt"
+AXT texts Panopin > "$OUT/texts/search.txt"
 check "⌥⌘C opens the shelf with search, and typing finds the test cards" "$(grep -m1 -i result "$OUT/texts/search.txt")" grep -q -i 'results' "$OUT/texts/search.txt"
 key 53
 key 53
+wait_for 5 shelf_hidden
 key 8 "option command"
-wait_for 6 front_is "$ID"
+wait_for 6 shelf_shown
 sleep 1
 type_in_search kestane
 sleep 1.5
 shot search-ocr
-UI texts Panopin > "$OUT/texts/search-ocr.txt"
+AXT texts Panopin > "$OUT/texts/search-ocr.txt"
 check "search finds the picture by the text read in it" "$(grep -m1 -i result "$OUT/texts/search-ocr.txt")" grep -q -i '1 result' "$OUT/texts/search-ocr.txt"
 key 53
 key 53
+wait_for 5 shelf_hidden
 textedit
 open_shelf
 key 125
@@ -248,10 +270,11 @@ key 51
 sleep 1.2
 check "⌫ brings it back" "" untrashed
 key 53
+wait_for 5 shelf_hidden
 textedit
 key 3 "control command"
 sleep 4
-if open_shelf; then pass "the shelf opens over a full-screen app"; else fail "the shelf opens over a full-screen app" "front: $(UI front)"; fi
+if open_shelf; then pass "the shelf opens over a full-screen app"; else fail "the shelf opens over a full-screen app" "windows: $(AXT shown | tr '\n' ' ')"; fi
 sleep 1
 shot fullscreen
 key 53
@@ -268,26 +291,27 @@ key 53
 wait_for 6 not_capturing
 
 section "Settings and the Library"
-UI menu Settings > /dev/null
-check "Settings opens from the menu bar icon" "windows: $(UI windows | tr '\n' ' ')" wait_for 15 window_is_open Settings
+AXT menu Settings > /dev/null
+check "Settings opens from the menu bar icon" "windows: $(AXT shown | tr '\n' ' ')" wait_for 15 window_is_open Settings
 sleep 2
 shot settings
 : > "$OUT/texts/settings.txt"
 for tab in General Sources History Shortcuts Appearance Privacy Updates About; do
-  UI click Settings "$tab" > /dev/null
+  AXT press Settings "$tab" > /dev/null
   sleep 1.2
-  { echo "== $tab"; UI texts Settings; } >> "$OUT/texts/settings.txt"
+  { echo "== $tab"; AXT texts Settings; } >> "$OUT/texts/settings.txt"
 done
 for want in "Open at login" "Same as macOS" "Use the macOS accent colour" "⌥⌘V"; do
   check "Settings says \"$want\"" "" grep -q "$want" "$OUT/texts/settings.txt"
 done
 bad=$(grep -E 'Windows|Ctrl|this PC' "$OUT/texts/settings.txt" | head -5 | tr '\n' '|')
 check "no Settings text names Windows, Ctrl or this PC" "$bad" [ -z "$bad" ]
-UI click Settings Sources > /dev/null
+AXT press Settings Sources > /dev/null
 sleep 1
-UI click Settings "Add a folder…" > /dev/null
-panel_open() { UI windows | grep -q -x Open; }
-check "Add a folder opens the macOS folder panel" "windows: $(UI windows | tr '\n' ' ')" wait_for 8 panel_open
+before=$(AXT shown | wc -l)
+AXT press Settings "Add a folder…" > /dev/null
+panel_open() { [ "$(AXT shown | wc -l)" -gt "$before" ]; }
+check "Add a folder opens the macOS folder panel" "windows: $(AXT shown | tr '\n' ' ')" wait_for 8 panel_open
 sleep 1
 shot folder-panel
 key 53
@@ -295,19 +319,19 @@ sleep 1
 UI close Settings > /dev/null
 defaults write -g AppleAccentColor -int 1
 sleep 1
-UI menu Settings > /dev/null
+AXT menu Settings > /dev/null
 wait_for 15 window_is_open Settings
 sleep 2
-UI click Settings Appearance > /dev/null
+AXT press Settings Appearance > /dev/null
 sleep 1
 shot settings-orange-accent
 UI close Settings > /dev/null
 defaults delete -g AppleAccentColor
-UI menu "Open Library" > /dev/null
-check "the Library opens from the menu bar icon" "windows: $(UI windows | tr '\n' ' ')" wait_for 15 window_is_open Library
+AXT menu "Open Library" > /dev/null
+check "the Library opens from the menu bar icon" "windows: $(AXT shown | tr '\n' ' ')" wait_for 15 window_is_open Library
 sleep 2
 shot library
-UI texts Library > "$OUT/texts/library.txt"
+AXT texts Library > "$OUT/texts/library.txt"
 bad=$(grep -E 'Windows|Ctrl|this PC' "$OUT/texts/library.txt" | head -5 | tr '\n' '|')
 check "no Library text names Windows, Ctrl or this PC" "$bad" [ -z "$bad" ]
 UI close Library > /dev/null
@@ -334,15 +358,14 @@ start_app
 check "turning it off removes the login item" "" wait_for 8 no_agent
 
 section "quit"
-UI menu Quit > /dev/null
+AXT menu Quit > /dev/null
 check "Quit in the menu ends Panopin" "" wait_for 10 stopped
 
 section "a first start without permissions, as a new user meets it"
 tccutil reset All "$ID" > /dev/null 2>&1
 rm -rf "$DATA"
 start_app
-wait_for 20 window_is_open Welcome
-UI click Welcome Start > /dev/null
+finish_first_run
 sleep 5
 shot fresh-after-start
 printf '%s' "PANOPIN-LIVE fresh $RUN" | pbcopy

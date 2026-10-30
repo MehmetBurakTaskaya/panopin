@@ -230,11 +230,15 @@ fn own_hwnd(_window: &WebviewWindow) -> Option<isize> {
     None
 }
 
-/// On macOS the overlay also opens over full-screen apps and stays out of Cmd+` (D-073); Tauri
-/// only lets it join every Space. Runs once in setup, on the main thread.
+/// The overlay on macOS (D-073). Since macOS 14 an app in the background may only ask to come
+/// forward, so a shelf opened by its shortcut would show without the keyboard. The window becomes
+/// a non-activating panel instead: it takes the keyboard while the app in front stays active,
+/// which is where Enter and Cmd+Enter return anyway. It also opens over full-screen apps and stays
+/// out of Cmd+`; Tauri only lets it join every Space. Runs once in setup, on the main thread.
 #[cfg(target_os = "macos")]
-pub fn float_over_full_screen(app: &AppHandle) {
-    use objc2_app_kit::{NSWindow, NSWindowCollectionBehavior};
+pub fn prepare_overlay(app: &AppHandle) {
+    use objc2::{runtime::AnyObject, ClassType};
+    use objc2_app_kit::{NSPanel, NSWindow, NSWindowCollectionBehavior, NSWindowStyleMask};
     let Some(Ok(raw)) = app
         .get_webview_window(LABEL)
         .map(|window| window.ns_window())
@@ -250,6 +254,44 @@ pub fn float_over_full_screen(app: &AppHandle) {
             | NSWindowCollectionBehavior::CanJoinAllSpaces
             | NSWindowCollectionBehavior::FullScreenAuxiliary
             | NSWindowCollectionBehavior::IgnoresCycle,
+    );
+    // The window keeps Tauri's own state right after the NSWindow fields, so it can only take
+    // the panel class while a panel adds no fields of its own.
+    if NSPanel::class().instance_size() != NSWindow::class().instance_size() {
+        log::warn!("the shelf stays a regular window: panels have fields of their own here");
+        return;
+    }
+    // SAFETY: on the main thread; ShelfPanel is an NSPanel without fields, as large as the window
+    // it replaces, and it answers the key and main window questions as Tauri's class did.
+    unsafe { AnyObject::set_class(ns_window.as_ref(), mac_panel::ShelfPanel::class()) };
+    ns_window.setStyleMask(ns_window.styleMask() | NSWindowStyleMask::NonactivatingPanel);
+    // Panels hide when their app deactivates; the shelf belongs to the app in front instead.
+    ns_window.setHidesOnDeactivate(false);
+}
+
+#[cfg(target_os = "macos")]
+mod mac_panel {
+    use objc2::{define_class, runtime::NSObject, MainThreadOnly};
+    use objc2_app_kit::{NSPanel, NSResponder, NSWindow};
+
+    define_class!(
+        /// The shelf's class on macOS: a panel that takes the keyboard without activating Panopin.
+        #[unsafe(super(NSPanel, NSWindow, NSResponder, NSObject))]
+        #[thread_kind = MainThreadOnly]
+        #[name = "PanopinShelfPanel"]
+        pub(super) struct ShelfPanel;
+
+        impl ShelfPanel {
+            #[unsafe(method(canBecomeKeyWindow))]
+            fn can_become_key_window(&self) -> bool {
+                true
+            }
+
+            #[unsafe(method(canBecomeMainWindow))]
+            fn can_become_main_window(&self) -> bool {
+                false
+            }
+        }
     );
 }
 
