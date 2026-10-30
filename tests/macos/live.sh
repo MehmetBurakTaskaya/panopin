@@ -208,7 +208,7 @@ check "the shelf has the keyboard" "focus: $(AXT focus); front: $(UI front)" she
 note "app in front while the shelf is open: $(UI front)"
 shot shelf
 AXT texts Panopin > "$OUT/texts/shelf.txt"
-check "the shelf's hints name Mac keys" "$(head -c 200 "$OUT/texts/shelf.txt" | tr '\n' '|')" grep -q '⌘Enter' "$OUT/texts/shelf.txt"
+check "the shelf's hints name Mac keys" "$(head -c 200 "$OUT/texts/shelf.txt" | tr '\n' '|')" grep -q -i '⌘enter' "$OUT/texts/shelf.txt"
 key 53
 check "Esc closes the shelf" "" wait_for 5 shelf_hidden
 check "and TextEdit is in front" "front: $(UI front)" front_is com.apple.TextEdit
@@ -323,8 +323,9 @@ panel_open() { [ "$(AXT shown | wc -l)" -gt "$before" ]; }
 check "Add a folder opens the macOS folder panel" "windows: $(AXT shown | tr '\n' ' ')" wait_for 8 panel_open
 sleep 1
 shot folder-panel
-key 53
-sleep 1
+AXT press Open Cancel > /dev/null || key 53
+panel_closed() { ! AXT shown | grep -q -x Open; }
+wait_for 5 panel_closed
 UI close Settings > /dev/null
 defaults write -g AppleAccentColor -int 1
 sleep 1

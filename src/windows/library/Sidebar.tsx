@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type
 import { t, type MessageKey } from '../../i18n';
 import type { Folder, Tag } from '../../ipc';
 import { sameSection, type Counts, type Section } from '../../library/query';
+import { formatShortcut } from '../../shortcuts';
 import styles from './Library.module.css';
 
 /** The MIME type cards carry while they are dragged onto a folder. */
@@ -241,7 +242,7 @@ export function Sidebar(props: SidebarProps) {
       </ul>
       <div className={styles.navHead}>
         <span>{t('library.folders')}</span>
-        <button type="button" title={`${t('library.folder.new')} (Ctrl+Shift+N)`} aria-label={t('library.folder.new')} onClick={props.onNewFolder}>
+        <button type="button" title={`${t('library.folder.new')} (${formatShortcut('CommandOrControl+Shift+N')})`} aria-label={t('library.folder.new')} onClick={props.onNewFolder}>
           +
         </button>
       </div>

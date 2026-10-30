@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Ref } f
 import { folderPaths } from '../../components/pickers/Pickers';
 import { getLanguage, t, type MessageKey } from '../../i18n';
 import { removeFromFolder, setNote, setTitle, untagItems, type Folder, type LibraryItem, type Tag } from '../../ipc';
+import { TRASH_SHORTCUT, formatShortcut } from '../../shortcuts';
 import { duration } from '../shelf/paper';
 import styles from './Library.module.css';
 
@@ -193,7 +194,7 @@ export function Inspector(props: InspectorProps) {
                 {t('library.action.restore')} (R)
               </button>
               <button type="button" className={styles.tool} onClick={props.onDeleteForever}>
-                {t('library.action.deleteForever')} (Delete)
+                {t('library.action.deleteForever')} ({formatShortcut(TRASH_SHORTCUT)})
               </button>
             </>
           ) : (
@@ -201,7 +202,7 @@ export function Inspector(props: InspectorProps) {
               {items.length === 1 && first?.kind === 'link' && (
                 <>
                   <button type="button" className={styles.tool} onClick={() => props.onOpenLink(first.id)}>
-                    {t('shelf.menu.openLink')} (Ctrl+O)
+                    {t('shelf.menu.openLink')} ({formatShortcut('CommandOrControl+O')})
                   </button>
                   <button type="button" className={styles.tool} onClick={() => props.onRefreshLink(first.id)}>
                     {t('shelf.menu.refreshLink')}
@@ -212,16 +213,16 @@ export function Inspector(props: InspectorProps) {
                 {t(allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin')} (P)
               </button>
               <button type="button" className={styles.tool} onClick={props.onName}>
-                {t('library.action.name')} (Alt+P)
+                {t('library.action.name')} ({formatShortcut('Alt+P')})
               </button>
               <button type="button" className={styles.tool} onClick={props.onFolder}>
-                {t('library.action.folder')} (Shift+P)
+                {t('library.action.folder')} ({formatShortcut('Shift+P')})
               </button>
               <button type="button" className={styles.tool} onClick={props.onTag}>
-                {t('library.action.tag')} (Ctrl+Shift+T)
+                {t('library.action.tag')} ({formatShortcut('CommandOrControl+Shift+T')})
               </button>
               <button type="button" className={styles.tool} onClick={props.onExport}>
-                {t('library.action.export')} (Ctrl+Shift+E)
+                {t('library.action.export')} ({formatShortcut('CommandOrControl+Shift+E')})
               </button>
               <button type="button" className={styles.tool} onClick={props.onTrash}>
                 {t('shelf.menu.trash')}

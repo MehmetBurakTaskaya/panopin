@@ -61,7 +61,7 @@ import {
   type KindFilter,
   type Section,
 } from '../../library/query';
-import { DRAG_OUT, TRASH_SHORTCUT } from '../../shortcuts';
+import { DRAG_OUT, TRASH_SHORTCUT, formatShortcut } from '../../shortcuts';
 import { useSettings } from '../../state/settings';
 import { Preview, type PreviewMode } from '../shelf/preview/Preview';
 import { trackSave, whenSaved } from '../shelf/preview/saves';
@@ -641,7 +641,7 @@ export function LibraryApp() {
             className={styles.search}
             type="search"
             value={query}
-            placeholder={`${t('library.search')} (Ctrl+F)`}
+            placeholder={`${t('library.search')} (${formatShortcut('CommandOrControl+F')})`}
             aria-label={t('library.search')}
             spellCheck={false}
             onChange={(e) => {
@@ -669,7 +669,7 @@ export function LibraryApp() {
                 type="button"
                 className={styles.tool}
                 aria-pressed={filters.kind === kind}
-                title={`${t(label)} (Ctrl+${i})`}
+                title={`${t(label)} (${formatShortcut(`CommandOrControl+${i}`)})`}
                 onClick={() => setFilters((f) => ({ ...f, kind }))}
               >
                 {t(label)}
@@ -779,7 +779,7 @@ export function LibraryApp() {
             </button>
           ) : (
             <>
-              <button type="button" className={styles.tool} title={`${t('library.newNote')} (Ctrl+N)`} onClick={addNote}>
+              <button type="button" className={styles.tool} title={`${t('library.newNote')} (${formatShortcut('CommandOrControl+N')})`} onClick={addNote}>
                 + {t('library.newNote')}
               </button>
               <button type="button" className={styles.tool} onClick={importSome}>
