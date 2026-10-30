@@ -20,7 +20,7 @@ describe('SettingsApp', () => {
     patches = [];
     calls = [];
     tab = null;
-    updates = { current: '1.0.0', installable: true, status: { state: 'idle' } };
+    updates = { current: '1.0.0', installable: true, automatic: true, status: { state: 'idle' } };
     mockIPC((cmd, args) => {
       calls.push({ cmd, args });
       switch (cmd) {
@@ -146,17 +146,21 @@ describe('SettingsApp', () => {
     });
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Updates');
     expect(screen.getByText('You have Panopin 1.0.0.')).toBeTruthy();
+    // Updates are always on (D-076): the tab says so and offers no switch.
+    expect(screen.getByText(/Panopin keeps itself up to date/)).toBeTruthy();
+    expect(screen.queryByRole('checkbox')).toBeNull();
   });
 
-  it('offers an update with its notes and installs it only when asked', async () => {
+  it('shows a waiting update with its notes and installs it at once when asked', async () => {
     updates = {
       current: '1.0.0',
       installable: true,
+      automatic: true,
       status: { state: 'available', version: '1.1.0', notes: '### Added\n- **Faster** search', date: null },
     };
     render(<SettingsApp />);
     await openTab('Updates');
-    expect(screen.getByText('Panopin 1.1.0 is available.')).toBeTruthy();
+    expect(screen.getByText('Panopin 1.1.0 installs as soon as you are not using Panopin.')).toBeTruthy();
     expect(screen.getByText(/• Faster search/)).toBeTruthy();
     expect(calls.some((c) => c.cmd === 'install_update')).toBe(false);
     await act(async () => {
@@ -165,12 +169,21 @@ describe('SettingsApp', () => {
     expect(calls.some((c) => c.cmd === 'install_update')).toBe(true);
   });
 
-  it('sends the portable build to the download page instead', async () => {
-    updates = { current: '1.0.0', installable: false, status: { state: 'available', version: '1.1.0', notes: null, date: null } };
+  it('sends a copy that cannot replace itself to the download page instead', async () => {
+    updates = { current: '1.0.0', installable: false, automatic: false, status: { state: 'available', version: '1.1.0', notes: null, date: null } };
     render(<SettingsApp />);
     await openTab('Updates');
+    expect(screen.getByText('Panopin 1.1.0 is available.')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Download from GitHub' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Update and restart' })).toBeNull();
+  });
+
+  it('leaves an update that would ask for a password to the button', async () => {
+    updates = { current: '1.0.0', installable: true, automatic: false, status: { state: 'available', version: '1.1.0', notes: null, date: null } };
+    render(<SettingsApp />);
+    await openTab('Updates');
+    expect(screen.getByText('Panopin 1.1.0 is available.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Update and restart' })).toBeTruthy();
   });
 
   it('counts before clearing history and clears only after confirming', async () => {

@@ -29,7 +29,8 @@ const downloads = `### Downloads
 - **Panopin-Setup-x64.exe**: the installer for Windows 10 22H2 and Windows 11 (x64). Open it and
   Panopin installs for your user, with no administrator rights and no pages to click through, then
   starts.
-- **Panopin-Portable-x64.zip**: unzip it anywhere and run \`Panopin.exe\`.${flags.includes('--mac') ? mac : ''}
+- **Panopin-Portable-x64.zip**: unzip it anywhere and run \`Panopin.exe\`.
+- \`Panopin-Update-x64.exe\` is the same installer, fetched by Panopin's own updates.${flags.includes('--mac') ? mac : ''}
 
 Panopin is not code-signed yet. If SmartScreen says "Windows protected your PC", choose
 **More info → Run anyway**. \`SHA256SUMS.txt\` lists the SHA-256 of every file.`;

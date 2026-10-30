@@ -42,6 +42,5 @@ export function testSettings(): Settings {
     launchAtLogin: false,
     edgeOpen: false,
     appearance: { systemAccent: true, material: true, animations: true },
-    updates: { autoCheck: false },
   };
 }

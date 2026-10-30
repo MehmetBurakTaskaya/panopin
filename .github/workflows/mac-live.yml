@@ -2,9 +2,10 @@ name: Mac live test
 
 # Builds the Mac app, installs it from its .dmg and drives it as a user would on GitHub's Mac
 # runners (tests/macos/live.sh, D-073): copies, screenshots, the global shortcuts, the shelf, paste,
-# text recognition, Settings, the Library and the login item, on Apple silicon and Intel.
-# Screenshots, window texts, the app log and the results stay under the run's artifacts. Started
-# by hand (Actions → Mac live test → Run workflow).
+# text recognition, Settings, the Library and the login item, on Apple silicon and Intel; then
+# lets it install an update by itself (tests/macos/update.sh, D-076). Screenshots, window texts,
+# the app log and the results stay under the run's artifacts. Started by hand (Actions → Mac live
+# test → Run workflow).
 on:
   workflow_dispatch:
 
@@ -39,9 +40,24 @@ jobs:
 
       - run: npm ci
 
-      # A test build installs no updates, so it needs no update packages and no update key.
+      # The test build looks for updates on a local server, never on GitHub, and trusts a key made
+      # for this run only, which also signs its update archive.
+      - name: Update key and settings for the test build
+        run: |
+          npx tauri signer generate --ci -p "" -w "$RUNNER_TEMP/update.key" > /dev/null
+          node -e '
+            const fs = require("fs");
+            const pubkey = fs.readFileSync(process.argv[1], "utf8").trim();
+            const updater = { pubkey, endpoints: ["http://127.0.0.1:8767/latest.json"], dangerousInsecureTransportProtocol: true };
+            fs.writeFileSync(process.argv[2], JSON.stringify({ bundle: { createUpdaterArtifacts: true }, plugins: { updater } }));
+          ' "$RUNNER_TEMP/update.key.pub" "$RUNNER_TEMP/test-config.json"
+
       - name: Build the app and its .dmg
-        run: npm run tauri build -- --bundles app,dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        run: |
+          export TAURI_SIGNING_PRIVATE_KEY="$RUNNER_TEMP/update.key"
+          npm run tauri build -- --bundles app,dmg --config "$RUNNER_TEMP/test-config.json"
 
       - name: Install from the .dmg
         run: |
@@ -52,6 +68,12 @@ jobs:
 
       - name: Live test
         run: bash tests/macos/live.sh /Applications/Panopin.app "$RUNNER_TEMP/mac-live"
+
+      - name: Update test
+        if: always()
+        run: |
+          bash tests/macos/update.sh /Applications/Panopin.app \
+            src-tauri/target/release/bundle/macos/Panopin.app.tar.gz "$RUNNER_TEMP/update.key" "$RUNNER_TEMP/mac-live"
 
       - uses: actions/upload-artifact@v7
         if: always()

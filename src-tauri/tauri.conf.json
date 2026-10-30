@@ -66,8 +66,9 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFBMjlFRTUwOEY1MjQwNjAKUldSZ1FGS1BVTzRwcXU5QVU2UTZuNXdRUTFsYjdpWDRzRkRJUnNvbFlIdXgxbjZYWDBZRHkvb0UK",
       "endpoints": ["https://github.com/MehmetBurakTaskaya/panopin/releases/latest/download/latest.json"],
+      "requireSignedVersion": true,
       "windows": {
-        "installMode": "passive"
+        "installMode": "quiet"
       }
     }
   }

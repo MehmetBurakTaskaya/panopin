@@ -117,6 +117,11 @@ fn with_gate<T>(app: &AppHandle, f: impl FnOnce(&mut ShelfGate) -> T) -> T {
     f(&mut gate)
 }
 
+/// Whether the shelf is on screen, for work that must not interrupt it (an update's install).
+pub fn is_open(app: &AppHandle) -> bool {
+    with_gate(app, |gate| gate.is_open())
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct OpenEvent {

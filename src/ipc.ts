@@ -53,10 +53,6 @@ export interface Appearance {
   animations: boolean;
 }
 
-export interface Updates {
-  autoCheck: boolean;
-}
-
 export interface Settings {
   language: LanguageSetting;
   theme: Theme;
@@ -77,7 +73,6 @@ export interface Settings {
   launchAtLogin: boolean;
   edgeOpen: boolean;
   appearance: Appearance;
-  updates: Updates;
 }
 
 /** UI sounds; `volume` is 0–100. */
@@ -105,7 +100,6 @@ export type SettingsPatch = {
   launchAtLogin?: boolean;
   edgeOpen?: boolean;
   appearance?: Partial<Appearance>;
-  updates?: Partial<Updates>;
 };
 
 export interface Counts {
@@ -239,14 +233,16 @@ export type UpdateStatus =
   | { state: 'failed'; checkedAt: number };
 export interface UpdateView {
   current: string;
-  /** False for the portable build and development runs, which never replace themselves. */
+  /** False for copies that never replace themselves, such as development runs (D-076). */
   installable: boolean;
+  /** Whether an update installs by itself; false where installing would ask for a password. */
+  automatic: boolean;
   status: UpdateStatus;
 }
 export const updateStatus = () => invoke<UpdateView>('update_status');
-/** A check the user asked for; it runs whatever the automatic setting says. */
+/** A check the user asked for, on top of the regular ones. */
 export const checkForUpdates = () => invoke<UpdateView>('check_for_updates');
-/** Downloads and runs the installer, which restarts Panopin; the portable build opens the download page. */
+/** Installs the update at once and restarts Panopin; a copy that cannot replace itself opens the download page. */
 export const installUpdate = () => invoke<void>('install_update');
 /** The tab a new Settings window should open on, once (for example from the tray). */
 export const takeSettingsTab = () => invoke<string | null>('take_settings_tab');

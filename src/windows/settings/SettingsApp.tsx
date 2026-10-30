@@ -242,7 +242,7 @@ export function SettingsApp() {
         {tab === 'shortcuts' && <ShortcutsTab settings={settings} />}
         {tab === 'appearance' && <AppearanceTab settings={settings} look={look} />}
         {tab === 'privacy' && <PrivacyTab settings={settings} />}
-        {tab === 'updates' && <UpdatesTab settings={settings} />}
+        {tab === 'updates' && <UpdatesTab />}
         {tab === 'about' && <AboutTab />}
         {error && (
           <p className={styles.error} role="alert">

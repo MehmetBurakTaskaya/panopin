@@ -1,9 +1,8 @@
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 import { formatLocale, t } from '../../i18n';
-import { checkForUpdates, installUpdate, updateStatus, type Settings, type UpdateView } from '../../ipc';
-import { useSettings } from '../../state/settings';
-import { Section, Toggle } from './controls';
+import { checkForUpdates, installUpdate, updateStatus, type UpdateView } from '../../ipc';
+import { Section } from './controls';
 import styles from './Settings.module.css';
 
 /** Release notes are Markdown; they are shown as plain text, never as HTML. Pure, so it is tested. */
@@ -31,7 +30,8 @@ function statusLine(view: UpdateView): string {
     case 'upToDate':
       return `${t('settings.updates.upToDate', { version: view.current })} ${t('settings.updates.checkedAt', { time: when(status.checkedAt) })}`;
     case 'available':
-      return t('settings.updates.available', { version: status.version });
+      // An update installs by itself once Panopin is not in use, unless that would ask for a password (D-076).
+      return t(view.automatic ? 'settings.updates.pending' : 'settings.updates.available', { version: status.version });
     case 'downloading':
       return status.total
         ? t('settings.updates.downloading', { percent: Math.min(100, Math.round((status.received / status.total) * 100)) })
@@ -41,9 +41,8 @@ function statusLine(view: UpdateView): string {
   }
 }
 
-/** Settings → Updates (D-065): the automatic check, "Check now" and "Update and restart". */
-export function UpdatesTab({ settings }: { settings: Settings }) {
-  const update = useSettings((s) => s.update);
+/** Settings → Updates (D-065, D-076): updates are always looked for; "Check now" and "Update and restart". */
+export function UpdatesTab() {
   const [view, setView] = useState<UpdateView | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -60,12 +59,7 @@ export function UpdatesTab({ settings }: { settings: Settings }) {
 
   return (
     <Section title={t('settings.updates.section')}>
-      <Toggle
-        label={t('settings.updates.auto')}
-        hint={t('settings.updates.autoHelp')}
-        checked={settings.updates.autoCheck}
-        onChange={(on) => void update({ updates: { autoCheck: on } })}
-      />
+      <p className={styles.help}>{t('settings.updates.automatic')}</p>
       <div className={styles.row}>
         <span className={styles.label} role="status" aria-live="polite">
           {view && statusLine(view)}
@@ -96,7 +90,7 @@ export function UpdatesTab({ settings }: { settings: Settings }) {
           {view.installable ? (
             <p className={styles.help}>{t('settings.updates.installHelp')}</p>
           ) : (
-            <p className={styles.help}>{t('settings.updates.portable')}</p>
+            <p className={styles.help}>{t('settings.updates.manual')}</p>
           )}
           <button type="button" className={`${styles.button} ${styles.primary}`} onClick={install}>
             {t(view.installable ? 'settings.updates.install' : 'settings.updates.download')}

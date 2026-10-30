@@ -66,16 +66,16 @@ window holds everything, with folders, tags, notes and search.
    already has (on Windows 10 the installer fetches it when it is missing).
 
 **Portable:** unzip **Panopin-Portable-x64.zip** anywhere and run `Panopin.exe`. Your data still
-lives in `%APPDATA%\Panopin`. The portable build tells you about new versions; you download them
-yourself.
+lives in `%APPDATA%\Panopin`, and the portable copy keeps itself up to date like the installed one.
 
-**Updates:** turn on "Check for updates" in Settings → Updates. Panopin then checks GitHub at
-start and every 6 hours, marks the tray icon when a version is available, and installs it only
-when you press "Update and restart". Your items and settings stay.
+**Updates:** Panopin keeps itself up to date. It looks for a new version on GitHub at start and
+every 6 hours and installs it by itself while you are not using it: it closes, updates in place and
+starts again, and your items and settings stay. "Update and restart" in Settings → Updates installs
+a waiting version at once. Only the newest release can be downloaded.
 
 **macOS:** download **Panopin-macOS.dmg** (macOS 13 or later, Apple silicon and Intel), open it and
-drag Panopin into Applications. Panopin is not notarised by Apple, so macOS blocks its first
-opening:
+drag Panopin into Applications, where it can keep itself up to date. Panopin is not notarised by
+Apple, so macOS blocks its first opening:
 
 1. Open Panopin. When macOS says it could not verify Panopin, close the warning with **Done** or
    **Cancel**, whichever your macOS shows (not Move to Trash).
@@ -125,10 +125,14 @@ On the shelf:
 
 - Everything stays on your computer: no account, no cloud, no telemetry, no analytics and no
   crash reports.
-- Panopin goes online for only two things, both off until you turn them on in Settings: **link
-  previews** and **update checks**. Both are made by the app's Rust core, never by its web view.
-  Link previews never visit local or private network addresses, plain `http` links or links that
-  carry passwords or tokens, and they load no scripts.
+- Panopin goes online only to keep itself up to date, and for **link previews** if you turn them
+  on in Settings. The update check reads one small file from GitHub at start and every 6 hours and
+  downloads a new version when there is one. It sends nothing about you, your computer or your
+  copies; GitHub sees the request like any download. Both are made by the app's Rust core, never by
+  its web view. Link previews never visit local or private network addresses, plain `http` links or
+  links that carry passwords or tokens, and they load no scripts.
+- The only numbers the developer sees are the download counts GitHub keeps for every release file.
+  Panopin has no ID, no usage counting and no other reporting.
 - Copied content is never written to log files.
 - Your data is not encrypted. **Panopin is not a password vault.**
 - Data lives in `%APPDATA%\Panopin` (database and media). The uninstaller asks whether to remove

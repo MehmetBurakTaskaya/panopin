@@ -27,6 +27,7 @@ jobs:
       PANOPIN_MACOS: ${{ vars.PANOPIN_MACOS }}
     outputs:
       signature: ${{ steps.draft.outputs.signature }}
+      portable_signature: ${{ steps.draft.outputs.portable_signature }}
     steps:
       - uses: actions/checkout@v7
 
@@ -72,27 +73,37 @@ jobs:
         run: npm run tauri build
 
       # Two downloads with names that never change, so releases/latest/download/<file> links keep
-      # working (D-068). The update signature goes into latest.json, not onto the release page.
+      # working (D-068). Updates fetch the same installer as Panopin-Update-x64.exe, so the download
+      # counts tell people's downloads from updates (D-077); the portable copy updates from its ZIP
+      # (D-076), signed here for this version. The update signatures go into latest.json, not onto
+      # the release page.
       - name: Draft release with the installer and the portable ZIP
         id: draft
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           version="${GITHUB_REF_NAME#v}"
           bundle=src-tauri/target/release/bundle/nsis
           mkdir -p out portable
           cp "$bundle/Panopin_${version}_x64-setup.exe" out/Panopin-Setup-x64.exe
+          cp "$bundle/Panopin_${version}_x64-setup.exe" out/Panopin-Update-x64.exe
           cp src-tauri/target/release/panopin.exe portable/Panopin.exe
           cp LICENSE portable/LICENSE.txt
           cp THIRD_PARTY_NOTICES.txt portable/THIRD_PARTY_NOTICES.txt
           (cd portable && 7z a -tzip -mx=9 ../out/Panopin-Portable-x64.zip . > /dev/null)
+          npx tauri signer sign --app-version "$version" out/Panopin-Portable-x64.zip < /dev/null > /dev/null
+          files="out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip out/Panopin-Update-x64.exe"
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" --clobber out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip
+            gh release upload "$GITHUB_REF_NAME" --clobber $files
           else
             mac=; [ "$PANOPIN_MACOS" = true ] && mac=--mac
             node scripts/release-notes.mjs "$version" --release $mac > notes.md
             gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Panopin $version" \
-              --notes-file notes.md out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip
+              --notes-file notes.md $files
           fi
           echo "signature=$(tr -d '\r\n' < "$bundle/Panopin_${version}_x64-setup.exe.sig")" >> "$GITHUB_OUTPUT"
+          echo "portable_signature=$(tr -d '\r\n' < out/Panopin-Portable-x64.zip.sig)" >> "$GITHUB_OUTPUT"
 
   macos:
     name: macOS universal .dmg
@@ -151,6 +162,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       WINDOWS_SIGNATURE: ${{ needs.windows.outputs.signature }}
+      PORTABLE_SIGNATURE: ${{ needs.windows.outputs.portable_signature }}
       MAC_SIGNATURE: ${{ needs.macos.outputs.signature }}
     steps:
       - uses: actions/checkout@v7
@@ -165,7 +177,8 @@ jobs:
           mkdir -p out
           gh release download "$GITHUB_REF_NAME" --dir out --skip-existing
           rm -f out/latest.json out/SHA256SUMS.txt
-          printf '%s' "$WINDOWS_SIGNATURE" > out/Panopin-Setup-x64.exe.sig
+          printf '%s' "$WINDOWS_SIGNATURE" > out/Panopin-Update-x64.exe.sig
+          printf '%s' "$PORTABLE_SIGNATURE" > out/Panopin-Portable-x64.zip.sig
           if [ -n "$MAC_SIGNATURE" ] && [ -f out/Panopin-macOS.app.tar.gz ]; then
             printf '%s' "$MAC_SIGNATURE" > out/Panopin-macOS.app.tar.gz.sig
           fi

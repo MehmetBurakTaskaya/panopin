@@ -463,7 +463,8 @@ signature is checked against the public key in `tauri.conf.json`, and it runs in
 is never touched. `release.yml` writes `latest.json` with github.com download addresses rather
 than the API asset addresses tauri-action v1 would use, because unauthenticated API requests are
 limited to 60 an hour per address. The key pair was made with `tauri signer generate` (CLI 2.12.4)
-without a password; the private key stays out of the repository (docs/SIGNING.md).
+without a password; the private key stays out of the repository (docs/SIGNING.md). Since 1.3.0
+checking is always on and updates install by themselves (D-076).
 
 ## D-066 Installed and portable copies, uninstalling — Accepted
 An installed copy has Tauri's `uninstall.exe` next to `Panopin.exe`; the portable ZIP and
@@ -476,7 +477,8 @@ shows only a progress bar, closes a running Panopin and starts Panopin when it i
 no folder to choose. Silent installs and the updater's own runs (which pass `/P`) are unchanged.
 The same file makes the uninstaller remove the "Start with Windows" entry and, only when "Delete
 the application data" is ticked, `%APPDATA%\Panopin` as well; Tauri itself removes only its
-identifier folders. Neither happens during an update.
+identifier folders. Neither happens during an update. Since 1.3.0 the portable copy updates
+itself as well (D-076).
 
 ## D-067 Icon — Accepted
 A note pinned to a cork tile in a wooden frame, candidate B of three (A: the note alone, C: a round
@@ -500,7 +502,9 @@ Publishing the draft is a manual step. While the repository variable `PANOPIN_MA
 (from 1.1.0, after the Mac live test passed, D-073), a macOS job adds the universal
 `Panopin-macOS.dmg` and `Panopin-macOS.app.tar.gz`, the archive updates install, whose signature
 also goes into `latest.json`; the download notes then name the Mac files. Code signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a
-Changelog and versions follow SemVer.
+Changelog and versions follow SemVer. From 1.3.0 a release also carries `Panopin-Update-x64.exe`
+(D-077), `latest.json` has a signed entry for the portable ZIP (D-076), and publishing one hides
+the older releases (D-076).
 
 ## D-069 Website and embed — Accepted
 Panopin has no website of its own: on 2026-10-30 the owner chose a page among the projects on
@@ -609,3 +613,58 @@ The Mac app stays ad-hoc signed and unnotarised, so macOS blocks its first openi
 chooses Open Anyway; the README and the release notes give the steps, and the README also gives
 the Terminal command that removes the quarantine flag. docs/SIGNING.md lists what signing and
 notarisation would take.
+
+## D-076 Updates are always on and install by themselves — Accepted
+The owner decided on 2026-10-30 that every copy keeps itself up to date: no switch, and no update
+left for the user to install. This changes D-065 and D-066.
+- Checking is always on: 30 s after start, every 6 hours, an hour after a failed check. The
+  "Check for updates" switch is gone and the stored `updates.autoCheck` value is ignored.
+  Settings → Updates, Settings → Privacy and the first-run window say that Panopin goes online to
+  update itself and never sends anything about the user or their copies.
+- A version found by any check installs by itself once Panopin is out of use: the shelf is closed
+  and no Panopin window has the keyboard. While an update waits, a thread looks once a minute
+  (usually just once, so there is no standing poll) and looks again after the download; if Panopin
+  came into use meanwhile, the download is left unused and tried later. "Update and restart"
+  installs at once, also while the update downloads by itself.
+- The installed Windows copy runs the installer silently (`installMode` `quiet`, so
+  `/S /UPDATE /R`): no window opens over other apps; the installer closes Panopin, updates it in
+  place and starts it again.
+- The portable copy updates too. It is a release build with `THIRD_PARTY_NOTICES.txt` next to it
+  and no uninstaller, and it asks for the `windows-x86_64-portable` entry of `latest.json`: the ZIP,
+  which `release.yml` signs with the update key for that version (`tauri signer sign
+  --app-version`). After the signature check the new `Panopin.exe` is written in full next to the
+  old one; the running program, which Windows lets one rename but not overwrite, becomes
+  `Panopin.old`, the new one takes its name, the licence texts follow and Panopin restarts; the next
+  start removes `Panopin.old`. The `zip` crate (MIT), already in the build through the updater,
+  unpacks it with its flate2 feature.
+- A Mac app bundle that macOS has not translocated replaces itself with the update archive and
+  restarts. Being ad-hoc signed (D-075), it may have to be allowed again under Accessibility after
+  an update. Where the user may not change the bundle or its folder, the updater would ask for an
+  administrator's password, so there the update never installs by itself: it waits for "Update and
+  restart". One that runs translocated (opened where it was downloaded) cannot replace itself, and
+  its Updates tab asks the user to move it to Applications; development runs only point to the
+  release page. `tests/macos/update.sh` (in the Mac live test) serves a local test build an update
+  signed with a key made for the run and checks that it installs by itself and restarts.
+- `requireSignedVersion` is on: the version signed into an update must match the version
+  `latest.json` announces, so an altered `latest.json` cannot offer an older signed release as a
+  new one. `tauri build` (CLI 2.12.4) already signs with the version.
+- Copies before 1.3.0 keep their behaviour: with checks off they never look; with checks on they
+  offer 1.3.0 and install it when the user presses "Update and restart". From 1.3.0 on, every copy
+  updates by itself.
+- Only the newest release stays downloadable: when a release is published, `hide-old-releases.yml`
+  turns every older published release back into a draft. Drafts keep their files and download
+  counts but only the owner sees them; publishing one again brings it back. The source of every
+  version stays in the repository.
+
+## D-077 Download numbers — Accepted
+The owner asked on 2026-10-30 how many people download and use Panopin. Panopin itself sends
+nothing (no ID, no usage counting); the numbers are the download counts GitHub keeps for each
+release file. `npm run stats`, or Actions → Download numbers, which shows the same table on its
+summary page, lists them per release: people's downloads (the Windows installer, the portable ZIP,
+the Mac `.dmg`), updates (`Panopin-Update-x64.exe`, the installer under the name updates fetch, and
+`Panopin-macOS.app.tar.gz`) and reads of `latest.json`. Every running copy reads `latest.json` at
+start and every 6 hours, 2 to 4 times a day, so its reads per day divided by 4 and by 2 bound the
+copies in use. These are downloads, not people: repeated downloads and the owner's own tests count,
+and copies before 1.3.0 with checks off are not seen. The workflow has write access only because
+GitHub lists draft releases to writers alone. The release page now also shows
+`Panopin-Update-x64.exe` (this changes D-068).

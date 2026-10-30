@@ -21,7 +21,8 @@
     "check:licenses": "node scripts/check-npm-licenses.mjs",
     "check:third-party": "node scripts/third-party.mjs --check",
     "third-party": "node scripts/third-party.mjs",
-    "icons": "node scripts/icons.mjs"
+    "icons": "node scripts/icons.mjs",
+    "stats": "node scripts/stats.mjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "3.14.20",

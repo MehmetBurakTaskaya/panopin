@@ -307,8 +307,8 @@ with conflicting styles). Everything below needs a Windows session.
       (live 2026-10-30: 0.9.9 found 1.0.0 on a local server, showed the notes, updated, restarted and
       kept every item and setting, the database moving from schema 7 to 8; the tray dot and the
       network monitor not checked)
-- [ ] The portable ZIP runs from any folder; it offers "Download from GitHub" instead of
-      installing, and its Licence texts button works.
+- [ ] The portable ZIP runs from any folder and its Licence texts button works. (Since 1.3.0 it
+      updates itself; see "Updates that install by themselves".)
 - [x] Uninstalling without "Delete the application data" keeps `%APPDATA%\Panopin`; with it, the
       folder is gone. The "Start with Windows" entry is removed both times. (live 2026-10-30: without
       it; ticking it would have deleted the development data, so not checked)
@@ -428,6 +428,35 @@ of each window were then read by eye for the font and the line breaks.
 - [x] With Mac texts in Arabic, ⌘ shortcuts in the hint line and the card menu are isolated, so
       they keep their order. (browser with a Mac user agent; not on a real Mac)
 - [ ] On a Mac, the panels macOS draws (Open, Save, permission prompts) follow the language.
+
+## Updates that install by themselves (D-076, D-077)
+
+Checked on 2026-10-30 on the development PC (Windows 11 25H2 build 26200) with test builds of this
+code as 1.2.8 and 1.2.9, pointed at a local update server and signed with the update key. Scripts
+sent no keys and opened no windows; the release 1.2.0 was installed again afterwards.
+
+- [x] The installed copy finds a newer version 30 s after start and, with the shelf closed and no
+      Panopin window in front, installs it a minute later without any window: Panopin starts again
+      as the new version, and items, folders, tags and settings stay. (live 2026-10-30: 1.2.8 →
+      1.2.9; the installer ran from the updater's folder without a window, fetched as
+      `Panopin-Update-x64.exe`, and the new version logged its start 2 s after the install began)
+- [x] The portable copy does the same from the signed ZIP: `Panopin.exe` is replaced, the old one
+      waits as `Panopin.old`, Panopin starts again and its next start removes `Panopin.old`; the
+      licence texts stay and no `.new` file is left. (live 2026-10-30: 1.2.8 → 1.2.9 in 91 s; it
+      fetched `latest.json` and the ZIP, not the installer)
+- [ ] While the shelf is open or a Panopin window is in front, the update waits, and it installs
+      about a minute after. (not run: it needs the keyboard and the focus)
+- [ ] "Update and restart" installs a waiting update at once, also while it downloads by itself.
+- [ ] An update whose signature does not match, or whose signed version differs from the one in
+      `latest.json`, is refused and nothing changes.
+- [ ] On a Mac in Applications, an update installs by itself and Panopin starts again from the new
+      bundle (Actions → Mac live test, its update step).
+- [ ] On a Mac whose Applications folder the user may not change, the update waits for "Update and
+      restart", which asks for an administrator's password.
+- [x] Publishing a release turns the older ones into drafts: their files answer 404 and the
+      release list shows only the newest. (2026-10-30: v1.0.0 and v1.1.0 turned into drafts by hand;
+      the workflow runs with the next release)
+- [x] `npm run stats` prints the downloads per release and file. (2026-10-30)
 
 ## Full round for v1.0.0
 

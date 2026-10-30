@@ -89,6 +89,7 @@ export function PrivacyTab({ settings }: { settings: Settings }) {
       </Section>
 
       <Section title={t('settings.privacy.network')}>
+        <p className={styles.help}>{t('onboarding.updates')}</p>
         <Toggle
           label={t('onboarding.linkPreviews')}
           hint={t('settings.privacy.linkPreviewsHelp')}

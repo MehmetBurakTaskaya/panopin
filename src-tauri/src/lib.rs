@@ -100,9 +100,6 @@ pub(crate) fn apply_settings(app: &AppHandle, patch: Value) -> Result<Settings> 
     if !old.link_previews && new.link_previews {
         links::wake(app);
     }
-    if old.updates != new.updates {
-        updates::nudge(app);
-    }
     if old.onboarded != new.onboarded
         || old.sources != new.sources
         || old.watched_folders != new.watched_folders

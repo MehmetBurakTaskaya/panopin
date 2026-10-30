@@ -1,0 +1,32 @@
+name: Hide old releases
+
+# Publishing a release turns every older published release back into a draft, so the release page
+# and releases/latest offer only the newest version (D-076). Drafts keep their files and download
+# counts, and only the owner sees them; publishing one again brings it back.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  hide:
+    name: Turn older releases into drafts
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      NEW: ${{ github.event.release.tag_name }}
+    steps:
+      - name: Hide every published release older than the new one
+        run: |
+          gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --exclude-pre-releases \
+            --limit 100 --json tagName --jq '.[].tagName' |
+          while read -r tag; do
+            [ "$tag" = "$NEW" ] && continue
+            # Only versions below the new one, so publishing an old release by mistake hides nothing newer.
+            [ "$(printf '%s\n%s\n' "${tag#v}" "${NEW#v}" | sort -V | head -n 1)" = "${tag#v}" ] || continue
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" --draft=true > /dev/null
+            echo "hid $tag"
+          done

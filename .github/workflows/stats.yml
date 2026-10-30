@@ -1,0 +1,23 @@
+name: Download numbers
+
+# Actions → Download numbers → Run workflow: the run's summary page shows how often each release
+# was downloaded and about how many copies are in use (D-077).
+on:
+  workflow_dispatch:
+
+# Write access only because GitHub lists hidden (draft) releases to writers alone; the job changes
+# nothing.
+permissions:
+  contents: write
+
+jobs:
+  numbers:
+    name: Download numbers
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Numbers on the summary page
+        run: node scripts/stats.mjs | tee -a "$GITHUB_STEP_SUMMARY"

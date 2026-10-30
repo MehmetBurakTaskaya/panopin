@@ -181,13 +181,6 @@ impl Default for Appearance {
     }
 }
 
-/// Update checks reach the network, so they are off until the user turns them on.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(default, rename_all = "camelCase")]
-pub struct Updates {
-    pub auto_check: bool,
-}
-
 /// Global shortcuts in Tauri accelerator syntax (`Super` is the Windows key); `None` means off.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
@@ -305,7 +298,6 @@ pub struct Settings {
     /// Resting the pointer on the shelf's screen edge opens it (D-022).
     pub edge_open: bool,
     pub appearance: Appearance,
-    pub updates: Updates,
 }
 
 /// Password managers whose copies are never kept, named as each system lists its apps.
@@ -341,7 +333,6 @@ impl Default for Settings {
             launch_at_login: false,
             edge_open: false,
             appearance: Appearance::default(),
-            updates: Updates::default(),
         }
     }
 }
@@ -453,7 +444,6 @@ mod tests {
         assert!(s.sources.clipboard_text && s.sources.screenshots);
         assert!(!s.sources.screen_recordings);
         assert!(!s.link_previews);
-        assert!(!s.updates.auto_check, "the network is opt-in");
         assert!(!s.launch_at_login && !s.edge_open && !s.search_without_accents);
         assert!(s.ocr && s.appearance.material && s.appearance.animations);
         assert_eq!(s.retention.text, Some(30));
@@ -569,9 +559,10 @@ mod tests {
     #[test]
     fn partial_document_fills_in_defaults() {
         let conn = store::open_in_memory().unwrap();
+        // Unknown fields are ignored, and so are retired ones such as the update switch (D-076).
         conn.execute(
             "INSERT INTO settings (key, value) VALUES ('app', ?1)",
-            [r#"{"language":"tr","futureField":true}"#],
+            [r#"{"language":"tr","futureField":true,"updates":{"autoCheck":false}}"#],
         )
         .unwrap();
         let s = load(&conn).unwrap();

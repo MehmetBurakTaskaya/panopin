@@ -3020,6 +3020,7 @@ dependencies = [
  "url",
  "windows",
  "windows-core",
+ "zip",
 ]
 
 [[package]]
@@ -5989,6 +5990,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1156b39d142a34b999c2310a50455e0cb3760bf7efad0122f796d813bee26ccb"
 dependencies = [
  "crc32fast",
+ "flate2",
  "getrandom 0.4.3",
  "indexmap 2.14.2",
  "memchr",

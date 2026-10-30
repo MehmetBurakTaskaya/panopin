@@ -58,6 +58,7 @@ export function OnboardingApp() {
       <section className={styles.card}>
         <h2>{t('onboarding.privacyTitle')}</h2>
         <p>{t('onboarding.privacy')}</p>
+        <p>{t('onboarding.updates')}</p>
         <p className={styles.strong}>{t('onboarding.notVault')}</p>
       </section>
 

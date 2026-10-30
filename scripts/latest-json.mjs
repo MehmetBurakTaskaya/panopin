@@ -2,8 +2,9 @@
 // download address on github.com. Plain release URLs need no GitHub API call, so users never meet
 // the API's rate limit.
 // Usage: node scripts/latest-json.mjs <version> <notes file> <folder with the release files>
-// The folder holds Panopin-Setup-x64.exe and, once macOS ships, the macOS update archive, each
-// next to its .sig file.
+// The folder holds Panopin-Update-x64.exe (the installer under the name updates fetch, D-077),
+// Panopin-Portable-x64.zip and, once macOS ships, the macOS update archive, each next to its .sig
+// file.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -21,14 +22,21 @@ function entry(pattern) {
 }
 
 const platforms = {};
-const windows = entry(/^Panopin-Setup-x64\.exe$/);
+const windows = entry(/^Panopin-Update-x64\.exe$/);
 if (!windows) {
-  console.error('the Windows installer or its signature is missing');
+  console.error('the Windows installer for updates or its signature is missing');
   process.exit(1);
 }
 // The installed app asks for the NSIS entry first; the plain one is the fallback.
 platforms['windows-x86_64-nsis'] = windows;
 platforms['windows-x86_64'] = windows;
+// The portable copy asks for its own entry and unpacks the ZIP (D-076).
+const portable = entry(/^Panopin-Portable-x64\.zip$/);
+if (!portable) {
+  console.error('the portable ZIP or its signature is missing');
+  process.exit(1);
+}
+platforms['windows-x86_64-portable'] = portable;
 // One universal archive serves both Mac architectures.
 const mac = entry(/\.app\.tar\.gz$/);
 if (mac) {

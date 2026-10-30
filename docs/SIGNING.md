@@ -31,7 +31,10 @@ The updater installs only packages signed with the project's updater key (D-028,
   `TAURI_SIGNING_PRIVATE_KEY` (and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` when it has a password).
   It is never committed. The owner keeps an offline backup, for example in a password manager.
 - `release.yml` builds the installer, signs it with that key and publishes the signature in
-  `latest.json`.
+  `latest.json`. It signs the portable ZIP with the same key for its version
+  (`tauri signer sign --app-version`), so the portable copy can update itself (D-076).
+- Every update signature carries the version it was made for, and the app refuses one whose
+  version differs from what `latest.json` announces (`requireSignedVersion`).
 - If the private key is lost, installed copies cannot accept updates signed with a new key: users
   have to install the next version by hand once.
 - To replace the key: make a new pair, ship one release signed with the old key that carries the
@@ -49,7 +52,7 @@ conditions (signpath.org/terms, read on 2026-10-30) and where Panopin stands:
 | Actively maintained, and already released in the form to be signed | After v1.0.0 is published |
 | Functionality described on the download page | README and `site/` |
 | Only the team's own binaries, built verifiably from source | `Panopin.exe` and the installer are built by `release.yml` on GitHub Actions; the WebView2 bootstrapper is downloaded by the installer, not packed into it |
-| Data sent to other systems is described in a privacy policy, shown during installation, and can be turned off | Link previews and update checks are off until turned on, and both can be turned off in Settings. **To do:** show the privacy note during installation (for example on an installer page) |
+| Data sent to other systems is described in a privacy policy, shown during installation, and can be turned off | Link previews are off until turned on and can be turned off in Settings. Update checks are always on (D-076): they fetch `latest.json` and send nothing about the user. **To do:** show the privacy note during installation (for example on an installer page), and ask SignPath whether an update check that cannot be turned off is acceptable |
 | No system changes without warning; an uninstaller | Start with Windows is opt-in; the installer adds an uninstaller |
 | Multi-factor authentication for every team member on GitHub and SignPath | **To do:** confirm MFA on both accounts |
 | Code signing roles: authors, reviewers, approvers | **To do:** name them (today all three are Mehmet Burak Taşkaya) |

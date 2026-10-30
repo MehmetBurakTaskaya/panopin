@@ -66,16 +66,17 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
    zaten vardır; Windows 10'da eksikse kurulum dosyası onu indirir.
 
 **Taşınabilir:** **Panopin-Portable-x64.zip** dosyasını istediğin yere aç ve `Panopin.exe`'yi
-çalıştır. Verilerin yine `%APPDATA%\Panopin` altında durur. Taşınabilir sürüm yeni sürümleri
-haber verir; indirmeyi sen yaparsın.
+çalıştır. Verilerin yine `%APPDATA%\Panopin` altında durur; taşınabilir kopya da kurulu olan gibi
+kendini güncel tutar.
 
-**Güncellemeler:** Ayarlar → Güncellemeler'de "Güncellemeleri denetle"yi aç. Panopin açılışta ve
-6 saatte bir GitHub'a bakar, yeni sürüm varsa tepsi simgesine bir işaret koyar ve yalnızca sen
-"Güncelle ve yeniden başlat"a bastığında kurar. Öğelerin ve ayarların korunur.
+**Güncellemeler:** Panopin kendini güncel tutar. Açılışta ve 6 saatte bir GitHub'da yeni sürüm arar
+ve sen onu kullanmıyorken kendiliğinden kurar: kapanır, yerinde güncellenir ve yeniden açılır;
+öğelerin ve ayarların korunur. Ayarlar → Güncellemeler'deki "Güncelle ve yeniden başlat", bekleyen
+sürümü hemen kurar. Yalnızca en yeni sürüm indirilebilir.
 
 **macOS:** **Panopin-macOS.dmg** dosyasını indir (macOS 13 ya da sonrası, Apple silicon ve Intel),
-aç ve Panopin'i Uygulamalar klasörüne sürükle. Panopin Apple onaylı (notarised) değil, bu yüzden
-macOS ilk açılışı engeller:
+aç ve Panopin'i Uygulamalar klasörüne sürükle; orada kendini güncel tutabilir. Panopin Apple onaylı
+(notarised) değil, bu yüzden macOS ilk açılışı engeller:
 
 1. Panopin'i aç. macOS onu doğrulayamadığını söyleyince uyarıyı macOS'unda hangisi varsa **Bitti**
    ya da **Vazgeç** ile kapat (Çöp Sepeti'ne Taşı ile değil).
@@ -126,11 +127,15 @@ Rafta:
 ## Gizlilik
 
 - Her şey bilgisayarında kalır: hesap, bulut, telemetri, analitik ya da çökme raporu yok.
-- Panopin internete yalnızca iki iş için çıkar ve ikisi de sen Ayarlar'dan açana kadar kapalıdır:
-  **bağlantı önizlemeleri** ve **güncelleme denetimi**. İkisini de uygulamanın web görünümü değil,
-  Rust çekirdeği yapar. Bağlantı önizlemeleri yerel ya da özel ağ adreslerine, düz `http`
+- Panopin internete yalnızca kendini güncel tutmak için çıkar; bir de sen Ayarlar'dan açarsan
+  **bağlantı önizlemeleri** için. Güncelleme denetimi açılışta ve 6 saatte bir GitHub'dan küçük bir
+  dosya okur ve yeni sürüm varsa onu indirir. Senin, bilgisayarın ya da kopyaladıkların hakkında
+  hiçbir şey göndermez; GitHub bu isteği her indirme gibi görür. İkisini de uygulamanın web görünümü
+  değil, Rust çekirdeği yapar. Bağlantı önizlemeleri yerel ya da özel ağ adreslerine, düz `http`
   bağlantılarına ve parola ya da token taşıyan bağlantılara hiç gitmez; sayfalardaki betikleri
   çalıştırmaz.
+- Geliştiricinin gördüğü tek sayılar, GitHub'ın her sürüm dosyası için tuttuğu indirme sayılarıdır.
+  Panopin'de kimlik numarası, kullanım sayımı ya da başka bir bildirim yoktur.
 - Kopyalanan içerik asla log dosyalarına yazılmaz.
 - Verilerin şifrelenmez. **Panopin bir parola kasası değildir.**
 - Veriler `%APPDATA%\Panopin` altında durur (veritabanı ve medya). Kaldırırken silinip

@@ -6,6 +6,23 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Panopin keeps itself up to date.** It looks for a new version at start and every 6 hours and
+  installs it by itself while you are not using it: it closes, updates in place and starts again,
+  and your items and settings stay. There is no switch for it any more; "Update and restart" in
+  Settings → Updates installs a waiting version at once. On Windows the update runs without a
+  window. On a Mac it works while Panopin is in Applications, and macOS may ask again for
+  Accessibility afterwards.
+- The portable copy updates itself too.
+- Settings → Privacy and the first-run window say what goes online: the update check, which sends
+  nothing about you or your copies, and link previews if you turn them on.
+
+### Security
+
+- An update must carry its version inside its signature, so an altered update list cannot offer an
+  older release as a new one.
+
 ## [1.2.0] - 2026-10-30
 
 ### Added
