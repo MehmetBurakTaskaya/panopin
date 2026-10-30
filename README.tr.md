@@ -56,7 +56,7 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
    **Panopin-Setup-x64.exe** dosyasını indirip aç. Panopin hemen, yalnızca senin kullanıcın için
    kurulur; yönetici izni istemez, tıklanacak sayfa yoktur ve bitince açılır.
 2. Panopin henüz kod imzalı değil (sertifikalar ücretli; bkz. [docs/SIGNING.md](docs/SIGNING.md)).
-   Bu yüzden Windows SmartScreen "Windows bilgisayarınızı korudu" diyebilir: **Daha fazla bilgi →
+   Bu yüzden Windows SmartScreen "Windows kişisel bilgisayarınızı korudu" diyebilir: **Ek bilgi →
    Yine de çalıştır**'ı seç. İndirdiğin dosyayı kontrol etmek istersen her sürüm, dosyalarının
    SHA-256 değerlerini `SHA256SUMS.txt` içinde listeler.
 3. Gereksinimler: Windows 10 22H2 ya da Windows 11, x64 ve Microsoft Edge WebView2. Windows 11'de
