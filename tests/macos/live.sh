@@ -207,9 +207,10 @@ wait_for 6 has_text "$T3"
 if open_shelf; then pass "⌥⌘V opens the shelf"; else fail "⌥⌘V opens the shelf" "windows: $(AXT shown | tr '\n' ' ')"; fi
 check "the shelf has the keyboard" "focus: $(AXT focus); front: $(UI front)" shelf_has_keys
 note "app in front while the shelf is open: $(UI front)"
+# The panel's webview can take a moment to paint after it appears: read its texts until they come.
+mac_hints() { AXT texts Panopin > "$OUT/texts/shelf.txt"; grep -q -i '⌘enter' "$OUT/texts/shelf.txt"; }
+if wait_for 5 mac_hints; then pass "the shelf's hints name Mac keys"; else fail "the shelf's hints name Mac keys" "$(head -c 200 "$OUT/texts/shelf.txt" | tr '\n' '|')"; fi
 shot shelf
-AXT texts Panopin > "$OUT/texts/shelf.txt"
-check "the shelf's hints name Mac keys" "$(head -c 200 "$OUT/texts/shelf.txt" | tr '\n' '|')" grep -q -i '⌘enter' "$OUT/texts/shelf.txt"
 key 53
 check "Esc closes the shelf" "" wait_for 5 shelf_hidden
 check "and TextEdit is in front" "front: $(UI front)" front_is com.apple.TextEdit
@@ -342,9 +343,10 @@ defaults delete -g AppleAccentColor
 "$PB" accent-changed
 AXT menu "Open Library" > /dev/null
 check "the Library opens from the menu bar icon" "windows: $(AXT shown | tr '\n' ' ')" wait_for 15 window_is_open Library
-sleep 2
+# Only a Library whose content has been read can show that no text names Windows.
+library_texts() { AXT texts Library > "$OUT/texts/library.txt"; grep -q 'All items' "$OUT/texts/library.txt"; }
+if wait_for 15 library_texts; then pass "the Library's texts can be read"; else fail "the Library's texts can be read" "$(head -c 200 "$OUT/texts/library.txt" | tr '\n' '|')"; fi
 shot library
-AXT texts Library > "$OUT/texts/library.txt"
 bad=$(grep -E 'Windows|Ctrl|this PC' "$OUT/texts/library.txt" | head -5 | tr '\n' '|')
 check "no Library text names Windows, Ctrl or this PC" "$bad" [ -z "$bad" ]
 UI close Library > /dev/null
