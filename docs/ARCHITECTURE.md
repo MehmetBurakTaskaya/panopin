@@ -235,8 +235,9 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 
 - `release.yml` (tag `v*`): version and notices checks, `tauri build` builds and signs the
   installer, a draft release gets `Panopin-Setup-x64.exe` and `Panopin-Portable-x64.zip`, then
-  `latest.json` (with the update signature) and `SHA256SUMS.txt` (D-068). `mac-test.yml`, started
-  by hand, builds a test `.dmg` (D-073). Panopin's page lives on mehmetburaktaskaya.com; `site/`
+  `latest.json` (with the update signature) and `SHA256SUMS.txt`, and while `PANOPIN_MACOS` is
+  `true` the macOS `.dmg` and update archive (D-068). Started by hand: `mac-test.yml` builds a test
+  `.dmg`; `mac-live.yml` drives the app on GitHub's Mac runners with `tests/macos/` (D-073). Panopin's page lives on mehmetburaktaskaya.com; `site/`
   holds its material (D-069).
 - Scripts: `icons.mjs` draws every icon from one SVG (D-067); `third-party.mjs` writes the
   licence list and `THIRD_PARTY_NOTICES.txt`, and CI checks that both are current (D-064);

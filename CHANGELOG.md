@@ -6,13 +6,21 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-30
+
 ### Added
 
-- **macOS, in progress.** A version for macOS 13 or later (Apple silicon and Intel) with the menu
-  bar icon, capture of copies and of screenshots, pasting into the previous app, text recognition,
-  macOS texts and key names. It will be released once it has been tested on a Mac; until then
-  releases stay Windows only. What it does differently, and what it cannot do yet, is in
-  `docs/DECISIONS.md` (D-073).
+- **macOS.** Panopin for macOS 13 or later, on Apple silicon and Intel: a menu bar app without a
+  Dock icon that keeps copies and screenshots as on Windows. ⌥⌘V slides in the shelf, which takes
+  the keyboard while the app you were in stays in front; ⌘Enter pastes there once Panopin is
+  allowed under Accessibility. ⌥⌘C opens search, ⌥⌘S starts the system's screen capture, Vision
+  reads the text in images, and texts, key names and the accent colour follow macOS. Screen
+  recordings, dragging cards out and opening the shelf from the screen edge are not on the Mac yet
+  (`docs/DECISIONS.md`, D-073).
+
+### Fixed
+
+- The Library names Mac keys on a Mac (⌘F, ⌘N and the others).
 
 ## [1.0.0] - 2026-10-30
 
@@ -49,5 +57,6 @@ The first release, for Windows 10 22H2 and Windows 11 (x64).
 - **Installer and portable ZIP.** A per-user installer that needs no administrator rights and no
   clicks: opened, it installs and starts Panopin, in English or Turkish. And a portable ZIP.
 
-[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/MehmetBurakTaskaya/panopin/releases/tag/v1.0.0

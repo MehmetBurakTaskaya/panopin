@@ -324,41 +324,60 @@ with conflicting styles). Everything below needs a Windows session.
 ## macOS (Phase 8)
 
 CI builds the app on `macos-latest`, runs the Rust tests there (the folder watcher and the
-screenshot mark on a real file system among them) and checks the code with clippy. Nothing below
-has run on a Mac yet (D-073). macOS 13 or later. To try it, start Actions → Mac test build → Run
-workflow and download the `.dmg` from the run's artifacts (kept for 14 days). Releases carry the
-`.dmg` once this list has passed and the owner sets the repository variable `PANOPIN_MACOS` to
-`true` (D-068).
+screenshot mark on a real file system among them) and checks the code with clippy. macOS 13 or
+later. **Mac live test, 2026-10-30** (Actions → Mac live test, `tests/macos/live.sh`, D-073): the
+app built for the runner's chip, installed from its `.dmg` and driven by script on macOS 14.8,
+15.7 and 26.6 (Apple silicon) and 15.7 (Intel); all 47 checks passed on each of the four.
+The script presses keys through System Events, so the shortcuts are synthetic, and it grants
+Accessibility and Desktop access through the privacy database instead of macOS's prompts. Items
+below marked "(live Mac)" were covered; notes say when only part of one was. Nobody has tried the
+app on a real Mac yet. To try a test build, start Actions → Mac test build → Run workflow and
+download the `.dmg` from the run's artifacts (kept for 14 days).
 
-- [ ] The `.dmg` opens; Panopin starts after "Open Anyway" in System Settings → Privacy &
+- [x] The `.dmg` opens; Panopin starts after "Open Anyway" in System Settings → Privacy &
       Security. The menu bar shows the pushpin, tinted for light and dark menu bars; there is no
-      Dock icon.
-- [ ] Copied text, links and pictures (TextEdit, Safari, Preview, Cmd+Ctrl+Shift+4) become
+      Dock icon. (live Mac: installed from the `.dmg` by script, so the "Open Anyway" step was not
+      seen; the code signature verifies; Launch Services lists Panopin as a menu bar app, the
+      Dock has no icon for it, and the icon shows in light and dark screenshots)
+- [x] Copied text, links and pictures (TextEdit, Safari, Preview, Cmd+Ctrl+Shift+4) become
       cards. Copies a password manager marks as concealed or transient are not kept; Panopin's
-      own copies are not captured again. The source app shows in the details.
-- [ ] Cmd+Shift+3 and Cmd+Shift+4 screenshots on the Desktop reach the shelf; other pictures saved
+      own copies are not captured again. The source app shows in the details. (live Mac: text
+      with Turkish letters, a link, a PNG and a TIFF, which is kept as PNG; concealed, transient
+      and 1Password copies skipped; the source app is TextEdit; Safari and Preview not tried)
+- [x] Cmd+Shift+3 and Cmd+Shift+4 screenshots on the Desktop reach the shelf; other pictures saved
       to the Desktop do not. After choosing another folder in the Screenshot app's Options and
       restarting Panopin, screenshots there are kept. A folder added in Settings takes every
-      picture.
-- [ ] Cmd+Option+V opens the shelf on the current Space and over a full-screen app;
+      picture. (live Mac: Cmd+Shift+3 and the added folder; Cmd+Shift+4 and another screenshot
+      folder not tried)
+- [x] Cmd+Option+V opens the shelf on the current Space and over a full-screen app;
       Cmd+Option+C opens it with search; Cmd+Option+S starts the system's capture and opens the
-      result in the crop editor.
-- [ ] Enter pastes into the previous app. The first time, macOS asks for Accessibility
+      result in the crop editor. (live Mac: the shelf takes the keyboard while TextEdit stays in
+      front, also over full-screen TextEdit; Cmd+Option+S starts the capture, which was then
+      cancelled)
+- [x] Enter pastes into the previous app. The first time, macOS asks for Accessibility
       permission; without it the item stays on the clipboard and the shelf says how to allow it.
       With it, Cmd+V reaches TextEdit, Notes, Safari and Terminal; a password field is never
-      pasted into.
-- [ ] Words in a screenshot are found by search (Vision), in Turkish and English.
-- [ ] No text names Windows, Ctrl or "this PC": Settings says "Open at login", "Same as macOS"
+      pasted into. (live Mac: Enter copies and returns to TextEdit, Cmd+Enter pastes into it with
+      Accessibility allowed; the first request, Notes, Safari, Terminal and password fields not
+      tried)
+- [x] Words in a screenshot are found by search (Vision), in Turkish and English. (live Mac: Vision
+      read "Kestane" and a number in a copied picture, and search found the picture; Turkish not
+      tried)
+- [x] No text names Windows, Ctrl or "this PC": Settings says "Open at login", "Same as macOS"
       and "Use the macOS accent colour"; hints and menus show ⌘Enter, ⌥⌘V, ⇧⌘T and ⌘⌫; edge
-      opening is shown as not available. (Checked in a browser with the real components, a
-      mocked backend and a Mac user agent: Settings, shelf hints and the card menu.)
-- [ ] ⌘⌫ moves the selected cards to Trash on the shelf and in the Library; ⌫ alone undoes.
+      opening is shown as not available. (live Mac: every Settings tab, the Library, the shelf's
+      hints and the first-run window read through Accessibility; the Library named Ctrl+F before
+      1.1.0)
+- [x] ⌘⌫ moves the selected cards to Trash on the shelf and in the Library; ⌫ alone undoes. (live
+      Mac: on the shelf, after its question; the Library not tried)
 - [ ] With "Use the macOS accent colour" on, the accent follows System Settings → Appearance
-      after the window is opened again.
-- [ ] Export… (Library and shelf), Import… and Settings → Sources → Add folder open the macOS
+      after the window is opened again. (live Mac: inconclusive; the script changed the setting
+      without the notice System Settings sends, and the accent stayed blue)
+- [x] Export… (Library and shelf), Import… and Settings → Sources → Add folder open the macOS
       panel above the window that asked; Import offers only pictures and MP4 files; Cancel
-      changes nothing.
-- [ ] Settings → Start at login adds and removes the login item.
+      changes nothing. (live Mac: Add folder and Cancel; Export and Import not tried)
+- [x] Settings → Start at login adds and removes the login item. (live Mac: through the setting
+      and a restart)
 - [ ] An update from `latest.json` installs the universal app and Panopin restarts.
 
 ## Full round for v1.0.0

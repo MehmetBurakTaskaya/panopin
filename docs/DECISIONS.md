@@ -495,10 +495,10 @@ with two files whose names never change, so `releases/latest/download/<file>` li
 working: `Panopin-Setup-x64.exe` and `Panopin-Portable-x64.zip` (`Panopin.exe`, `LICENSE.txt`,
 `THIRD_PARTY_NOTICES.txt`). A last job adds `latest.json`, which carries the installer's update
 signature, and `SHA256SUMS.txt`; the release page shows no `.sig` file and no second copy.
-Publishing the draft is a manual step. The universal macOS `.dmg` (Phase 8, D-073) is built only
-when the repository variable `PANOPIN_MACOS` is `true`, which the owner sets once the test build
-from `mac-test.yml` has been tried on a Mac; until then releases and `latest.json` are Windows
-only. Code signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a
+Publishing the draft is a manual step. While the repository variable `PANOPIN_MACOS` is `true`
+(from 1.1.0, after the Mac live test passed, D-073), a macOS job adds the universal
+`Panopin-macOS.dmg` and `Panopin-macOS.app.tar.gz`, the archive updates install, whose signature
+also goes into `latest.json`; the download notes then name the Mac files. Code signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a
 Changelog and versions follow SemVer.
 
 ## D-069 Website and embed — Accepted
@@ -531,11 +531,16 @@ thumbnail and picture shown (31 MB on the development PC), and those copies outl
 for good or a cleared history. Media is now answered with `Cache-Control: no-store`; pictures that
 are on screen stay in memory, and reading a file again from `media/` is cheap.
 
-## D-073 macOS (Phase 8) — Accepted, not yet run on a Mac
+## D-073 macOS (Phase 8) — Accepted
 macOS 13 or later, one universal app for Apple silicon and Intel, built and checked by CI on
-`macos-latest`. Nobody has run it on a Mac yet, so everything below is built, not verified. The
-bindings are the `objc2` framework crates 0.3.2 (Zlib, Apache-2.0 or MIT) with only the classes in
-use; Vision needs no main thread.
+`macos-latest`. `mac-live.yml`, started by hand, installs it from its `.dmg` on GitHub's Mac
+runners (macOS 14, 15 and 26 on Apple silicon, macOS 15 on Intel) and drives it as a user would
+with `tests/macos/live.sh`: System Events presses keys, a small Accessibility tool reads and
+presses controls inside the web views, `sqlite3` checks what was kept, and screenshots stay with
+the run. The runners let the shell use Accessibility and screen capture; the script grants Panopin
+Accessibility and Desktop access the same way, through the privacy database. Nobody has tried it on
+a real Mac yet. The bindings are the `objc2` framework crates 0.3.2 (Zlib, Apache-2.0 or MIT)
+with only the classes in use; Vision needs no main thread.
 
 | Topic | Windows | macOS |
 | --- | --- | --- |
@@ -553,11 +558,12 @@ use; Vision needs no main thread.
 | In-app keys | Ctrl+… | Cmd+… (the key tables already accept either); ⌘⌫ also moves to Trash, as in Finder, since a Mac's Delete key needs fn |
 | Texts | — | strings that name Windows, its keys or "this PC" have a `key.mac` variant in the locale files, which the webviews use on a Mac; menus and hints name keys as macOS does (⌥⌘V, ⇧⌘T, ⌫); the AltGr warning is off; excluded apps start as KeePassXC, 1Password and Bitwarden |
 | Accent colour | `UISettings`, followed live | `NSColor.controlAccentColor` in sRGB, a little darker for light and lighter for dark surfaces; read again when a window opens |
-| Shelf over full-screen apps | topmost overlay | the shelf's `NSWindow` also gets `FullScreenAuxiliary` and `IgnoresCycle` at start; Tauri only lets it join every Space |
-| Tray | notification area icon | menu bar template icon that macOS tints; no Dock icon (accessory app) |
+| Shelf and the keyboard | the shelf takes the foreground and gives it back | since macOS 14 an app in the background may only ask to come forward, so the shelf is a non-activating panel: at start its window takes `PanopinShelfPanel`, an `NSPanel` without fields of its own (only when a panel is no larger than a window, since Tauri keeps its state right behind the window's fields), with `NonactivatingPanel`. It takes the keyboard while the app in front stays active, and Enter and Cmd+Enter return there |
+| Shelf over full-screen apps | topmost overlay | the panel also gets `FullScreenAuxiliary` and `IgnoresCycle`; Tauri only lets it join every Space |
+| Tray | notification area icon | menu bar template icon that macOS tints; no Dock icon (accessory app). The policy is set before the event loop starts: set in setup, the launch put the default back |
 | Screen snip | Snipping Tool overlay | `screencapture -i -c` |
 | Start at login | Run key | LaunchAgent (autostart plugin) |
-| Distribution | NSIS installer, portable ZIP | universal `.dmg`, ad-hoc signed (`signingIdentity` `-`, which Apple silicon needs for apps from the internet) but not notarised: "System Settings → Privacy & Security → Open Anyway". `mac-test.yml`, started by hand, builds a test `.dmg` as a workflow artifact; releases carry the `.dmg` once the `PANOPIN_MACOS` variable is `true` (D-068) |
+| Distribution | NSIS installer, portable ZIP | universal `.dmg`, ad-hoc signed (`signingIdentity` `-`, which Apple silicon needs for apps from the internet) but not notarised: "System Settings → Privacy & Security → Open Anyway". The ad-hoc signature changes with every build, so macOS may ask for Accessibility again after an update. `mac-test.yml`, started by hand, builds a test `.dmg` as a workflow artifact; releases carry the `.dmg` and the update archive while the `PANOPIN_MACOS` variable is `true` (D-068), from 1.1.0 on |
 
 Not on macOS yet (BACKLOG): screen recordings, drag-out (a card dragged on a Mac stays where it
 is), edge opening (Settings shows it as unavailable), Mica-like materials and quiet sounds during

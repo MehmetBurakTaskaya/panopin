@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Everything you copy, pinned to a cork board.</strong><br>
-  A fast, fully local clipboard and screenshot shelf for Windows.
+  A fast, fully local clipboard and screenshot shelf for Windows and macOS.
 </p>
 
 <p align="center">
@@ -70,7 +70,12 @@ yourself.
 start and every 6 hours, marks the tray icon when a version is available, and installs it only
 when you press "Update and restart". Your items and settings stay.
 
-macOS support is planned for a later version.
+**macOS:** download **Panopin-macOS.dmg** (macOS 13 or later, Apple silicon and Intel), open it and
+drag Panopin into Applications. Panopin is not notarised by Apple yet, so the first time macOS
+cannot check it: open **System Settings → Privacy & Security** and choose **Open Anyway**. Panopin
+lives in the menu bar. macOS asks once before Panopin may read the Desktop, where screenshots are
+saved; ⌘Enter pastes for you once Panopin is allowed under **Privacy & Security → Accessibility**
+(after an update macOS may ask again). On a Mac the shortcuts are ⌥⌘V, ⌥⌘C and ⌥⌘S.
 
 ## Shortcuts
 

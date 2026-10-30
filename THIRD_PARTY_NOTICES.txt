@@ -1,4 +1,4 @@
-Third-party notices for Panopin 1.0.0
+Third-party notices for Panopin 1.1.0
 
 Panopin is released under the MIT licence (see LICENSE). Its Windows and macOS builds use the
 349 Rust crates and 9 npm packages listed below, under their own licences. Each

@@ -1,9 +1,9 @@
 name: Release
 
 # Pushing a tag such as v1.0.0 builds the Windows installer and the portable ZIP and puts them on a
-# draft release with latest.json and SHA256SUMS.txt (D-068). The universal macOS .dmg joins them
-# once the repository variable PANOPIN_MACOS is "true" (D-073). Publishing the draft is a manual
-# step.
+# draft release with latest.json and SHA256SUMS.txt (D-068). The universal macOS .dmg and its update
+# archive join them while the repository variable PANOPIN_MACOS is "true" (D-073). Publishing the
+# draft is a manual step.
 on:
   push:
     tags: ['v*']
@@ -24,6 +24,7 @@ jobs:
         shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
+      PANOPIN_MACOS: ${{ vars.PANOPIN_MACOS }}
     outputs:
       signature: ${{ steps.draft.outputs.signature }}
     steps:
@@ -86,7 +87,8 @@ jobs:
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" --clobber out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip
           else
-            node scripts/release-notes.mjs "$version" --release > notes.md
+            mac=; [ "$PANOPIN_MACOS" = true ] && mac=--mac
+            node scripts/release-notes.mjs "$version" --release $mac > notes.md
             gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Panopin $version" \
               --notes-file notes.md out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip
           fi
@@ -95,13 +97,15 @@ jobs:
   macos:
     name: macOS universal .dmg
     needs: windows
-    # Released only after the Mac build has been tried on a Mac (D-073).
+    # Released once the Mac live test passes (D-073).
     if: ${{ vars.PANOPIN_MACOS == 'true' }}
     runs-on: macos-latest
     # A failed Mac build leaves the Windows release intact; latest.json then offers Windows only.
     continue-on-error: true
     env:
       GH_TOKEN: ${{ github.token }}
+    outputs:
+      signature: ${{ steps.upload.outputs.signature }}
     steps:
       - uses: actions/checkout@v7
 
@@ -122,35 +126,22 @@ jobs:
 
       - run: npm ci
 
-      - name: Release notes
-        id: notes
-        run: |
-          {
-            echo 'body<<PANOPIN_NOTES'
-            node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" --release
-            echo 'PANOPIN_NOTES'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build, sign and upload to the draft release
-        uses: tauri-apps/tauri-action@v1
+      - name: Build and sign the app
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Panopin __VERSION__
-          releaseBody: ${{ steps.notes.outputs.body }}
-          releaseDraft: true
-          prerelease: false
-          uploadUpdaterJson: false
-          args: --target universal-apple-darwin
+        run: npm run tauri build -- --target universal-apple-darwin
 
-      - name: Fixed name
+      # The .dmg to download and the archive that updates install, under names that never change
+      # (D-068). The update signature goes into latest.json, not onto the release page.
+      - name: Add the .dmg and the update archive to the draft
+        id: upload
         run: |
-          dmg=$(ls src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg | head -n 1)
-          cp "$dmg" Panopin-macOS.dmg
-          gh release upload "$GITHUB_REF_NAME" --clobber Panopin-macOS.dmg
+          bundle=src-tauri/target/universal-apple-darwin/release/bundle
+          cp "$(ls "$bundle"/dmg/*.dmg | head -n 1)" Panopin-macOS.dmg
+          cp "$bundle/macos/Panopin.app.tar.gz" Panopin-macOS.app.tar.gz
+          gh release upload "$GITHUB_REF_NAME" --clobber Panopin-macOS.dmg Panopin-macOS.app.tar.gz
+          echo "signature=$(tr -d '\r\n' < "$bundle/macos/Panopin.app.tar.gz.sig")" >> "$GITHUB_OUTPUT"
 
   finish:
     name: latest.json and checksums
@@ -160,6 +151,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       WINDOWS_SIGNATURE: ${{ needs.windows.outputs.signature }}
+      MAC_SIGNATURE: ${{ needs.macos.outputs.signature }}
     steps:
       - uses: actions/checkout@v7
 
@@ -174,6 +166,9 @@ jobs:
           gh release download "$GITHUB_REF_NAME" --dir out --skip-existing
           rm -f out/latest.json out/SHA256SUMS.txt
           printf '%s' "$WINDOWS_SIGNATURE" > out/Panopin-Setup-x64.exe.sig
+          if [ -n "$MAC_SIGNATURE" ] && [ -f out/Panopin-macOS.app.tar.gz ]; then
+            printf '%s' "$MAC_SIGNATURE" > out/Panopin-macOS.app.tar.gz.sig
+          fi
           node scripts/release-notes.mjs "$version" > notes.md
           node scripts/latest-json.mjs "$version" notes.md out > out/latest.json
           (cd out && sha256sum $(ls | grep -v -E '^SHA256SUMS\.txt$|\.sig$') > SHA256SUMS.txt && cat SHA256SUMS.txt)

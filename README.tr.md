@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>Kopyaladığın her şey, mantar panoda raptiyeyle.</strong><br>
-  Windows için hızlı ve tamamen yerel çalışan bir pano ve ekran görüntüsü rafı.
+  Windows ve macOS için hızlı ve tamamen yerel çalışan bir pano ve ekran görüntüsü rafı.
 </p>
 
 <p align="center">
@@ -70,7 +70,13 @@ haber verir; indirmeyi sen yaparsın.
 6 saatte bir GitHub'a bakar, yeni sürüm varsa tepsi simgesine bir işaret koyar ve yalnızca sen
 "Güncelle ve yeniden başlat"a bastığında kurar. Öğelerin ve ayarların korunur.
 
-macOS desteği sonraki bir sürümde gelecek.
+**macOS:** **Panopin-macOS.dmg** dosyasını indir (macOS 13 ya da sonrası, Apple silicon ve Intel),
+aç ve Panopin'i Uygulamalar klasörüne sürükle. Panopin henüz Apple onaylı (notarised) değil; bu
+yüzden ilk açılışta macOS onu denetleyemez: **Sistem Ayarları → Gizlilik ve Güvenlik**'te **Yine de
+Aç**'ı seç. Panopin menü çubuğunda yaşar. macOS, ekran görüntülerinin kaydedildiği Masaüstü'nü
+okumak için bir kez izin ister; ⌘Enter'ın senin yerine yapıştırması için Panopin'e **Gizlilik ve
+Güvenlik → Erişilebilirlik**'te izin ver (bir güncellemeden sonra macOS yeniden sorabilir). Mac'te
+kısayollar ⌥⌘V, ⌥⌘C ve ⌥⌘S.
 
 ## Kısayollar
 
