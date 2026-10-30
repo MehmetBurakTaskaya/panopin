@@ -26,6 +26,8 @@ const PRIVATE_TYPES: [&str; 4] = [
 ];
 const FILE_URL: &str = "public.file-url";
 const INTERVAL: Duration = Duration::from_millis(500);
+/// How many more rounds a change that looked empty is read again before it counts as seen.
+const EMPTY_RETRIES: u32 = 3;
 
 pub fn spawn(tx: Sender<Event>) -> Result<()> {
     thread::Builder::new()
@@ -37,6 +39,7 @@ pub fn spawn(tx: Sender<Event>) -> Result<()> {
 fn run(tx: &Sender<Event>) {
     // Whatever is on the pasteboard at start was copied before Panopin ran; it is not captured.
     let mut seen = autoreleasepool(|_| NSPasteboard::generalPasteboard().changeCount());
+    let mut empty_reads = 0;
     loop {
         thread::sleep(INTERVAL);
         let snapshot = autoreleasepool(|_| {
@@ -45,8 +48,16 @@ fn run(tx: &Sender<Event>) {
             if count == seen {
                 return None;
             }
+            let snapshot = read(&pasteboard);
+            // An app clears the pasteboard and then writes to it, and the count moves only once:
+            // read in between, the copy looks empty. It is read again before it counts as seen.
+            if is_empty(&snapshot) && empty_reads < EMPTY_RETRIES {
+                empty_reads += 1;
+                return None;
+            }
             seen = count;
-            Some(read(&pasteboard))
+            empty_reads = 0;
+            Some(snapshot)
         });
         if let Some(snapshot) = snapshot {
             if tx.send(Event::Clipboard(snapshot)).is_err() {
@@ -100,6 +111,15 @@ fn read(pasteboard: &NSPasteboard) -> Snapshot {
             });
     }
     snapshot
+}
+
+/// Nothing to keep and no marker that says why: what a copy looks like before it is written.
+fn is_empty(snapshot: &Snapshot) -> bool {
+    snapshot.text.is_none()
+        && snapshot.image.is_none()
+        && !snapshot.private
+        && !snapshot.own_copy
+        && !snapshot.has_files
 }
 
 /// The executable name of the app in front, which the excluded-apps list matches.
