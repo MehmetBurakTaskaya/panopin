@@ -1,18 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <!-- Draft app icon: a paper card held by a red pushpin. Final icon arrives in Phase 7. -->
+  <!-- Panopin: a note pinned to a cork tile. Every icon size comes from this file: npm run icons. -->
   <defs>
-    <radialGradient id="pin" cx="38%" cy="32%" r="72%">
-      <stop offset="0" stop-color="#ff9a86"/>
-      <stop offset=".38" stop-color="#e8402b"/>
-      <stop offset="1" stop-color="#951a0d"/>
+    <radialGradient id="pin" cx="36%" cy="30%" r="78%">
+      <stop offset="0" stop-color="#ff9480"/>
+      <stop offset=".42" stop-color="#e2402a"/>
+      <stop offset="1" stop-color="#8a170b"/>
     </radialGradient>
-  </defs>
-  <g transform="rotate(-7 128 150)">
-    <rect x="40" y="70" width="176" height="162" rx="16" fill="#000" fill-opacity=".18" transform="translate(6 8)"/>
-    <rect x="40" y="70" width="176" height="162" rx="16" fill="#f7f0e3" stroke="#6b4a2d" stroke-width="9"/>
-    <path d="M76 136h104M76 176h68" stroke="#b39a7a" stroke-width="14" stroke-linecap="round"/>
+    <radialGradient id="cork" cx="50%" cy="28%" r="85%">
+      <stop offset="0" stop-color="#e2b783"/>
+      <stop offset="1" stop-color="#b47d48"/>
+    </radialGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a86f3e"/>
+      <stop offset="1" stop-color="#6b4220"/>
+    </linearGradient></defs>
+  <rect x="10" y="10" width="236" height="236" rx="54" fill="url(#wood)"/>
+  <rect x="28" y="28" width="200" height="200" rx="38" fill="url(#cork)"/>
+  <g fill="#7a4c22" fill-opacity=".32">
+    <circle cx="58" cy="70" r="5"/><circle cx="196" cy="58" r="4"/><circle cx="206" cy="122" r="5"/>
+    <circle cx="48" cy="150" r="4"/><circle cx="70" cy="208" r="5"/><circle cx="190" cy="204" r="4"/>
+    <circle cx="150" cy="212" r="3"/><circle cx="100" cy="50" r="3"/><circle cx="216" cy="170" r="3"/>
   </g>
-  <ellipse cx="136" cy="86" rx="30" ry="10" fill="#000" fill-opacity=".2"/>
-  <circle cx="128" cy="64" r="38" fill="url(#pin)" stroke="#7a1409" stroke-width="5"/>
-  <ellipse cx="114" cy="50" rx="12" ry="8" fill="#fff" fill-opacity=".55"/>
+  <g transform="rotate(-5 128 146)">
+    <rect x="62" y="80" width="132" height="124" rx="12" fill="#2d1604" fill-opacity=".28" transform="translate(4 7)"/>
+    <rect x="62" y="80" width="132" height="124" rx="12" fill="#fffdf7"/>
+    <path d="M86 134h84M86 168h52" stroke="#c2ad8c" stroke-width="14" stroke-linecap="round"/>
+  </g>
+  <ellipse cx="137.3" cy="99.2" rx="24.2" ry="9.3" fill="#2d1604" fill-opacity=".3"/>
+  <circle cx="128" cy="80" r="31" fill="url(#pin)" stroke="#6a1207" stroke-width="4.0"/>
+  <ellipse cx="116.8" cy="68.2" rx="9.9" ry="6.8" fill="#fff" fill-opacity=".62"/>
 </svg>

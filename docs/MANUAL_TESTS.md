@@ -248,7 +248,37 @@ real app.
 - [ ] High contrast themes keep cards, focus rings and text readable.
 - [ ] Narrator reads card types, titles and actions in English and Turkish.
 
-## Updates and data safety (Phase 7)
+## Release, updates and website (Phase 7)
 
-- [ ] Updating from the previous release keeps all data and settings.
-- [ ] The installer runs without administrator rights; SmartScreen steps match the README.
+Checked on the development PC (2026-10-30): a local release build signed with the update key;
+the Settings update states, the tray's tab request and the release-note text in automated tests;
+the website and the embed in a browser (desktop, 375 px phone emulation, dark mode, a host page
+with conflicting styles). Everything below needs a Windows session.
+
+- [ ] The installer runs without administrator rights, installs to `%LOCALAPPDATA%\Panopin`, adds
+      a Start menu entry and speaks Turkish on a Turkish Windows; SmartScreen steps match the
+      README.
+- [ ] The tray icon reads well at 100 %, 125 %, 150 % and 200 % scaling on a light and a dark
+      taskbar, in the normal, paused and update states.
+- [ ] Settings → About → Licence texts opens `THIRD_PARTY_NOTICES.txt`.
+- [ ] Updates off: no request to github.com (network monitor). On: a newer published release puts
+      a dot on the tray icon and "Update to x…" in its menu; Settings shows the notes; "Update and
+      restart" installs it and Panopin comes back with every item, pin, folder and setting.
+- [ ] The portable ZIP runs from any folder; it offers "Download from GitHub" instead of
+      installing, and its Licence texts button works.
+- [ ] Uninstalling without "Delete the application data" keeps `%APPDATA%\Panopin`; with it, the
+      folder is gone. The "Start with Windows" entry is removed both times.
+- [ ] Tag `v1.0.0`: the draft release has `Panopin_1.0.0_x64-setup.exe` (+ `.sig`),
+      `Panopin-Setup-x64.exe`, both ZIPs, `latest.json` and `SHA256SUMS.txt`, and the hashes
+      match the downloads.
+- [ ] The website on Windows offers "Download for Windows", on a phone "See all downloads"; the
+      language switch remembers its choice. The embed shows both languages on
+      mehmetburaktaskaya.com.
+
+## Full round for v1.0.0
+
+Run every unchecked item in this file on the installed v1.0.0 build, in this order: capture,
+shelf, preview and editing, Library, search/OCR/links/recordings/Settings, appearance and
+accessibility, release. Add the date, Windows build and result next to each item; a failure gets a
+GitHub issue and blocks publishing the draft until it is fixed or accepted as a known issue in the
+release notes.

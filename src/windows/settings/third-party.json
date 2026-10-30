@@ -403,6 +403,16 @@
    "license": "MIT OR Apache-2.0"
   },
   {
+   "name": "futures-macro",
+   "version": "0.3.34",
+   "license": "MIT OR Apache-2.0"
+  },
+  {
+   "name": "futures-sink",
+   "version": "0.3.34",
+   "license": "MIT OR Apache-2.0"
+  },
+  {
    "name": "futures-task",
    "version": "0.3.34",
    "license": "MIT OR Apache-2.0"
@@ -416,6 +426,11 @@
    "name": "generic-array",
    "version": "0.14.7",
    "license": "MIT"
+  },
+  {
+   "name": "getrandom",
+   "version": "0.2.17",
+   "license": "MIT OR Apache-2.0"
   },
   {
    "name": "getrandom",
@@ -501,6 +516,11 @@
    "name": "hyper",
    "version": "1.12.0",
    "license": "MIT"
+  },
+  {
+   "name": "hyper-rustls",
+   "version": "0.27.10",
+   "license": "Apache-2.0 OR ISC OR MIT"
   },
   {
    "name": "hyper-tls",
@@ -666,6 +686,11 @@
    "name": "mime",
    "version": "0.3.17",
    "license": "MIT OR Apache-2.0"
+  },
+  {
+   "name": "minisign-verify",
+   "version": "0.3.0",
+   "license": "MIT"
   },
   {
    "name": "miniz_oxide",
@@ -848,6 +873,11 @@
    "license": "MIT OR Apache-2.0"
   },
   {
+   "name": "ring",
+   "version": "0.17.14",
+   "license": "Apache-2.0 AND ISC"
+  },
+  {
    "name": "rusqlite",
    "version": "0.41.1",
    "license": "MIT"
@@ -858,9 +888,24 @@
    "license": "Apache-2.0 OR MIT"
   },
   {
+   "name": "rustls",
+   "version": "0.23.46",
+   "license": "Apache-2.0 OR ISC OR MIT"
+  },
+  {
    "name": "rustls-pki-types",
    "version": "1.15.1",
    "license": "MIT OR Apache-2.0"
+  },
+  {
+   "name": "rustls-platform-verifier",
+   "version": "0.7.1",
+   "license": "MIT OR Apache-2.0"
+  },
+  {
+   "name": "rustls-webpki",
+   "version": "0.103.16",
+   "license": "ISC"
   },
   {
    "name": "same-file",
@@ -1028,6 +1073,11 @@
    "license": "MIT"
   },
   {
+   "name": "subtle",
+   "version": "2.6.1",
+   "license": "BSD-3-Clause"
+  },
+  {
    "name": "syn",
    "version": "2.0.119",
    "license": "MIT OR Apache-2.0"
@@ -1093,6 +1143,11 @@
    "license": "Apache-2.0 OR MIT"
   },
   {
+   "name": "tauri-plugin-updater",
+   "version": "2.14.1",
+   "license": "Apache-2.0 OR MIT"
+  },
+  {
    "name": "tauri-runtime",
    "version": "2.12.2",
    "license": "Apache-2.0 OR MIT"
@@ -1106,6 +1161,11 @@
    "name": "tauri-utils",
    "version": "2.10.2",
    "license": "Apache-2.0 OR MIT"
+  },
+  {
+   "name": "tempfile",
+   "version": "3.27.0",
+   "license": "MIT OR Apache-2.0"
   },
   {
    "name": "tendril",
@@ -1165,6 +1225,16 @@
   {
    "name": "tokio-native-tls",
    "version": "0.3.1",
+   "license": "MIT"
+  },
+  {
+   "name": "tokio-rustls",
+   "version": "0.26.6",
+   "license": "MIT OR Apache-2.0"
+  },
+  {
+   "name": "tokio-util",
+   "version": "0.7.20",
    "license": "MIT"
   },
   {
@@ -1233,6 +1303,11 @@
    "license": "MIT"
   },
   {
+   "name": "typed-path",
+   "version": "0.13.0",
+   "license": "MIT OR Apache-2.0"
+  },
+  {
    "name": "typeid",
    "version": "1.0.3",
    "license": "MIT OR Apache-2.0"
@@ -1256,6 +1331,11 @@
    "name": "unicode-segmentation",
    "version": "1.13.3",
    "license": "MIT OR Apache-2.0"
+  },
+  {
+   "name": "untrusted",
+   "version": "0.9.0",
+   "license": "ISC"
   },
   {
    "name": "url",
@@ -1466,6 +1546,11 @@
    "name": "zerovec-derive",
    "version": "0.11.7",
    "license": "Unicode-3.0"
+  },
+  {
+   "name": "zip",
+   "version": "9.1.3",
+   "license": "MIT"
   },
   {
    "name": "zmij",

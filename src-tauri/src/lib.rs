@@ -17,6 +17,7 @@ mod store;
 mod system_state;
 mod transfer;
 mod tray;
+mod updates;
 mod windows;
 
 use std::{
@@ -99,6 +100,9 @@ pub(crate) fn apply_settings(app: &AppHandle, patch: Value) -> Result<Settings> 
     if !old.link_previews && new.link_previews {
         links::wake(app);
     }
+    if old.updates != new.updates {
+        updates::nudge(app);
+    }
     if old.onboarded != new.onboarded
         || old.sources != new.sources
         || old.watched_folders != new.watched_folders
@@ -132,6 +136,7 @@ fn setup(app: &AppHandle) -> Result<()> {
     capture::start(app, &dir)?;
     ocr::start(app)?;
     links::start(app);
+    updates::start(app);
     look::watch(app);
     let settings = app.state::<AppState>().settings();
     edge::configure(app, settings.edge_open, settings.shelf_edge);
@@ -269,6 +274,7 @@ pub fn run() {
         .manage(hotkeys::HotkeyState::default())
         .manage(snip::SnipState::default())
         .manage(commands::ShelfUndo::default())
+        .manage(windows::SettingsTab::default())
         .register_asynchronous_uri_scheme_protocol("media", |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             let path = request.uri().path().to_owned();
@@ -294,6 +300,9 @@ pub fn run() {
             });
         })
         .setup(|app| {
+            // updates::start reads the plugin's state, so it is registered first (D-065).
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
             setup(app.handle())?;
             Ok(())
         })
@@ -338,7 +347,12 @@ pub fn run() {
             commands::set_pause,
             commands::pick_watch_folder,
             commands::open_project_link,
+            commands::open_licence_texts,
             commands::app_version,
+            commands::update_status,
+            commands::check_for_updates,
+            commands::install_update,
+            commands::take_settings_tab,
             commands::set_pinned,
             commands::take_down,
             commands::undo_take_down,

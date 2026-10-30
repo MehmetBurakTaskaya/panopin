@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Panopin",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "com.mehmetburaktaskaya.panopin",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -34,8 +34,12 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "category": "Productivity",
     "copyright": "Copyright (c) 2026 Mehmet Burak Taşkaya",
+    "publisher": "Mehmet Burak Taşkaya",
+    "homepage": "https://github.com/MehmetBurakTaskaya/panopin",
+    "license": "MIT",
     "shortDescription": "Clipboard and screenshot shelf",
     "longDescription": "Saves what you copy and the screenshots you take, and slides them in on a cork board when you need them.",
     "icon": [
@@ -45,9 +49,25 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": {
+      "../LICENSE": "LICENSE.txt",
+      "../THIRD_PARTY_NOTICES.txt": "THIRD_PARTY_NOTICES.txt"
+    },
     "windows": {
       "nsis": {
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "languages": ["English", "Turkish"],
+        "displayLanguageSelector": false,
+        "installerHooks": "windows/installer-hooks.nsh"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFBMjlFRTUwOEY1MjQwNjAKUldSZ1FGS1BVTzRwcXU5QVU2UTZuNXdRUTFsYjdpWDRzRkRJUnNvbFlIdXgxbjZYWDBZRHkvb0UK",
+      "endpoints": ["https://github.com/MehmetBurakTaskaya/panopin/releases/latest/download/latest.json"],
+      "windows": {
+        "installMode": "passive"
       }
     }
   }

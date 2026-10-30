@@ -21,4 +21,9 @@ export default defineConfig(
     files: ['scripts/**/*.mjs', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // The website's one plain script, run by browsers as a classic script.
+    files: ['site/**/*.js'],
+    languageOptions: { globals: globals.browser, sourceType: 'script' },
+  },
 );

@@ -22,7 +22,7 @@ use crate::{
         shelf::{self as shelf_store, Shelf, UndoStack},
     },
     transfer::{self, BoardRect, PasteOutcome},
-    windows, AppState,
+    updates, windows, AppState,
 };
 
 /// Session undo stack for take-downs.
@@ -246,9 +246,53 @@ pub fn open_project_link(which: String) -> Result<()> {
     links::open_url(url)
 }
 
+/// Settings → About: the licence texts installed next to Panopin, else their copy on GitHub.
+#[tauri::command]
+pub fn open_licence_texts(app: AppHandle) -> Result<()> {
+    let installed = app
+        .path()
+        .resolve(
+            "THIRD_PARTY_NOTICES.txt",
+            tauri::path::BaseDirectory::Resource,
+        )
+        .ok()
+        .filter(|path| path.is_file());
+    match installed {
+        // The shell does not open verbatim (`\\?\`) paths.
+        Some(path) => links::open_url(path.display().to_string().trim_start_matches(r"\\?\")),
+        None => links::open_url(
+            "https://github.com/MehmetBurakTaskaya/panopin/blob/main/THIRD_PARTY_NOTICES.txt",
+        ),
+    }
+}
+
 #[tauri::command]
 pub fn app_version(app: AppHandle) -> String {
     app.package_info().version.to_string()
+}
+
+#[tauri::command]
+pub fn update_status(app: AppHandle) -> updates::UpdateView {
+    updates::view(&app)
+}
+
+/// "Check now" in Settings: the user asked, so it runs whatever the automatic setting says.
+#[tauri::command]
+pub async fn check_for_updates(app: AppHandle) -> updates::UpdateView {
+    updates::check(&app).await;
+    updates::view(&app)
+}
+
+/// "Update and restart"; the portable build opens the download page instead.
+#[tauri::command]
+pub async fn install_update(app: AppHandle) -> Result<()> {
+    updates::install(&app).await
+}
+
+/// The tab a new Settings window opens on, once.
+#[tauri::command]
+pub fn take_settings_tab(state: State<'_, windows::SettingsTab>) -> Option<&'static str> {
+    state.take()
 }
 
 /// Shortcuts whose combination another app holds; Settings warns about them.

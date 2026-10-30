@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panopin — everything you copy, pinned to a cork board</title>
+  <meta name="description" content="A fast, fully local clipboard and screenshot shelf for Windows. Free and open source.">
+  <meta name="color-scheme" content="light dark">
+  <meta property="og:title" content="Panopin">
+  <meta property="og:description" content="Everything you copy, pinned to a cork board. A fast, fully local clipboard and screenshot shelf for Windows.">
+  <meta property="og:image" content="https://mehmetburaktaskaya.github.io/panopin/assets/shelf-light.webp">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="assets/panopin.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Pick the language before the first paint: a saved choice, else the browser's languages.
+    (function () {
+      var lang = null;
+      try { lang = localStorage.getItem('panopin-lang'); } catch (e) {}
+      if (lang !== 'en' && lang !== 'tr') {
+        var list = navigator.languages || [navigator.language || ''];
+        lang = list.some(function (l) { return /^tr\b/i.test(l); }) ? 'tr' : 'en';
+      }
+      document.documentElement.lang = lang;
+      document.documentElement.dataset.lang = lang;
+    })();
+  </script>
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main"><span data-l="en">Skip to content</span><span data-l="tr">İçeriğe geç</span></a>
+
+  <header class="top">
+    <a class="brand" href="#">
+      <img src="assets/panopin.svg" width="36" height="36" alt="">
+      <span>Panopin</span>
+    </a>
+    <nav aria-label="Sections">
+      <a href="#features"><span data-l="en">Features</span><span data-l="tr">Özellikler</span></a>
+      <a href="#privacy"><span data-l="en">Privacy</span><span data-l="tr">Gizlilik</span></a>
+      <a href="#faq"><span data-l="en">FAQ</span><span data-l="tr">SSS</span></a>
+      <a href="https://github.com/MehmetBurakTaskaya/panopin">GitHub</a>
+    </nav>
+    <div class="langs" role="group" aria-label="Language / Dil">
+      <button type="button" data-set-lang="en" lang="en">EN</button>
+      <button type="button" data-set-lang="tr" lang="tr">TR</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <h1>
+        <span data-l="en">Everything you copy, pinned to a cork board.</span>
+        <span data-l="tr">Kopyaladığın her şey, mantar panoda raptiyeyle.</span>
+      </h1>
+      <p class="lead">
+        <span data-l="en">Panopin quietly keeps the texts, links, images and screenshots you copy. Press
+          <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd>, pick one with the keyboard, press <kbd>Enter</kbd> —
+          and you are back where you were, with it on your clipboard.</span>
+        <span data-l="tr">Panopin kopyaladığın metinleri, bağlantıları, görselleri ve ekran görüntülerini sessizce
+          saklar. <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd>'ye bas, klavyeyle birini seç, <kbd>Enter</kbd>'a bas:
+          o artık panoda, sen de kaldığın yerdesin.</span>
+      </p>
+
+      <div class="download" id="download">
+        <a class="button primary" id="download-main"
+           href="https://github.com/MehmetBurakTaskaya/panopin/releases/latest/download/Panopin-Setup-x64.exe">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 20h14" /></svg>
+          <span data-download-label="windows">
+            <span data-l="en">Download for Windows</span><span data-l="tr">Windows için indir</span>
+          </span>
+          <span data-download-label="mac" hidden>
+            <span data-l="en">macOS: coming soon</span><span data-l="tr">macOS: yakında</span>
+          </span>
+          <span data-download-label="other" hidden>
+            <span data-l="en">See all downloads</span><span data-l="tr">Tüm indirmeler</span>
+          </span>
+        </a>
+        <p class="fine" data-download-note="windows">
+          <span data-l="en">Windows 10 22H2 and Windows 11 (x64) · free and open source · no administrator rights needed</span>
+          <span data-l="tr">Windows 10 22H2 ve Windows 11 (x64) · ücretsiz ve açık kaynak · yönetici izni gerekmez</span>
+        </p>
+        <p class="fine" data-download-note="mac" hidden>
+          <span data-l="en">Panopin runs on Windows today; the macOS version is planned.</span>
+          <span data-l="tr">Panopin bugün Windows'ta çalışıyor; macOS sürümü planlanıyor.</span>
+        </p>
+        <p class="fine" data-download-note="other" hidden>
+          <span data-l="en">Panopin runs on Windows 10 and 11. Open this page on your PC to download it.</span>
+          <span data-l="tr">Panopin Windows 10 ve 11'de çalışır. İndirmek için bu sayfayı bilgisayarında aç.</span>
+        </p>
+        <p class="more">
+          <a href="https://github.com/MehmetBurakTaskaya/panopin/releases/latest/download/Panopin-Portable-x64.zip">
+            <span data-l="en">Portable ZIP</span><span data-l="tr">Taşınabilir ZIP</span></a>
+          ·
+          <a href="https://github.com/MehmetBurakTaskaya/panopin/releases/latest">
+            <span data-l="en">All releases</span><span data-l="tr">Tüm sürümler</span></a>
+          ·
+          <a href="#smartscreen">
+            <span data-l="en">"Windows protected your PC"?</span><span data-l="tr">"Windows bilgisayarınızı korudu" mu?</span></a>
+        </p>
+      </div>
+
+      <figure class="shot">
+        <img data-l="en" src="assets/shelf-light.webp" width="1440" height="468"
+             alt="The Panopin shelf: a cork board with rows of images, texts and links">
+        <img data-l="tr" src="assets/shelf-light-tr.webp" width="1440" height="468" loading="lazy"
+             alt="Panopin rafı: görseller, metinler ve bağlantı satırlarıyla bir mantar pano">
+      </figure>
+    </section>
+
+    <section id="features" class="features">
+      <h2><span data-l="en">Made for the way you copy</span><span data-l="tr">Kopyalama alışkanlığına göre tasarlandı</span></h2>
+      <ul class="grid">
+        <li>
+          <h3><span data-l="en">A cork board of your own</span><span data-l="tr">Kendine ait bir mantar pano</span></h3>
+          <p><span data-l="en">Copies are taped to the board, the ones you keep get a pushpin, and small paper-and-cork sounds go with it.</span>
+             <span data-l="tr">Kopyaladıkların bantla tutturulur, sakladıklarına raptiye saplanır; küçük kâğıt ve mantar sesleri eşlik eder.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">Native and light</span><span data-l="tr">Native ve hafif</span></h3>
+          <p><span data-l="en">Built with Rust. Almost no CPU while idle: the clipboard is followed through Windows events, never polled.</span>
+             <span data-l="tr">Rust ile yazıldı. Boştayken neredeyse hiç işlemci kullanmaz: pano yoklanmaz, Windows olaylarıyla izlenir.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">Keyboard first</span><span data-l="tr">Önce klavye</span></h3>
+          <p><span data-l="en">Arrows, 1–9 and Enter. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> pastes straight into the app you came from; <kbd>Ctrl</kbd>+<kbd>K</kbd> lists every action.</span>
+             <span data-l="tr">Oklar, 1–9 ve Enter. <kbd>Ctrl</kbd>+<kbd>Enter</kbd> doğrudan geldiğin uygulamaya yapıştırır; <kbd>Ctrl</kbd>+<kbd>K</kbd> tüm işleri listeler.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">Text in screenshots, found</span><span data-l="tr">Ekran görüntüsündeki yazı da bulunur</span></h3>
+          <p><span data-l="en">Windows' own OCR reads your images in the background, so search finds the words inside them — no model to download.</span>
+             <span data-l="tr">Windows'un kendi OCR'ı görsellerini arka planda okur; arama onların içindeki kelimeleri de bulur, model indirmeye gerek yok.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">Works with your screenshots</span><span data-l="tr">Ekran görüntülerinle birlikte çalışır</span></h3>
+          <p><span data-l="en">Snipping Tool snips, the Screenshots folder and screen recordings arrive on the board. <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> snips straight into the crop editor.</span>
+             <span data-l="tr">Ekran Alıntısı Aracı kesimleri, Ekran Görüntüleri klasörü ve ekran kayıtları rafa gelir. <kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> kesimi doğrudan kırpma editöründe açar.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">Preview and edit</span><span data-l="tr">Önizle ve düzenle</span></h3>
+          <p><span data-l="en">Edit texts; mark up images with a pen, highlighter, arrows, shapes, text and pixelation; crop. The original is always kept.</span>
+             <span data-l="tr">Metinleri düzenle; görselleri kalem, vurgulayıcı, ok, şekil, yazı ve pikselleştirmeyle işaretle, kırp. Orijinal her zaman saklanır.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">A Library for what you keep</span><span data-l="tr">Sakladıkların için Kütüphane</span></h3>
+          <p><span data-l="en">Folders, tags, names, notes, Trash and export, with the same keys as the shelf.</span>
+             <span data-l="tr">Klasörler, etiketler, isimler, notlar, Çöp Kutusu ve dışa aktarma; rafla aynı tuşlarla.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">Made for Turkish too</span><span data-l="tr">Türkçe dostu</span></h3>
+          <p><span data-l="en">Search that knows İ and ı, optional accent-free matching, and shortcuts that never block AltGr characters such as ₺, @ and €.</span>
+             <span data-l="tr">İ ile ı'yı bilen arama, istersen aksansız eşleştirme ve ₺, @, € gibi AltGr karakterlerini asla engellemeyen kısayollar.</span></p>
+        </li>
+        <li>
+          <h3><span data-l="en">At home on Windows 11</span><span data-l="tr">Windows 11'de evinde gibi</span></h3>
+          <p><span data-l="en">Mica, your accent colour, light and dark themes, per-monitor DPI and multiple monitors.</span>
+             <span data-l="tr">Mica, vurgu rengin, açık ve koyu tema, monitör başına DPI ve çoklu monitör.</span></p>
+        </li>
+      </ul>
+      <figure class="shot">
+        <img data-l="en" src="assets/search-dark.webp" width="1440" height="468" loading="lazy"
+             alt="Searching for “salon” finds a text and a screenshot that contains the word">
+        <img data-l="tr" src="assets/search-dark-tr.webp" width="1440" height="468" loading="lazy"
+             alt="“salon” araması bir metni ve bu kelimeyi içeren bir ekran görüntüsünü buluyor">
+        <figcaption>
+          <span data-l="en">Search finds “salon” in a note and inside a screenshot.</span>
+          <span data-l="tr">Arama “salon” kelimesini bir notta ve bir ekran görüntüsünün içinde buluyor.</span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section id="privacy" class="privacy">
+      <h2><span data-l="en">Your copies stay yours</span><span data-l="tr">Kopyaladıkların sende kalır</span></h2>
+      <ul class="checks">
+        <li><span data-l="en">Everything stays on your computer: no account, no cloud, no telemetry, no analytics, no crash reports.</span>
+            <span data-l="tr">Her şey bilgisayarında kalır: hesap, bulut, telemetri, analitik ya da çökme raporu yok.</span></li>
+        <li><span data-l="en">Only two things ever go online, and both are off until you turn them on: link previews and update checks.</span>
+            <span data-l="tr">İnternete yalnızca iki şey çıkar ve ikisi de sen açana kadar kapalıdır: bağlantı önizlemeleri ve güncelleme denetimi.</span></li>
+        <li><span data-l="en">Copies that password managers and Windows mark as private are never saved. Exclude apps, or pause capture for a while.</span>
+            <span data-l="tr">Parola yöneticilerinin ve Windows'un gizli işaretlediği kopyalar hiç kaydedilmez. Uygulamaları hariç tut ya da yakalamayı bir süre duraklat.</span></li>
+        <li><span data-l="en">Copied content is never written to log files.</span>
+            <span data-l="tr">Kopyalanan içerik asla log dosyalarına yazılmaz.</span></li>
+        <li><span data-l="en">Saved items are not encrypted: Panopin is not a password vault.</span>
+            <span data-l="tr">Saklanan öğeler şifrelenmez: Panopin bir parola kasası değildir.</span></li>
+      </ul>
+    </section>
+
+    <section id="faq" class="faq">
+      <h2><span data-l="en">Questions</span><span data-l="tr">Sık sorulanlar</span></h2>
+      <details id="smartscreen">
+        <summary><span data-l="en">Windows says “Windows protected your PC”. Is that a problem?</span>
+                 <span data-l="tr">Windows “Windows bilgisayarınızı korudu” diyor. Sorun mu var?</span></summary>
+        <p><span data-l="en">Panopin is not code-signed yet, because certificates cost money. SmartScreen warns about new files without a
+           reputation. Choose <b>More info → Run anyway</b>. Every release lists the SHA-256 of its files in <code>SHA256SUMS.txt</code>,
+           and the source code is on GitHub.</span>
+           <span data-l="tr">Panopin henüz kod imzalı değil, çünkü sertifikalar ücretli. SmartScreen itibarı olmayan yeni dosyalar için
+           uyarır. <b>Daha fazla bilgi → Yine de çalıştır</b>'ı seç. Her sürüm dosyalarının SHA-256 değerlerini
+           <code>SHA256SUMS.txt</code> içinde listeler; kaynak kodu da GitHub'da.</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">Where is my data, and how do I remove it?</span>
+                 <span data-l="tr">Verilerim nerede, nasıl silerim?</span></summary>
+        <p><span data-l="en">In <code>%APPDATA%\Panopin</code>. Uninstall Panopin from Windows Settings → Apps; the uninstaller asks whether to remove
+           your data too.</span>
+           <span data-l="tr"><code>%APPDATA%\Panopin</code> klasöründe. Panopin'i Windows Ayarlar → Uygulamalar'dan kaldır; kaldırıcı verilerini de
+           silmek isteyip istemediğini sorar.</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">Does it need the internet?</span><span data-l="tr">İnternet gerekiyor mu?</span></summary>
+        <p><span data-l="en">No. Panopin works offline. Link previews and update checks are optional and off by default.</span>
+           <span data-l="tr">Hayır. Panopin çevrimdışı çalışır. Bağlantı önizlemeleri ve güncelleme denetimi isteğe bağlıdır ve varsayılan olarak kapalıdır.</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">Which languages can it read in images?</span><span data-l="tr">Görsellerde hangi dilleri okuyabiliyor?</span></summary>
+        <p><span data-l="en">The languages whose OCR is installed in Windows, usually your Windows language. Settings → Privacy shows which one Panopin
+           uses and how to add more.</span>
+           <span data-l="tr">Windows'ta OCR'ı kurulu olan diller; genellikle Windows'unun dili. Ayarlar → Gizlilik, Panopin'in hangisini
+           kullandığını ve nasıl dil ekleneceğini gösterir.</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">How do updates work?</span><span data-l="tr">Güncellemeler nasıl çalışıyor?</span></summary>
+        <p><span data-l="en">Turn on “Check for updates” in Settings → Updates. Panopin then looks for a new version at start and every 6 hours,
+           marks its tray icon, and installs only when you press “Update and restart”. Your items and settings stay.</span>
+           <span data-l="tr">Ayarlar → Güncellemeler'de “Güncellemeleri denetle”yi aç. Panopin açılışta ve 6 saatte bir yeni sürüme bakar,
+           tepsi simgesine işaret koyar ve yalnızca sen “Güncelle ve yeniden başlat”a bastığında kurar. Öğelerin ve ayarların korunur.</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">Can I change the shortcuts?</span><span data-l="tr">Kısayolları değiştirebilir miyim?</span></summary>
+        <p><span data-l="en">Yes, in Settings → Shortcuts. Six global shortcuts can be recorded; three are set by default
+           (<kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd>, <kbd>C</kbd> and <kbd>S</kbd>).</span>
+           <span data-l="tr">Evet, Ayarlar → Kısayollar'dan. Altı global kısayol kaydedilebilir; üçü varsayılan olarak atanmıştır
+           (<kbd>Win</kbd>+<kbd>Alt</kbd>+<kbd>V</kbd>, <kbd>C</kbd> ve <kbd>S</kbd>).</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">Is there a macOS version?</span><span data-l="tr">macOS sürümü var mı?</span></summary>
+        <p><span data-l="en">Not yet. Windows comes first; macOS is planned for a later version.</span>
+           <span data-l="tr">Henüz yok. Öncelik Windows'ta; macOS sonraki bir sürüm için planlanıyor.</span></p>
+      </details>
+      <details>
+        <summary><span data-l="en">Is it really free?</span><span data-l="tr">Gerçekten ücretsiz mi?</span></summary>
+        <p><span data-l="en">Yes. Panopin is open source under the MIT licence, with no ads, no account and no paid tier.</span>
+           <span data-l="tr">Evet. Panopin MIT lisanslı açık kaynak bir uygulama; reklam, hesap ya da ücretli sürüm yok.</span></p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="bottom">
+    <p>Made by Mehmet Burak Taşkaya · <a href="https://mehmetburaktaskaya.com">mehmetburaktaskaya.com</a></p>
+    <p>
+      <a href="https://github.com/MehmetBurakTaskaya/panopin">GitHub</a> ·
+      <a href="https://github.com/MehmetBurakTaskaya/panopin/blob/main/LICENSE"><span data-l="en">MIT licence</span><span data-l="tr">MIT lisansı</span></a> ·
+      <a href="https://github.com/MehmetBurakTaskaya/panopin/blob/main/CHANGELOG.md"><span data-l="en">Changelog</span><span data-l="tr">Değişiklikler</span></a>
+    </p>
+  </footer>
+</body>
+</html>

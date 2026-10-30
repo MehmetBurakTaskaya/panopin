@@ -80,7 +80,8 @@ src-tauri/src
   focus.rs               remember/restore the previous foreground window, Alt mask key
   system_state.rs        full-screen / presentation / focus-session detection (D-021)
   hotkeys.rs             global shortcut registry, recorder suspend/restore
-  tray.rs                tray icon, menu, counts tooltip, paused/update badges
+  tray.rs                tray icon, menu, counts tooltip; a picture per state and DPI (D-067)
+  updates.rs             update checks, their schedule and installs (D-065, D-066)
   platform/
     theme.rs             accent colour, light/dark, high contrast, animation setting
     edge.rs              optional edge-dwell opener (D-022)
@@ -219,13 +220,23 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 
 | Metric | Target |
 | --- | --- |
-| Installer (NSIS, x64) | < 15 MB |
-| Idle CPU | ≈ 0 % (no polling) |
+| Installer (NSIS, x64) | < 15 MB (v1.0.0: 3.3 MB) |
+| Idle CPU | ≈ 0 % (no polling; v1.0.0: 0.2 s of CPU per minute with WebView2) |
 | Shelf open, hotkey → first frame | < 100 ms with the pre-created window |
 | Search, 10 000 items | < 50 ms |
-| Memory | Measured and published honestly in the README (Phase 7) |
+| Memory | Published in the README (v1.0.0: about 120 MB idle, 110 MB of it WebView2) |
 
-## 12. Open questions and spikes
+## 12. Release and website
+
+- `release.yml` (tag `v*`): version and notices checks, tauri-action v1 builds and signs the
+  installer into a draft release, then the portable ZIP, fixed-name copies, `latest.json` and
+  `SHA256SUMS.txt` are added (D-068). `pages.yml`, started by hand, publishes `site/` (D-069).
+- Scripts: `icons.mjs` draws every icon from one SVG (D-067); `third-party.mjs` writes the
+  licence list and `THIRD_PARTY_NOTICES.txt`, and CI checks that both are current (D-064);
+  `release-notes.mjs` and `latest-json.mjs` serve the release workflow.
+- `src-tauri/windows/installer-hooks.nsh` adds to the uninstaller (D-066).
+
+## 13. Open questions and spikes
 
 | Topic | Plan |
 | --- | --- |

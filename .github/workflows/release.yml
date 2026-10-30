@@ -1,0 +1,110 @@
+name: Release
+
+# Pushing a tag such as v1.0.0 builds the Windows installer and the portable ZIP and puts them on a
+# draft release with latest.json and SHA256SUMS.txt (D-068). Publishing the draft is a manual step.
+# The macOS .dmg joins in Phase 8.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Windows installer and portable ZIP
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Version, notices and signing key
+        env:
+          SIGNING_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          npm_version=$(node -p "require('./package.json').version")
+          conf_version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo_version=$(sed -n 's/^version = "\(.*\)"$/\1/p' src-tauri/Cargo.toml | head -n 1)
+          echo "tag $tag · package.json $npm_version · tauri.conf.json $conf_version · Cargo.toml $cargo_version"
+          if [ "$tag" != "$npm_version" ] || [ "$tag" != "$conf_version" ] || [ "$tag" != "$cargo_version" ]; then
+            echo "::error::The tag and the three version fields must match"
+            exit 1
+          fi
+          npm run check:third-party
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::The TAURI_SIGNING_PRIVATE_KEY secret is missing (docs/SIGNING.md)"
+            exit 1
+          fi
+
+      - name: Release notes
+        id: notes
+        run: |
+          node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" > notes.md
+          {
+            echo 'body<<PANOPIN_NOTES'
+            node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" --release
+            echo 'PANOPIN_NOTES'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build, sign and upload to a draft release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Panopin __VERSION__
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: true
+          prerelease: false
+          # latest.json is written below with github.com download addresses (D-065).
+          uploadUpdaterJson: false
+
+      - name: Portable ZIP, fixed names, latest.json and checksums
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          setup="src-tauri/target/release/bundle/nsis/Panopin_${version}_x64-setup.exe"
+          mkdir -p out portable
+          cp src-tauri/target/release/panopin.exe portable/Panopin.exe
+          cp LICENSE portable/LICENSE.txt
+          cp THIRD_PARTY_NOTICES.txt portable/THIRD_PARTY_NOTICES.txt
+          (cd portable && 7z a -tzip -mx=9 "../out/Panopin_${version}_x64-portable.zip" . > /dev/null)
+          # Names without a version, so releases/latest/download/<file> always works (D-068).
+          cp "out/Panopin_${version}_x64-portable.zip" out/Panopin-Portable-x64.zip
+          cp "$setup" out/Panopin-Setup-x64.exe
+          cp "$setup" "out/Panopin_${version}_x64-setup.exe"
+          node scripts/latest-json.mjs "$version" "$setup.sig" notes.md > out/latest.json
+          (cd out && sha256sum Panopin* latest.json | sed 's/ \*/  /' > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          gh release upload "$GITHUB_REF_NAME" --clobber \
+            out/Panopin-Setup-x64.exe \
+            out/Panopin-Portable-x64.zip \
+            "out/Panopin_${version}_x64-portable.zip" \
+            out/latest.json \
+            out/SHA256SUMS.txt
+          ls -l out

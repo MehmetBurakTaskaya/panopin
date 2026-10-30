@@ -50,3 +50,11 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - Marking matched words in the Library's tiles and list.
 - Choosing the OCR language per image.
 - The command palette inside the markup, crop and text editors.
+
+## Ideas from Phase 7
+
+- winget and Scoop manifests (planned after v1.0.0).
+- The SignPath Foundation application once v1.0.0 is published (docs/SIGNING.md).
+- A portable build that can replace itself in its own folder.
+- An ARM64 build.
+- A short demo GIF for the README and the website (the placeholders are in place).

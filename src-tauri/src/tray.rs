@@ -1,5 +1,5 @@
 //! Tray icon, menu and tooltip. The tooltip shows item counts per kind; the icon and menu
-//! change while capture is paused.
+//! change while capture is paused and when an update is on offer.
 
 use tauri::{
     image::Image,
@@ -15,11 +15,62 @@ use crate::{
     settings::PAUSED_UNTIL_RESUMED,
     shelf,
     store::items::Counts,
-    windows, AppState,
+    updates, windows, AppState,
 };
 
 const TRAY_ID: &str = "panopin";
-const PAUSED_ICON: &[u8] = include_bytes!("../icons/tray-paused.png");
+
+/// One tray picture per small-icon size from 100 % to 200 % scaling, drawn from the SVG at that
+/// size so Windows never shrinks a larger one (D-067). `npm run icons` makes them.
+type Pictures = [(u32, &'static [u8]); 4];
+macro_rules! pictures {
+    ($name:literal) => {
+        [
+            (
+                16,
+                include_bytes!(concat!("../icons/tray/", $name, "-16.png")),
+            ),
+            (
+                20,
+                include_bytes!(concat!("../icons/tray/", $name, "-20.png")),
+            ),
+            (
+                24,
+                include_bytes!(concat!("../icons/tray/", $name, "-24.png")),
+            ),
+            (
+                32,
+                include_bytes!(concat!("../icons/tray/", $name, "-32.png")),
+            ),
+        ]
+    };
+}
+const NORMAL: Pictures = pictures!("normal");
+const PAUSED: Pictures = pictures!("paused");
+const UPDATE: Pictures = pictures!("update");
+const PAUSED_UPDATE: Pictures = pictures!("paused-update");
+
+/// The smallest picture at least as large as Windows' small icons, else the largest.
+fn picture(set: &Pictures) -> &'static [u8] {
+    let want = small_icon_size();
+    set.iter()
+        .find(|(size, _)| *size >= want)
+        .unwrap_or(&set[set.len() - 1])
+        .1
+}
+
+#[cfg(windows)]
+fn small_icon_size() -> u32 {
+    use ::windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON};
+    // SAFETY: no pointers; the size follows the display scaling Panopin started with.
+    let size = unsafe { GetSystemMetrics(SM_CXSMICON) };
+    u32::try_from(size).unwrap_or(16)
+}
+
+#[cfg(not(windows))]
+fn small_icon_size() -> u32 {
+    32
+}
 
 pub fn create(app: &AppHandle) -> Result<()> {
     TrayIconBuilder::with_id(TRAY_ID)
@@ -52,6 +103,14 @@ fn on_menu(app: &AppHandle, event: MenuEvent) {
         "pause-forever" => capture::set_pause(app, Some(PAUSED_UNTIL_RESUMED)),
         "resume" => capture::set_pause(app, None),
         "settings" => windows::open_settings(app),
+        // Settings shows the result; a check runs unless an update is already on offer.
+        "updates" => {
+            if updates::offered(app).is_none() {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move { updates::check(&app).await });
+            }
+            windows::open_settings_on(app, "updates")
+        }
         "quit" => {
             app.exit(0);
             Ok(())
@@ -67,18 +126,20 @@ fn is_paused(app: &AppHandle) -> bool {
     app.state::<AppState>().settings().is_paused(now_ms())
 }
 
-/// Rebuilds menu, icon and tooltip from the language, the pause state and the counts.
+/// Rebuilds menu, icon and tooltip from the language, the pause state, the update on offer and
+/// the counts.
 pub fn refresh(app: &AppHandle) -> Result<()> {
     let Some(tray) = app.tray_by_id(TRAY_ID) else {
         return Ok(());
     };
     tray.set_menu(Some(menu(app)?))?;
-    let icon = if is_paused(app) {
-        Some(Image::from_bytes(PAUSED_ICON)?)
-    } else {
-        app.default_window_icon().cloned()
+    let set = match (is_paused(app), updates::offered(app).is_some()) {
+        (false, false) => &NORMAL,
+        (true, false) => &PAUSED,
+        (false, true) => &UPDATE,
+        (true, true) => &PAUSED_UPDATE,
     };
-    tray.set_icon(icon)?;
+    tray.set_icon(Some(Image::from_bytes(picture(set))?))?;
     tray.set_tooltip(Some(tooltip(app, capture::counts(app))))?;
     Ok(())
 }
@@ -109,6 +170,10 @@ fn tooltip(app: &AppHandle, counts: Counts) -> String {
         text.push('\n');
         text.push_str(&i18n::t(lang, "tray.paused"));
     }
+    if let Some(version) = updates::offered(app) {
+        text.push('\n');
+        text.push_str(&i18n::t(lang, "tray.updateAvailable").replace("{version}", &version));
+    }
     text
 }
 
@@ -133,6 +198,16 @@ fn menu(app: &AppHandle) -> Result<Menu<Wry>> {
     };
     let library = item("library", "tray.library")?;
     let settings = item("settings", "tray.settings")?;
+    let updates = match updates::offered(app) {
+        Some(version) => MenuItem::with_id(
+            app,
+            "updates",
+            i18n::t(lang, "tray.updateTo").replace("{version}", &version),
+            true,
+            None::<&str>,
+        )?,
+        None => item("updates", "tray.checkUpdates")?,
+    };
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = item("quit", "tray.quit")?;
     Ok(Menu::with_items(
@@ -142,6 +217,7 @@ fn menu(app: &AppHandle) -> Result<Menu<Wry>> {
             &library,
             pause.as_ref(),
             &settings,
+            &updates,
             &separator,
             &quit,
         ],

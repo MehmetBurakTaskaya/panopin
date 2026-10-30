@@ -180,6 +180,34 @@ pub fn open_settings(app: &AppHandle) -> Result<()> {
     )
 }
 
+/// The tab a Settings window that is still being created should show first.
+#[derive(Default)]
+pub struct SettingsTab(std::sync::Mutex<Option<&'static str>>);
+
+impl SettingsTab {
+    pub fn take(&self) -> Option<&'static str> {
+        self.0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take()
+    }
+}
+
+/// Opens Settings on one tab: an open window switches at once, a new one asks when it loads.
+pub fn open_settings_on(app: &AppHandle, tab: &'static str) -> Result<()> {
+    use tauri::Emitter;
+    match app.get_webview_window(SETTINGS) {
+        Some(window) => window.emit("settings:tab", tab)?,
+        None => {
+            *app.state::<SettingsTab>()
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(tab)
+        }
+    }
+    open_settings(app)
+}
+
 /// First-run screen: nothing is captured until it is confirmed.
 pub fn open_onboarding(app: &AppHandle) -> Result<()> {
     open(app, ONBOARDING, "onboarding.windowTitle", (600.0, 720.0))

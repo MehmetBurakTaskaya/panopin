@@ -42,6 +42,8 @@ pub enum AppError {
     Unsupported,
     #[error("a background task stopped unexpectedly")]
     Interrupted,
+    #[error("update error: {0}")]
+    Update(#[from] tauri_plugin_updater::Error),
 }
 
 pub type Result<T, E = AppError> = std::result::Result<T, E>;

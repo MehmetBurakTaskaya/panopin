@@ -226,6 +226,30 @@ export const pickWatchFolder = () => invoke<string | null>('pick_watch_folder');
 export const openProjectLink = (which: 'website' | 'github' | 'licence' | 'languages') =>
   invoke<void>('open_project_link', { which });
 export const appVersion = () => invoke<string>('app_version');
+/** Opens the third-party licence texts installed next to Panopin. */
+export const openLicenceTexts = () => invoke<void>('open_licence_texts');
+
+/** Where the update check stands (D-065). Times are Unix milliseconds. */
+export type UpdateStatus =
+  | { state: 'idle' }
+  | { state: 'checking' }
+  | { state: 'upToDate'; checkedAt: number }
+  | { state: 'available'; version: string; notes: string | null; date: number | null }
+  | { state: 'downloading'; received: number; total: number | null }
+  | { state: 'failed'; checkedAt: number };
+export interface UpdateView {
+  current: string;
+  /** False for the portable build and development runs, which never replace themselves. */
+  installable: boolean;
+  status: UpdateStatus;
+}
+export const updateStatus = () => invoke<UpdateView>('update_status');
+/** A check the user asked for; it runs whatever the automatic setting says. */
+export const checkForUpdates = () => invoke<UpdateView>('check_for_updates');
+/** Downloads and runs the installer, which restarts Panopin; the portable build opens the download page. */
+export const installUpdate = () => invoke<void>('install_update');
+/** The tab a new Settings window should open on, once (for example from the tray). */
+export const takeSettingsTab = () => invoke<string | null>('take_settings_tab');
 /** Pauses capture until the given Unix time (ms), `null` resumes. */
 export const setPause = (until: number | null) => invoke<void>('set_pause', { until });
 

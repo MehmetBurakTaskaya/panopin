@@ -48,7 +48,7 @@ Phase 4) because it lags during resize.
 ## D-006 Data location — Accepted
 User data lives in `%APPDATA%\Panopin\` (`data.db`, `media/`, `cache/`, `staging/`).
 Framework-managed state (WebView2 profile, window-state file) stays in Tauri's
-identifier-based folders; the uninstaller offers to remove both (Phase 7).
+identifier-based folders; the uninstaller offers to remove both (done in Phase 7, D-066).
 
 ## D-007 Screenshot folders via Known Folders — Accepted
 The usual path `%USERPROFILE%\Pictures\Screenshots` is wrong on many machines. On the development PC,
@@ -170,11 +170,12 @@ with `Intl.PluralRules`) and Rust (tray, notifications). A CI script fails on mi
 NSIS only (no MSI), `installMode: currentUser` (no admin), WebView2 `downloadBootstrapper`.
 `createUpdaterArtifacts: true`; tauri-action v1 uploads `latest.json` (`uploadUpdaterJson`) to a
 **draft** release. Because GitHub's "latest release" excludes drafts, clients see an update only
-after the draft is published. The signing key exists only in GitHub Secrets.
+after the draft is published. The signing key exists only in GitHub Secrets. (Phase 7: the
+workflow writes `latest.json` itself, D-065.)
 
 ## D-029 Portable ZIP — Accepted
 The portable build keeps data in `%APPDATA%` like the installed one. A "data next to the exe" mode
-is in the backlog. Whether the portable build shows the updater is decided in Phase 7.
+is in the backlog. The portable build learns about updates but never installs them (D-066).
 
 ## D-030 Frontend toolchain (Phase 1) — Accepted
 React 19.3, Vite 8.3, Vitest 5.0, ESLint 10 with typescript-eslint 8.72, Zustand 5. TypeScript stays
@@ -445,3 +446,60 @@ offered inside an editor.
 its licence (`npm query .prod`, `cargo tree`) into `src/windows/settings/third-party.json`, which
 Settings → About shows. Run it after changing dependencies. The release (Phase 7) adds
 `THIRD_PARTY_NOTICES` with the licence texts.
+
+## D-065 Updates — Accepted
+`tauri-plugin-updater` 2.14.1 (Apache-2.0 OR MIT), called from Rust only, so the webviews get no
+updater permission. Checking is off until the user turns it on; then Panopin checks 30 s after
+start, which leaves time for the network after signing in, and every 6 hours; a failed check is
+tried again after an hour. The scheduler sleeps on a condition variable until the next check or a
+change of the setting, so there is no polling. "Check now" in Settings and "Check for updates" in
+the tray run a check because the user asked. A version on offer puts a blue dot on the tray icon
+and "Update to x…" in its menu, and Settings shows its notes (the CHANGELOG section, shown as
+plain text). Nothing installs until "Update and restart": the installer is downloaded, its
+signature is checked against the public key in `tauri.conf.json`, and it runs in passive mode
+(`/P /UPDATE /R`), closing Panopin, updating it in place and starting it again. `%APPDATA%\Panopin`
+is never touched. `release.yml` writes `latest.json` with github.com download addresses rather
+than the API asset addresses tauri-action v1 would use, because unauthenticated API requests are
+limited to 60 an hour per address. The key pair was made with `tauri signer generate` (CLI 2.12.4)
+without a password; the private key stays out of the repository (docs/SIGNING.md).
+
+## D-066 Installed and portable copies, uninstalling — Accepted
+An installed copy has Tauri's `uninstall.exe` next to `Panopin.exe`; the portable ZIP and
+development runs have none, so their update button opens the release page instead of replacing
+files. The installer works per user (`%LOCALAPPDATA%\Panopin`), speaks English or Turkish after
+the Windows language, and puts `LICENSE.txt` and `THIRD_PARTY_NOTICES.txt` next to the app, which
+Settings → About opens. An installer hook (`src-tauri/windows/installer-hooks.nsh`) makes the
+uninstaller remove the "Start with Windows" entry and, only when "Delete the application data"
+is ticked, `%APPDATA%\Panopin` as well; Tauri itself removes only its identifier folders. Neither
+happens during an update.
+
+## D-067 Icon — Proposed (the owner chooses)
+A note pinned to a cork tile in a wooden frame, candidate B of three (A: the note alone, C: a round
+cork badge), shown to the owner on 2026-10-30. One SVG, `src-tauri/icons/app-icon.svg`, is the
+source of every size: `npm run icons` runs `tauri icon` for the app icon and draws the four tray
+states (normal; paused: greyed with a pause badge; update on offer: a blue dot; both) at 16, 20,
+24 and 32 px. Panopin uses the picture that matches Windows' small-icon size, so the tray never
+shows a shrunken one; at 16 px the pin, the note and both badges stay readable on light and dark
+taskbars.
+
+## D-068 Release pipeline — Accepted
+A `v*` tag runs `release.yml` on `windows-latest`. It first checks that the tag matches the version
+in `package.json`, `tauri.conf.json` and `Cargo.toml`, that the third-party notices are current and
+that the signing key secret exists. `tauri-apps/tauri-action@v1` builds and signs the NSIS
+installer and creates a **draft** release whose notes are the CHANGELOG section plus download
+notes. The workflow then adds the portable ZIP (`Panopin.exe`, `LICENSE.txt`,
+`THIRD_PARTY_NOTICES.txt`), copies with fixed names (`Panopin-Setup-x64.exe`,
+`Panopin-Portable-x64.zip`) so `releases/latest/download/<file>` links never change, `latest.json`
+and `SHA256SUMS.txt`. The owner publishes the draft. The macOS `.dmg` joins in Phase 8; code
+signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a Changelog
+and versions follow SemVer.
+
+## D-069 Website and embed — Accepted
+`site/` is one static page in English and Turkish (the browser's languages, or the visitor's
+choice, remembered), with system fonts and no requests to other sites. Its download button offers
+the installer on Windows, says that macOS is coming on a Mac and lists all downloads elsewhere.
+The screenshots show the real shelf components with sample items, rendered in a browser, so no
+personal data appears. `pages.yml` publishes the page to GitHub Pages only when started by hand.
+`site/embed/download-section.html` is a self-contained section for mehmetburaktaskaya.com: styles
+scoped under `.panopin-embed`, an inline picture, no script; docs/WEBSITE.md explains how to add it
+to the Astro site.

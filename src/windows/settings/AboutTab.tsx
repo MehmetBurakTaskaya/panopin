@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { t } from '../../i18n';
-import { appVersion, openProjectLink } from '../../ipc';
+import { appVersion, openLicenceTexts, openProjectLink } from '../../ipc';
 import { Section } from './controls';
 import styles from './Settings.module.css';
 import thirdParty from './third-party.json';
@@ -57,6 +57,11 @@ export function AboutTab() {
       </div>
       <Section title={t('settings.about.thirdParty')}>
         <p className={styles.help}>{t('settings.about.thirdPartyHelp')}</p>
+        <div className={styles.buttons}>
+          <button type="button" className={styles.button} onClick={() => void openLicenceTexts()}>
+            {t('settings.about.licenceTexts')}
+          </button>
+        </div>
         <Packages title="Rust" list={thirdParty.rust} />
         <Packages title="npm" list={thirdParty.npm} />
       </Section>

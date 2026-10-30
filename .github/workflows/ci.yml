@@ -66,6 +66,11 @@ jobs:
       - name: Build app (no installer)
         run: npm run tauri build -- --no-bundle
 
+      # The licence list in Settings and THIRD_PARTY_NOTICES.txt must follow the dependencies.
+      - name: Third-party notices are current
+        if: runner.os == 'Windows'
+        run: npm run check:third-party
+
   cargo-deny:
     name: Licences and advisories
     runs-on: ubuntu-latest

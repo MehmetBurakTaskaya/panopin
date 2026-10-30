@@ -1,7 +1,7 @@
 {
   "name": "panopin",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Windows-first clipboard and screenshot shelf, styled as a cork board.",
   "license": "MIT",
   "author": "Mehmet Burak Taşkaya",
@@ -19,7 +19,9 @@
     "lint": "eslint .",
     "check:i18n": "node scripts/check-i18n.mjs",
     "check:licenses": "node scripts/check-npm-licenses.mjs",
-    "third-party": "node scripts/third-party.mjs"
+    "check:third-party": "node scripts/third-party.mjs --check",
+    "third-party": "node scripts/third-party.mjs",
+    "icons": "node scripts/icons.mjs"
   },
   "dependencies": {
     "@tanstack/react-virtual": "3.14.20",

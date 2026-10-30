@@ -1,6 +1,6 @@
 [package]
 name = "panopin"
-version = "0.1.0"
+version = "1.0.0"
 description = "Windows-first clipboard and screenshot shelf, styled as a cork board."
 authors = ["Mehmet Burak Taşkaya"]
 license = "MIT"
@@ -37,6 +37,7 @@ tokio = { version = "1.54.1", default-features = false, features = ["net", "rt",
 html5gum = "0.8.4"
 encoding_rs = "0.8.42"
 tauri-plugin-autostart = "2.7.0"
+tauri-plugin-updater = "2.14.1"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62.2", features = [

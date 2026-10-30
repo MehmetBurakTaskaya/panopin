@@ -1,7 +1,18 @@
+import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
 import { t, type LanguageSetting, type MessageKey } from '../../i18n';
-import { setPause, systemLook, type CardSize, type Settings, type ShelfEdge, type SystemLook, type Theme } from '../../ipc';
+import {
+  checkForUpdates,
+  setPause,
+  systemLook,
+  takeSettingsTab,
+  type CardSize,
+  type Settings,
+  type ShelfEdge,
+  type SystemLook,
+  type Theme,
+} from '../../ipc';
 import { useSettings } from '../../state/settings';
 import { AboutTab } from './AboutTab';
 import { Choice, Section, Toggle } from './controls';
@@ -9,6 +20,7 @@ import { HistoryTab, SourcesTab } from './DataTabs';
 import { PrivacyTab } from './PrivacyTab';
 import styles from './Settings.module.css';
 import { ShortcutsTab } from './ShortcutsTab';
+import { UpdatesTab } from './UpdatesTab';
 
 export const TABS = ['general', 'sources', 'history', 'shortcuts', 'appearance', 'privacy', 'updates', 'about'] as const;
 export type TabId = (typeof TABS)[number];
@@ -123,28 +135,6 @@ function AppearanceTab({ settings, look }: { settings: Settings; look: SystemLoo
   );
 }
 
-function UpdatesTab({ settings }: { settings: Settings }) {
-  const update = useSettings((s) => s.update);
-  return (
-    <Section title={t('settings.updates.section')}>
-      <Toggle
-        label={t('settings.updates.auto')}
-        hint={t('settings.updates.autoHelp')}
-        checked={settings.updates.autoCheck}
-        onChange={(on) => void update({ updates: { autoCheck: on } })}
-      />
-      <div className={styles.row}>
-        <span className={styles.label}>
-          <small>{t('settings.updates.notYet')}</small>
-        </span>
-        <button type="button" className={styles.button} disabled>
-          {t('settings.updates.checkNow')}
-        </button>
-      </div>
-    </Section>
-  );
-}
-
 /** Settings: tabs on the left, every change applies at once (D-060, D-061). */
 export function SettingsApp() {
   useSettings((s) => s.lang);
@@ -158,6 +148,15 @@ export function SettingsApp() {
   useEffect(() => {
     systemLook().then(setLook, () => {});
   }, []);
+  // The tray opens Settings on a tab: a new window asks once, an open one hears an event.
+  useEffect(() => {
+    const show = (id: string | null) => {
+      if (id && (TABS as readonly string[]).includes(id)) setTab(id as TabId);
+    };
+    takeSettingsTab().then(show, () => {});
+    const off = listen<string>('settings:tab', (event) => show(event.payload));
+    return () => void off.then((stop) => stop(), () => {});
+  }, []);
 
   // Ctrl+K: go to a tab or flip a setting from the keyboard (D-063).
   const commands = (current: Settings): PaletteCommand[] => {
@@ -169,6 +168,14 @@ export function SettingsApp() {
       [`${t('tray.pause')}: ${t('tray.pause.5m')}`, '', minutes(5)],
       [`${t('tray.pause')}: ${t('tray.pause.1h')}`, '', minutes(60)],
       [t('tray.resume'), '', () => void setPause(null)],
+      [
+        t('tray.checkUpdates'),
+        '',
+        () => {
+          setTab('updates');
+          void checkForUpdates();
+        },
+      ],
       ...THEMES.map(([theme, label]): [string, string, () => void] => [
         `${t('settings.theme')}: ${t(label)}`,
         '',
