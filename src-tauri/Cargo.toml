@@ -1,7 +1,7 @@
 [package]
 name = "panopin"
 version = "1.3.0"
-description = "Windows-first clipboard and screenshot shelf, styled as a cork board."
+description = "Clipboard and screenshot shelf for Windows and macOS, styled as a cork board."
 authors = ["Mehmet Burak Taşkaya"]
 license = "MIT"
 edition = "2021"
