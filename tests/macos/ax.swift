@@ -4,6 +4,7 @@
 //   press <pid> <window> <name>   presses the control with that name in the window
 //   focus <pid>                   focused window title | focused element role | subrole
 //   menu <pid> <item start>       opens the menu bar icon's menu and chooses the item
+//   icons <pid>                   how many menu bar icons the app has
 //   shown <pid>                   titles of the app's windows on screen
 import AppKit
 import ApplicationServices
@@ -77,6 +78,8 @@ case "texts" where args.count == 3:
         if role == "AXStaticText" {
             let found = text(element, kAXValueAttribute)
             if !found.isEmpty { print(found) }
+        } else if role == "AXPopUpButton" {
+            print("[\(label(element))] \(text(element, kAXValueAttribute))")
         } else if controlRoles.contains(role) {
             print("[\(label(element))]")
         }
@@ -122,6 +125,8 @@ case "menu" where args.count == 3:
         postKey(53)
         fail("no menu item \(args[2])")
     }
+case "icons" where args.count == 2:
+    print(element(application(args[1]), "AXExtrasMenuBar").map { children($0).count } ?? 0)
 case "shown" where args.count == 2:
     guard let pid = pid_t(args[1]) else { fail("bad pid \(args[1])") }
     let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly], kCGNullWindowID) as? [[String: Any]] ?? []

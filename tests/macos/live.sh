@@ -87,6 +87,8 @@ for tool in pasteboard:pbtool ax:axtool; do
   swiftc -O -o "$OUT/${tool#*:}" "$HERE/${tool%%:*}.swift" 2>> "$OUT/swiftc.log" || { fail "the test helper ${tool%%:*} builds" "$(tail -3 "$OUT/swiftc.log")"; exit 1; }
 done
 : > "$OUT/note.txt"
+# The Dock's recent apps would list Panopin even without an icon of its own.
+defaults write com.apple.dock show-recents -bool false && killall Dock && sleep 3
 note "macOS $(sw_vers -productVersion), $(uname -m), Panopin $(defaults read "$APP/Contents/Info" CFBundleShortVersionString 2>/dev/null)"
 note "app architectures: $(lipo -archs "$APP/Contents/MacOS/panopin" 2>&1)"
 note "$(csrutil status 2>&1 | head -1)"
@@ -108,9 +110,12 @@ check "Panopin starts" "" running
 wait_for 20 window_is_open Welcome
 sleep 2
 shot first-run
-AXT texts Welcome > "$OUT/texts/first-run.txt"
-mac_onboarding() { grep -q '⇧⌘3' "$OUT/texts/first-run.txt" && grep -q 'this Mac' "$OUT/texts/first-run.txt"; }
-check "the first-run window speaks of ⇧⌘3 and this Mac" "$(head -c 200 "$OUT/texts/first-run.txt" | tr '\n' '|')" mac_onboarding
+# The web view builds its accessibility tree when first asked, so the texts may come a moment later.
+mac_onboarding() {
+  AXT texts Welcome > "$OUT/texts/first-run.txt"
+  grep -q '⇧⌘3' "$OUT/texts/first-run.txt" && grep -q 'this Mac' "$OUT/texts/first-run.txt"
+}
+check "the first-run window speaks of ⇧⌘3 and this Mac" "$(head -c 200 "$OUT/texts/first-run.txt" | tr '\n' '|')" wait_for 15 mac_onboarding
 if finish_first_run; then
   pass "Start ends the first run"
 else
@@ -120,10 +125,13 @@ fi
 sleep 2
 
 section "menu bar and Dock"
-no_dock_icon() { ! UI dock | grep -q Panopin; }
-check "no Dock icon" "Dock: $(UI dock | tr '\n' ' ')" no_dock_icon
-status_item() { [ "$(UI statusitems)" -ge 1 ]; }
-check "a menu bar icon" "" status_item
+menu_bar_app() { lsappinfo info -only ApplicationType -app "$ID" | grep -q UIElement; }
+check "Panopin runs as a menu bar app" "$(lsappinfo info -only ApplicationType -app "$ID")" menu_bar_app
+dock_items() { UI dock | grep -v -x 'missing value'; }
+no_dock_icon() { dock_items | grep -q Finder && ! dock_items | grep -q Panopin; }
+check "no Dock icon" "Dock: $(dock_items | tr '\n' ' ')" no_dock_icon
+status_item() { [ "$(AXT icons)" -ge 1 ]; }
+check "a menu bar icon" "icons: $(AXT icons)" status_item
 shot menubar-light
 
 section "copies"
@@ -304,7 +312,8 @@ done
 for want in "Open at login" "Same as macOS" "Use the macOS accent colour" "⌥⌘V"; do
   check "Settings says \"$want\"" "" grep -q "$want" "$OUT/texts/settings.txt"
 done
-bad=$(grep -E 'Windows|Ctrl|this PC' "$OUT/texts/settings.txt" | head -5 | tr '\n' '|')
+# "Windows and motion" is about Panopin's windows, not the system.
+bad=$(grep -E 'Windows|Ctrl|this PC' "$OUT/texts/settings.txt" | grep -v -x 'Windows and motion' | head -5 | tr '\n' '|')
 check "no Settings text names Windows, Ctrl or this PC" "$bad" [ -z "$bad" ]
 AXT press Settings Sources > /dev/null
 sleep 1
