@@ -30,7 +30,7 @@ window holds everything, with folders, tags, notes and search.
 
 - **A cork board of your own.** Copies are taped to the board, the ones you keep get a pushpin,
   and small paper-and-cork sounds go with it (they can be turned off).
-- **Native and light.** Built with Tauri and Rust. The installer is about 3.3 MB
+- **Native and light.** Built with Tauri and Rust. The installer is about 3.5 MB
   and Panopin uses almost no CPU while idle: the clipboard is followed through Windows events, never
   polled.
 - **Respects privacy.** Copies that password managers and Windows mark as private are never
@@ -45,6 +45,9 @@ window holds everything, with folders, tags, notes and search.
   multiple monitors.
 - **Made for Turkish too.** Search that knows İ and ı, optional accent-free matching, and default
   shortcuts that never block AltGr characters such as ₺, @ and €.
+- **Ten languages.** English, German, Spanish, French, Brazilian Portuguese, Turkish, Russian,
+  Japanese, Korean and Simplified Chinese. Panopin follows the system language; Settings can
+  change it.
 - **Keyboard first.** Every action has a key, and Ctrl+K opens a command palette that lists them.
 - **Easy to install.** A per-user installer that needs no administrator rights, and a portable
   ZIP.
