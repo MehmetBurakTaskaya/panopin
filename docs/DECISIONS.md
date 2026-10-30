@@ -602,3 +602,10 @@ speaks the same twelve languages, and the macOS app lists them in `CFBundleLocal
 (`src-tauri/Info.plist`), so the panels macOS draws for it follow.
 `npm run check:i18n` compares every file with English (keys, placeholders, status) and checks
 that the app's two language lists name every file.
+
+## D-075 The Mac app stays unnotarised for now — Accepted
+The owner decided on 2026-10-30 not to join the Apple Developer Program (99 USD a year) for now.
+The Mac app stays ad-hoc signed and unnotarised, so macOS blocks its first opening until the user
+chooses Open Anyway; the README and the release notes give the steps, and the README also gives
+the Terminal command that removes the quarantine flag. docs/SIGNING.md lists what signing and
+notarisation would take.

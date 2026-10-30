@@ -74,9 +74,19 @@ haber verir; indirmeyi sen yaparsın.
 "Güncelle ve yeniden başlat"a bastığında kurar. Öğelerin ve ayarların korunur.
 
 **macOS:** **Panopin-macOS.dmg** dosyasını indir (macOS 13 ya da sonrası, Apple silicon ve Intel),
-aç ve Panopin'i Uygulamalar klasörüne sürükle. Panopin henüz Apple onaylı (notarised) değil; bu
-yüzden ilk açılışta macOS onu denetleyemez: **Sistem Ayarları → Gizlilik ve Güvenlik**'te **Yine de
-Aç**'ı seç. Panopin menü çubuğunda yaşar. macOS, ekran görüntülerinin kaydedildiği Masaüstü'nü
+aç ve Panopin'i Uygulamalar klasörüne sürükle. Panopin Apple onaylı (notarised) değil, bu yüzden
+macOS ilk açılışı engeller:
+
+1. Panopin'i aç. macOS onu doğrulayamadığını söyleyince **Bitti**'yi seç (Çöp Sepeti'ne Taşı'yı
+   değil).
+2. **Sistem Ayarları → Gizlilik ve Güvenlik**'i aç, aşağı kaydır ve Panopin'in yanındaki **Yine de
+   Aç**'ı seç. Düğme, açmayı denedikten sonra yaklaşık bir saat orada kalır.
+3. Yine **Yine de Aç**'ı seç ve Mac'inin parolasını gir. Bundan sonra Panopin her uygulama gibi
+   açılır.
+
+Ya da Terminal'de: `xattr -dr com.apple.quarantine /Applications/Panopin.app`.
+
+Panopin menü çubuğunda yaşar. macOS, ekran görüntülerinin kaydedildiği Masaüstü'nü
 okumak için bir kez izin ister; ⌘Enter'ın senin yerine yapıştırması için Panopin'e **Gizlilik ve
 Güvenlik → Erişilebilirlik**'te izin ver (bir güncellemeden sonra macOS yeniden sorabilir). Mac'te
 kısayollar ⌥⌘V, ⌥⌘C ve ⌥⌘S.

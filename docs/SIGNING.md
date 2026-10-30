@@ -11,7 +11,8 @@ start with "Windows protected your PC". Choose **More info → Run anyway**. The
 missing reputation, not from anything found in the file, and each new version starts without
 reputation again.
 
-On macOS (from Phase 8) the equivalent is **System Settings → Privacy & Security → Open Anyway**.
+On macOS the equivalent is **System Settings → Privacy & Security → Open Anyway** (see "macOS"
+below).
 
 Every release lists the SHA-256 of each file in `SHA256SUMS.txt`. To compare a download in
 PowerShell:
@@ -65,3 +66,21 @@ conditions (signpath.org/terms, read on 2026-10-30) and where Panopin stands:
    command for that), sign the installer, and only then create the update signature, because it
    must cover the final installer bytes.
 4. Keep the SmartScreen note in the README until a signed release has been out for a while.
+
+## macOS
+
+The Mac app is signed ad hoc (`signingIdentity` `-` in `src-tauri/tauri.macos.conf.json`), which
+Apple silicon needs, but it has no Developer ID and is not notarised. macOS 15 and later therefore
+block its first opening with "Apple could not verify Panopin". The README gives the way through:
+choose **Done**, then **System Settings → Privacy & Security → Open Anyway** and the password. A
+Developer ID certificate and notarisation need the Apple Developer Program (99 USD a year); the
+owner decided on 2026-10-30 not to join for now (D-075). If that changes:
+
+1. Join, create a "Developer ID Application" certificate and export it as a `.p12` file; create an
+   app-specific password for the Apple account and note the Team ID.
+2. Add the secrets `APPLE_CERTIFICATE` (the `.p12` in base64), `APPLE_CERTIFICATE_PASSWORD`,
+   `APPLE_ID`, `APPLE_PASSWORD` (the app-specific password), `APPLE_TEAM_ID` and
+   `KEYCHAIN_PASSWORD`.
+3. In the macOS job of `release.yml`, import the certificate into a temporary keychain and pass the
+   variables to `tauri build`, which then signs and notarises (its log says when they are missing).
+   The first notarisation can take hours.

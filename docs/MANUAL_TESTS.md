@@ -328,10 +328,16 @@ screenshot mark on a real file system among them) and checks the code with clipp
 later. **Mac live test, 2026-10-30** (Actions → Mac live test, `tests/macos/live.sh`, D-073): the
 app built for the runner's chip, installed from its `.dmg` and driven by script on macOS 14.8,
 15.7 and 26.6 (Apple silicon) and 15.7 (Intel); all 47 checks passed on each of the four.
+The runs for 1.2.0 missed one copy now and then, each time a different one (a PNG and the first
+text on macOS 26, a TIFF on macOS 15 Intel): a copy read between an app clearing the pasteboard
+and writing to it looked empty and was never read again. With the listener reading such a
+change again, and the script waiting for the shelf's and the Library's texts, 48 checks passed
+on each of the four (commit 2648861).
 The script presses keys through System Events, so the shortcuts are synthetic, and it grants
 Accessibility and Desktop access through the privacy database instead of macOS's prompts. Items
-below marked "(live Mac)" were covered; notes say when only part of one was. Nobody has tried the
-app on a real Mac yet. To try a test build, start Actions → Mac test build → Run workflow and
+below marked "(live Mac)" were covered; notes say when only part of one was. On a real Mac (a
+friend's, 2026-10-30) the first try stopped at macOS's "could not verify" dialog, the step the
+README now spells out (D-075); nothing further has been tried there yet. To try a test build, start Actions → Mac test build → Run workflow and
 download the `.dmg` from the run's artifacts (kept for 14 days).
 
 - [x] The `.dmg` opens; Panopin starts after "Open Anyway" in System Settings → Privacy &
@@ -411,9 +417,13 @@ of each window were then read by eye for the font and the line breaks.
       (1920×1080) read left to right in the Arabic window, cut at their end.
 - [x] Settings → General and the first-run window list the twelve languages by their own names;
       Settings shows the review note under the choice for every language except English.
-- [ ] In the installed app, "System default" follows the Windows display language, and choosing a
-      language in Settings changes every open window and the tray menu at once. (the tag matching
-      is covered by unit tests in TypeScript and Rust; not tried in the real app)
+- [x] In the installed app, "System default" follows the Windows display language, and choosing a
+      language in Settings changes the open windows at once. (live 2026-10-30, the 1.2.0 release
+      installer over 1.0.0 with the data kept: on Turkish Windows "System default" shows Turkish;
+      German, Russian, Arabic, Japanese, Korean and Chinese retitle and redraw Settings, the shelf
+      and an open Library, and the review note follows; 43 of 44 checks, the 44th, "Suchen
+      (Strg+F)" in the Library's search box, is a placeholder UI Automation does not read and shows
+      in the window capture; the setting was put back. The tray menu was not read.)
 - [ ] The installer shows its pages in the Windows display language when it is one of the twelve.
 - [x] With Mac texts in Arabic, ⌘ shortcuts in the hint line and the card menu are isolated, so
       they keep their order. (browser with a Mac user agent; not on a real Mac)

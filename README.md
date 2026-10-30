@@ -74,9 +74,17 @@ start and every 6 hours, marks the tray icon when a version is available, and in
 when you press "Update and restart". Your items and settings stay.
 
 **macOS:** download **Panopin-macOS.dmg** (macOS 13 or later, Apple silicon and Intel), open it and
-drag Panopin into Applications. Panopin is not notarised by Apple yet, so the first time macOS
-cannot check it: open **System Settings → Privacy & Security** and choose **Open Anyway**. Panopin
-lives in the menu bar. macOS asks once before Panopin may read the Desktop, where screenshots are
+drag Panopin into Applications. Panopin is not notarised by Apple, so macOS blocks its first
+opening:
+
+1. Open Panopin. When macOS says it could not verify Panopin, choose **Done** (not Move to Trash).
+2. Open **System Settings → Privacy & Security**, scroll down and choose **Open Anyway** next to
+   Panopin. The button stays there for about an hour after you tried to open it.
+3. Choose **Open Anyway** again and enter your password. From then on Panopin opens like any app.
+
+Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/Panopin.app`.
+
+Panopin lives in the menu bar. macOS asks once before Panopin may read the Desktop, where screenshots are
 saved; ⌘Enter pastes for you once Panopin is allowed under **Privacy & Security → Accessibility**
 (after an update macOS may ask again). On a Mac the shortcuts are ⌥⌘V, ⌥⌘C and ⌥⌘S.
 
