@@ -449,8 +449,14 @@ sent no keys and opened no windows; the release 1.2.0 was installed again afterw
 - [ ] "Update and restart" installs a waiting update at once, also while it downloads by itself.
 - [ ] An update whose signature does not match, or whose signed version differs from the one in
       `latest.json`, is refused and nothing changes.
-- [ ] On a Mac in Applications, an update installs by itself and Panopin starts again from the new
-      bundle (Actions → Mac live test, its update step).
+- [x] On a Mac in Applications, an update installs by itself and Panopin starts again from the new
+      bundle (Actions → Mac live test, its update step). (2026-10-30, run 41083660234 on 2faeacc:
+      6 of 6 on macOS 14, 15, 15 Intel and 26, next to 48 of 48 in the live test; on GitHub's
+      runners, not on a real Mac)
+- [x] The release's own installer installs over the previous release with the data kept, and the
+      new version's first update check against GitHub works. (2026-10-30: the 1.3.0 draft's
+      installer over 1.2.0 on the development PC; the draft's checksums and all five update
+      signatures, each signed for 1.3.0, checked against the app's public key)
 - [ ] On a Mac whose Applications folder the user may not change, the update waits for "Update and
       restart", which asks for an administrator's password.
 - [x] Publishing a release turns the older ones into drafts: their files answer 404 and the
