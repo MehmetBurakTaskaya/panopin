@@ -4,9 +4,9 @@
 .slot {
   flex: none;
   display: flex;
-  margin-right: var(--gap);
+  margin-inline-end: var(--gap);
 }
-.collapsing { margin-right: 0; transition: width 0.22s ease, margin 0.22s ease; }
+.collapsing { margin-inline-end: 0; transition: width 0.22s ease, margin 0.22s ease; }
 .expanding { transition: width 0.22s ease, margin 0.22s ease; }
 
 .lift { position: relative; transition: transform 0.18s ease; }
@@ -68,7 +68,7 @@ img.fav { object-fit: contain; background: #fff; }
 .ph { position: relative; }
 .play { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); }
 .play::after { content: ''; position: absolute; left: 10px; top: 7px; border: 6px solid transparent; border-left: 9px solid #fff; border-right: 0; }
-.duration { position: absolute; right: 9px; bottom: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 9.5px/14px var(--font); }
+.duration { position: absolute; inset-inline-end: 9px; bottom: 9px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 9.5px/14px var(--font); }
 
 .ph { width: 100%; height: 100%; border-radius: 1px; overflow: hidden; background: var(--paper-2); }
 .ph img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -159,7 +159,7 @@ img.fav { object-fit: contain; background: #fff; }
 
 .num {
   position: absolute;
-  right: -7px;
+  inset-inline-end: -7px;
   bottom: -7px;
   z-index: 5;
   min-width: 18px;

@@ -88,9 +88,9 @@ function LinkPreview({ item, onClose, onOpen, onRefresh }: LinkPreviewProps) {
                 </span>
               )}
               <div>
-                <h2>{linkHeading(item)}</h2>
+                <h2 dir="auto">{linkHeading(item)}</h2>
                 {item.linkSite && <p className={styles.linkSite}>{item.linkSite}</p>}
-                {item.linkDescription && <p>{item.linkDescription}</p>}
+                {item.linkDescription && <p dir="auto">{item.linkDescription}</p>}
                 <p className={styles.linkUrl}>{item.url}</p>
               </div>
             </div>

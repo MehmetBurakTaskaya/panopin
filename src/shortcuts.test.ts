@@ -21,6 +21,10 @@ describe('formatShortcut', () => {
     expect(formatShortcut('Ctrl+Shift+Esc', 'windows')).toBe('Ctrl+Maj+Échap');
     // A Mac writes the same symbols in every language.
     expect(formatShortcut('Super+Shift+T', 'mac')).toBe('⇧⌘T');
+    // Right to left, a shortcut is isolated so it keeps its order.
+    setLanguage('ar');
+    expect(formatShortcut('Super+Shift+T', 'mac')).toBe('\u2066⇧⌘T\u2069');
+    expect(formatShortcut('Ctrl+Enter', 'windows')).toBe('\u2066Ctrl+Enter\u2069');
   });
 
   it('uses macOS symbols in the macOS order', () => {

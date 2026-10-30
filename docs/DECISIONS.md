@@ -163,7 +163,7 @@ Web Audio synthesis (no audio files), ported from `docs/concept/mockup/sound.js`
 0.3, a compressor on the master bus, a per-sound minimum gap and at most three voices per 160 ms.
 
 ## D-027 Localisation — Accepted
-`/locales/*.json` (English and Turkish at first, ten languages since D-074) are the single string
+`/locales/*.json` (English and Turkish at first, twelve languages since D-074) are the single string
 source for TypeScript (small `t()` helper with `Intl.PluralRules`) and Rust (tray, notifications).
 A CI script fails on missing or unused keys.
 
@@ -570,9 +570,9 @@ Not on macOS yet (BACKLOG): screen recordings, drag-out (a card dragged on a Mac
 is), edge opening (Settings shows it as unavailable), Mica-like materials and quiet sounds during
 full-screen apps.
 
-## D-074 Ten languages — Accepted
-Panopin speaks English (the source), German, Spanish, French, Brazilian Portuguese, Turkish,
-Russian, Japanese, Korean and Simplified Chinese. Each is one flat file in `locales/`, named by its
+## D-074 Twelve languages — Accepted
+Panopin speaks English (the source), German, Spanish, French, Italian, Brazilian Portuguese,
+Turkish, Russian, Arabic, Japanese, Korean and Simplified Chinese. Each is one flat file in `locales/`, named by its
 language tag and read by the webviews (every file comes with the code, so `t()` stays synchronous)
 and by the Rust side (tray, window titles), as in D-027. The first two entries describe the file:
 `"@language"`, its own name, and `"@status"`: `"source"` for English, `"needs review"` for a machine
@@ -585,11 +585,20 @@ simplified script (Traditional Chinese falls through to the next language), and 
 fits. The page's `lang` follows the language: it gives Turkish its casing and, for Chinese,
 Japanese and Korean, a UI font with that language's forms of the Han characters (`tokens.css`).
 Korean wraps at spaces (`word-break: keep-all`) instead of between syllables; copied text keeps
-its own wrapping. On Windows the code writes key names from the `key.*` entries, so each
-language can use its keyboard's names (German Strg, Umschalt, Entf; French Maj, Suppr, Échap;
-Spanish Mayús, Supr, Intro), and the texts that mention keys use the same names. Win, Alt and
-the Mac symbols are the same everywhere. The Windows installer speaks the same ten languages,
-and the macOS app lists them in `CFBundleLocalizations` (`src-tauri/Info.plist`), so the panels
-macOS draws for it follow.
+its own wrapping. Arabic is written right to left: `dir` follows the language too, so the
+windows mirror. Layout rules use the start and end sides instead of left and right; the shelf's
+rows start at the right, the card menu opens leftwards, the Library's sidebar and resizers swap
+sides, and the left and right arrows keep pointing where they move (right goes back towards the
+start). Letter spacing is off for Arabic, whose letters join, and its numbers and dates keep
+Western digits (`ar-u-nu-latn`), like its texts. Pictures, the markup canvas and
+playback controls do not mirror. Copied text, link titles, names and notes take their direction
+from their own first letters (`dir="auto"`) in every language, so English stays left to right in
+an Arabic window and Arabic right to left in an English one. Inside right-to-left text, shortcuts and image
+sizes are wrapped in Unicode isolates, so ⌘Enter and 1920×1080 keep their order. On Windows the code writes key names from the `key.*` entries,
+so each language can use its keyboard's names (German Strg, Umschalt, Entf; French Maj, Suppr,
+Échap; Spanish Mayús, Supr, Intro; Italian Maiusc, Invio, Canc), and the texts that mention keys
+use the same names. Win, Alt and the Mac symbols are the same everywhere. The Windows installer
+speaks the same twelve languages, and the macOS app lists them in `CFBundleLocalizations`
+(`src-tauri/Info.plist`), so the panels macOS draws for it follow.
 `npm run check:i18n` compares every file with English (keys, placeholders, status) and checks
 that the app's two language lists name every file.

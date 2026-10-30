@@ -41,8 +41,8 @@
 
 /* Toolbar */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--ui-line); }
-.heading { margin-right: auto; font: 600 16px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.heading small { margin-left: 8px; font: 12px var(--font); color: var(--ui-muted); }
+.heading { margin-inline-end: auto; font: 600 16px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.heading small { margin-inline-start: 8px; font: 12px var(--font); color: var(--ui-muted); }
 .segment { display: inline-flex; border: 1px solid var(--ui-line); border-radius: 6px; overflow: hidden; }
 .tool {
   all: unset;
@@ -88,7 +88,7 @@
 .thumb { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; background: color-mix(in srgb, var(--ui-line) 50%, transparent); }
 .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; padding: 6px; object-fit: contain; }
 .thumb img.cover { padding: 0; object-fit: cover; }
-.thumb .duration { position: absolute; right: 8px; bottom: 8px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 10px/14px var(--font); }
+.thumb .duration { position: absolute; inset-inline-end: 8px; bottom: 8px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 10px/14px var(--font); }
 img.letter { object-fit: contain; background: #fff; box-shadow: 0 0 0 1px var(--ui-line); }
 .thumbText { align-self: stretch; justify-self: stretch; padding: 8px 10px; overflow: hidden; font: 11.5px/1.45 var(--font); white-space: pre-line; word-break: break-word; color: var(--ui-ink); }
 .thumbLink { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--ui-muted); }
@@ -100,8 +100,10 @@ img.letter { object-fit: contain; background: #fff; box-shadow: 0 0 0 1px var(--
 .listHead { position: sticky; top: 0; z-index: 1; display: flex; height: 30px; border-bottom: 1px solid var(--ui-line); background: var(--ui-surface); font-size: 12px; font-weight: 600; }
 .col { position: relative; display: flex; align-items: center; gap: 4px; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .listHead .col { cursor: default; }
+/* A name keeps its own direction, so a long one is cut at its end in any language. */
+.colText { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .listHead .col:hover { background: var(--ui-line); }
-.resizer { position: absolute; top: 4px; bottom: 4px; right: 0; width: 5px; cursor: col-resize; border-right: 1px solid var(--ui-line); }
+.resizer { position: absolute; top: 4px; bottom: 4px; inset-inline-end: 0; width: 5px; cursor: col-resize; border-inline-end: 1px solid var(--ui-line); }
 .row { position: absolute; left: 0; right: 0; display: flex; align-items: center; height: 36px; border-bottom: 1px solid var(--ui-line); cursor: default; }
 .row[aria-selected='true'] { background: color-mix(in srgb, var(--accent) 16%, transparent); }
 .row.cursor { box-shadow: inset 0 0 0 2px var(--accent); }

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, type MouseEvent, type PointerEvent, type Ref, type WheelEvent } from 'react';
-import { t, type MessageKey } from '../../i18n';
+import { isRtl, t, type MessageKey } from '../../i18n';
 import type { Shelf, ShelfItem } from '../../ipc';
 import { KINDS, pageStart, type Kind, type ShelfModel } from '../../keyboard/shelfModel';
 import { Card, cardDomId, type Effect } from './Card';
@@ -57,7 +57,7 @@ export function ShelfRows(props: ShelfRowsProps) {
     return () => observer.disconnect();
   }, [activeKind, model.rows, onPageSize]);
 
-  // The page holding the cursor is aligned to the left edge, so the 1–9 badges are on screen.
+  // The page holding the cursor is aligned to the row's start edge, so the 1–9 badges are on screen.
   useLayoutEffect(() => {
     const track = cursor ? tracks.current[cursor.kind] : null;
     if (!track || !cursor) return;
@@ -65,15 +65,25 @@ export function ShelfRows(props: ShelfRowsProps) {
     const first = slots[start];
     const current = slots[cursor.index];
     if (!first || !current) return;
+    const behavior = reducedMotion ? 'auto' : 'smooth';
+    if (isRtl()) {
+      // Right to left the page starts at the right edge, where scrolling starts at 0 and goes negative.
+      const box = track.getBoundingClientRect();
+      const toFirst = first.getBoundingClientRect().right - (box.right - SCROLL_PAD);
+      const toCurrent = current.getBoundingClientRect().left - (box.left + SCROLL_PAD);
+      track.scrollTo({ left: Math.min(0, track.scrollLeft + Math.min(toFirst, toCurrent)), behavior });
+      return;
+    }
     let left = first.offsetLeft - SCROLL_PAD;
     const right = current.offsetLeft + current.offsetWidth + SCROLL_PAD - track.clientWidth;
     if (left < right) left = right;
-    track.scrollTo({ left: Math.max(0, left), behavior: reducedMotion ? 'auto' : 'smooth' });
+    track.scrollTo({ left: Math.max(0, left), behavior });
   }, [cursor, start, reducedMotion]);
 
   const onWheel = (kind: Kind) => (event: WheelEvent) => {
     const track = tracks.current[kind];
-    if (track && Math.abs(event.deltaY) > Math.abs(event.deltaX)) track.scrollLeft += event.deltaY;
+    // The wheel moves along the row, towards its end: rightwards, or leftwards right to left.
+    if (track && Math.abs(event.deltaY) > Math.abs(event.deltaX)) track.scrollLeft += isRtl() ? -event.deltaY : event.deltaY;
   };
 
   const activeId = cursor ? (model.rows[cursor.kind][cursor.index] ?? null) : null;

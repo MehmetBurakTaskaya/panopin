@@ -1,5 +1,5 @@
 // Turns a Tauri accelerator ("Super+Alt+V") into the label users expect on their platform.
-import { t, type MessageKey } from './i18n';
+import { isRtl, ltr, t, type MessageKey } from './i18n';
 import { detectPlatform, type Platform } from './platform';
 
 export { detectPlatform, type Platform };
@@ -49,9 +49,10 @@ export function formatShortcut(accelerator: string, platform: Platform = detectP
     // Letters read as capitals; other keys keep their name: Tab, F9.
     return name ?? (part.length === 1 ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1));
   });
-  if (platform !== 'mac') return parts.join('+');
   const rank = (part: string) => (MAC_ORDER.includes(part) ? MAC_ORDER.indexOf(part) : MAC_ORDER.length);
-  return parts.sort((a, b) => rank(a) - rank(b)).join('');
+  const label = platform === 'mac' ? parts.sort((a, b) => rank(a) - rank(b)).join('') : parts.join('+');
+  // Right to left, a shortcut is kept in its own left-to-right order.
+  return isRtl() ? ltr(label) : label;
 }
 
 export interface RecordedKey {

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { t, type MessageKey } from '../../i18n';
+import { isRtl, t, type MessageKey } from '../../i18n';
 import { formatShortcut } from '../../shortcuts';
 import styles from './Shelf.module.css';
 
@@ -29,8 +29,10 @@ export function ContextMenu({ at, entries, onClose }: { at: MenuPlacement; entri
     const menu = ref.current;
     if (!menu) return;
     const { width, height } = menu.getBoundingClientRect();
+    // It opens towards the end of the line: right of the point, or left of it right to left.
+    const x = isRtl() ? at.x - width : at.x;
     setPosition({
-      x: Math.max(EDGE, Math.min(at.x, window.innerWidth - width - EDGE)),
+      x: Math.max(EDGE, Math.min(x, window.innerWidth - width - EDGE)),
       y: Math.max(EDGE, Math.min(at.y, window.innerHeight - height - EDGE)),
     });
     items.current[0]?.focus();

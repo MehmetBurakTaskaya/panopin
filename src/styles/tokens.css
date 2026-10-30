@@ -78,6 +78,12 @@
   --font-display: 'Segoe UI Variable Display', 'Segoe UI', 'Malgun Gothic', -apple-system, 'Apple SD Gothic Neo', system-ui, sans-serif;
 }
 
+/* Arabic: Segoe UI carries it on Windows (the Variable faces do not), SF Arabic on a Mac. */
+:root:lang(ar) {
+  --font: 'Segoe UI', Tahoma, -apple-system, 'SF Arabic', 'Geeza Pro', system-ui, sans-serif;
+  --font-display: 'Segoe UI', Tahoma, -apple-system, 'SF Arabic', 'Geeza Pro', system-ui, sans-serif;
+}
+
 :root[data-scheme='dark'] {
   color-scheme: dark;
   --accent: #60cdff;

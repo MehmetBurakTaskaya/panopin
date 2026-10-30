@@ -22,9 +22,11 @@ pub enum Language {
     De,
     Es,
     Fr,
+    It,
     #[serde(rename = "pt-BR")]
     PtBr,
     Ru,
+    Ar,
     Ja,
     Ko,
     #[serde(rename = "zh-CN")]
@@ -598,6 +600,8 @@ mod tests {
         assert_eq!(s.language, Language::En);
         assert_eq!(s.shortcuts.shelf_search, None);
         assert_eq!(s.shortcuts.shelf.as_deref(), Some("Super+Alt+V"));
+        let s = apply_patch(&s, json!({ "language": "ar" })).unwrap();
+        assert_eq!(s.language, Language::Ar);
         // Regional languages are stored as their tags.
         let s = apply_patch(&s, json!({ "language": "pt-BR" })).unwrap();
         assert_eq!(s.language, Language::PtBr);

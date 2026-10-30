@@ -10,7 +10,7 @@ import {
   type MouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { t } from '../../i18n';
+import { inlineArrow, isRtl, t } from '../../i18n';
 import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
 import { FolderPicker, NamePrompt, TagPicker } from '../../components/pickers/Pickers';
 import {
@@ -388,7 +388,8 @@ export function ShelfApp() {
     const id = cursorId(latest.current.model);
     if (id === null) return;
     const rect = document.getElementById(cardDomId(id))?.getBoundingClientRect();
-    setMenu({ ids: targetIds(), at: { x: rect ? rect.left + 8 : 40, y: rect ? rect.bottom + 6 : 40 } });
+    const x = rect ? (isRtl() ? rect.right - 8 : rect.left + 8) : 40;
+    setMenu({ ids: targetIds(), at: { x, y: rect ? rect.bottom + 6 : 40 } });
   };
 
   /** E, M and C open an editor only for the kind they belong to. */
@@ -684,7 +685,8 @@ export function ShelfApp() {
       // The text, markup and crop editors handle their own keys; typing never reaches the shelf.
       if ((state.preview && state.preview !== 'view') || isEditable(event.target)) return;
       if (event.isComposing) return;
-      const command = commandFor(event);
+      const { code, ctrlKey, altKey, shiftKey, metaKey } = event;
+      const command = commandFor({ key: inlineArrow(event.key), code, ctrlKey, altKey, shiftKey, metaKey });
       if (!command) return;
       event.preventDefault();
       handlers.current.run(command);

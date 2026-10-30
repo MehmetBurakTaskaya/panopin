@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { commit as record, redo as redoStep, startHistory, undo as undoStep, type History } from '../../../edit/history';
 import { cropRect, emptyLayer, isEmptyLayer, visibleArea, type Area, type EditLayer, type Point } from '../../../edit/layer';
-import { t } from '../../../i18n';
+import { ltr, t } from '../../../i18n';
 import { getEdit, mediaUrl, revertEdit, saveEdit, type ShelfItem } from '../../../ipc';
 import { CropEditor } from './CropEditor';
 import { icons } from './icons';
@@ -201,7 +201,7 @@ export function ImagePreview({ item, mode, onMode, onClose }: ImagePreviewProps)
     <>
       <div className={styles.bar}>
         <span className={styles.title}>
-          {t('preview.image')} · {Math.round(area.w)}×{Math.round(area.h)}
+          {t('preview.image')} · {ltr(`${Math.round(area.w)}×${Math.round(area.h)}`)}
         </span>
         <button type="button" className={styles.button} title={`${t('preview.markup')} (M)`} onClick={() => onMode('markup')}>
           {icons.pen}

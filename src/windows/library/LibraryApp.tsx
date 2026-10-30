@@ -14,7 +14,7 @@ import {
 } from 'react';
 import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
 import { ConfirmDialog, FolderPicker, NamePrompt, TagPicker } from '../../components/pickers/Pickers';
-import { getLanguage, t, type MessageKey } from '../../i18n';
+import { getLanguage, inlineArrow, isRtl, t, type MessageKey } from '../../i18n';
 import {
   addToFolder,
   copyImageText,
@@ -424,7 +424,7 @@ export function LibraryApp() {
     switch (e.key) {
       case 'ArrowLeft':
       case 'ArrowRight':
-        if (grid) dispatch({ type: 'move', dx: e.key === 'ArrowLeft' ? -1 : 1, dy: 0, extend: shift });
+        if (grid) dispatch({ type: 'move', dx: inlineArrow(e.key) === 'ArrowLeft' ? -1 : 1, dy: 0, extend: shift });
         else handled = false;
         break;
       case 'ArrowUp':
@@ -567,7 +567,9 @@ export function LibraryApp() {
     e.preventDefault();
     const startX = e.clientX;
     const start = widths[side];
-    const widthAt = (x: number) => Math.max(160, Math.min(560, start + (side === 'sidebar' ? x - startX : startX - x)));
+    // The sidebar sits at the start edge and the inspector at the end: left and right, or mirrored.
+    const toEnd = (x: number) => (isRtl() ? startX - x : x - startX);
+    const widthAt = (x: number) => Math.max(160, Math.min(560, start + (side === 'sidebar' ? toEnd(x) : -toEnd(x))));
     const onMove = (ev: PointerEvent) => setWidths((w) => ({ ...w, [side]: widthAt(ev.clientX) }));
     const onUp = (ev: PointerEvent) => {
       window.removeEventListener('pointermove', onMove);

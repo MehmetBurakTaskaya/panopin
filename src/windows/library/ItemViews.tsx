@@ -11,7 +11,7 @@ import {
   type Ref,
 } from 'react';
 import { PinIcon } from '../../components/PinIcon';
-import { getLanguage, t, type MessageKey } from '../../i18n';
+import { formatLocale, isRtl, t, type MessageKey } from '../../i18n';
 import { mediaUrl, type LibraryItem, type LibraryLayout, type SortKey, type Tag } from '../../ipc';
 import type { LibraryModel } from '../../keyboard/libraryModel';
 import { displayTitle } from '../../library/query';
@@ -68,7 +68,7 @@ function Visual({ item }: { item: LibraryItem }) {
       </>
     );
   }
-  if (item.kind === 'text') return <div className={styles.thumbText}>{(item.preview ?? '').slice(0, 260)}</div>;
+  if (item.kind === 'text') return <div className={styles.thumbText} dir="auto">{(item.preview ?? '').slice(0, 260)}</div>;
   if (item.kind === 'link' && item.linkImage) {
     return <img className={styles.cover} src={mediaUrl('link-image', item.id, item.linkVersion)} alt="" loading="lazy" draggable={false} />;
   }
@@ -150,7 +150,7 @@ export function ItemGrid(props: ItemViewProps & { onColumns: (columns: number) =
                 <Visual item={item} />
               </div>
               <div className={styles.caption}>
-                <span>{displayTitle(item) || '—'}</span>
+                <span dir="auto">{displayTitle(item) || '—'}</span>
                 {item.pinned && <PinIcon className={styles.pin} />}
               </div>
             </div>
@@ -195,17 +195,19 @@ export function ItemList(
     e.stopPropagation();
     const startX = e.clientX;
     const start = widths[key];
-    const onMove = (ev: PointerEvent) => setWidths((w) => ({ ...w, [key]: Math.max(60, Math.min(1600, start + ev.clientX - startX)) }));
+    // A column grows towards its end edge: right, or left in a right-to-left language.
+    const widthAt = (x: number) => Math.max(60, Math.min(1600, start + (isRtl() ? startX - x : x - startX)));
+    const onMove = (ev: PointerEvent) => setWidths((w) => ({ ...w, [key]: widthAt(ev.clientX) }));
     const onUp = (ev: PointerEvent) => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      props.onColumnWidth(key, Math.max(60, Math.min(1600, start + ev.clientX - startX)));
+      props.onColumnWidth(key, widthAt(ev.clientX));
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
   };
 
-  const date = new Intl.DateTimeFormat(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' });
+  const date = new Intl.DateTimeFormat(formatLocale(), { dateStyle: 'medium', timeStyle: 'short' });
   const selection = new Set(model.selection);
   const cursorId = model.cursor === null ? null : model.ids[model.cursor];
   const totalWidth = COLUMNS.reduce((sum, c) => sum + widths[c.key], 0) + 40;
@@ -268,7 +270,9 @@ export function ItemList(
               </span>
               <span className={styles.col} role="gridcell" style={{ width: widths.title }}>
                 {item.pinned && <PinIcon className={styles.pin} />}
-                {displayTitle(item) || '—'}
+                <span className={styles.colText} dir="auto">
+                  {displayTitle(item) || '—'}
+                </span>
               </span>
               <span className={styles.col} role="gridcell" style={{ width: widths.kind }}>
                 {t(KIND_LABEL[item.kind] ?? 'library.kind.text')}

@@ -1,6 +1,6 @@
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
-import { getLanguage, t } from '../../i18n';
+import { formatLocale, t } from '../../i18n';
 import { checkForUpdates, installUpdate, updateStatus, type Settings, type UpdateView } from '../../ipc';
 import { useSettings } from '../../state/settings';
 import { Section, Toggle } from './controls';
@@ -19,7 +19,7 @@ export function plainNotes(markdown: string): string {
     .trim();
 }
 
-const when = (ms: number) => new Date(ms).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' });
+const when = (ms: number) => new Date(ms).toLocaleString(formatLocale(), { dateStyle: 'medium', timeStyle: 'short' });
 
 function statusLine(view: UpdateView): string {
   const status = view.status;

@@ -383,7 +383,7 @@ download the `.dmg` from the run's artifacts (kept for 14 days).
 ## Languages (D-074)
 
 Checked on 2026-10-30 in a browser (Chromium on Windows 11, display at 125 %) with the real
-windows and a mocked backend, in all ten languages, with English as the baseline. A script looked
+windows and a mocked backend, in all twelve languages, with English as the baseline. A script looked
 at every visible text and picker: Settings at 820×640 and at its smallest size, 640×480, on every
 tab; the first-run window; the Library; the shelf, its card menu and the empty board. Screenshots
 of each window were then read by eye for the font and the line breaks.
@@ -395,15 +395,28 @@ of each window were then read by eye for the font and the line breaks.
       show their own Windows UI fonts (Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic) with no
       missing glyphs, and the page's `lang` follows the language.
 - [x] Korean wraps between words, not inside them. (fixed during this check)
-- [x] German, French and Spanish write keys with their keyboards' names in the card menu, the hints,
-      the Library and Settings → Shortcuts: Strg+Eingabe, Strg+Umschalt+T, Entf; Ctrl+Maj+C,
-      Suppr, Échap; Ctrl+Intro, Mayús, Supr. Other languages keep Ctrl, Shift, Enter.
-- [x] Settings → General and the first-run window list the ten languages by their own names;
+- [x] German, French, Spanish and Italian write keys with their keyboards' names in the card menu,
+      the hints, the Library and Settings → Shortcuts: Strg+Eingabe, Strg+Umschalt+T, Entf;
+      Ctrl+Maj+C, Suppr, Échap; Ctrl+Intro, Mayús, Supr; Ctrl+Invio, Maiusc, Canc. Other languages
+      keep Ctrl, Shift, Enter.
+- [x] Arabic mirrors every window: the shelf's rows start at the right (labels and their tape
+      stripe on the right, card 1 the rightmost, number badges at the cards' left corners),
+      Settings' tabs and the Library's sidebar sit on the right, toggles and the volume slider
+      mirror, and the card menu opens leftwards from the card. Arabic letters stay joined (no
+      letter spacing) in Segoe UI, numbers and dates use Western digits.
+- [x] Arabic keys follow the screen: Left moves to the card on the left, Right back, Ctrl+Right to
+      the first card; moving to the last card scrolls the row left until it is whole, and the
+      wheel scrolls towards the row's end.
+- [x] Copied text keeps its own direction: Latin and Turkish cards, Library names and sizes
+      (1920×1080) read left to right in the Arabic window, cut at their end.
+- [x] Settings → General and the first-run window list the twelve languages by their own names;
       Settings shows the review note under the choice for every language except English.
 - [ ] In the installed app, "System default" follows the Windows display language, and choosing a
       language in Settings changes every open window and the tray menu at once. (the tag matching
       is covered by unit tests in TypeScript and Rust; not tried in the real app)
-- [ ] The installer shows its pages in the Windows display language when it is one of the ten.
+- [ ] The installer shows its pages in the Windows display language when it is one of the twelve.
+- [x] With Mac texts in Arabic, ⌘ shortcuts in the hint line and the card menu are isolated, so
+      they keep their order. (browser with a Mac user agent; not on a real Mac)
 - [ ] On a Mac, the panels macOS draws (Open, Save, permission prompts) follow the language.
 
 ## Full round for v1.0.0

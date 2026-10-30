@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type Ref } from 'react';
-import { t, type MessageKey } from '../../i18n';
+import { inlineArrow, t, type MessageKey } from '../../i18n';
 import type { Folder, Tag } from '../../ipc';
 import { sameSection, type Counts, type Section } from '../../library/query';
 import { formatShortcut } from '../../shortcuts';
@@ -114,7 +114,7 @@ export function Sidebar(props: SidebarProps) {
       if (target) props.onSection(target.section);
     };
     const handled = (() => {
-      switch (e.key) {
+      switch (inlineArrow(e.key)) {
         case 'ArrowDown':
           go(current + 1);
           return true;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getLanguage, t } from '../../../i18n';
+import { formatLocale, t } from '../../../i18n';
 import { getText, updateText, type ShelfItem } from '../../../ipc';
 import { icons } from './icons';
 import type { PreviewMode } from './Preview';
@@ -92,6 +92,7 @@ export function TextPreview({ item, editing, onMode, onClose }: TextPreviewProps
           {editing && body !== null ? (
             <textarea
               className={styles.sheetEdit}
+              dir="auto"
               value={body}
               autoFocus
               spellCheck={false}
@@ -107,12 +108,12 @@ export function TextPreview({ item, editing, onMode, onClose }: TextPreviewProps
               }}
             />
           ) : (
-            <pre className={styles.sheetText} onClick={() => body !== null && onMode('text')}>
+            <pre className={styles.sheetText} dir="auto" onClick={() => body !== null && onMode('text')}>
               {body ?? ''}
             </pre>
           )}
           <div className={styles.sheetMeta}>
-            <span>{count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: new Intl.NumberFormat(getLanguage()).format(count) })}</span>
+            <span>{count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: new Intl.NumberFormat(formatLocale()).format(count) })}</span>
             <span>{error ? t('markup.saveFailed', { error }) : editing ? t('preview.autosave') : t('preview.editHint')}</span>
           </div>
         </div>

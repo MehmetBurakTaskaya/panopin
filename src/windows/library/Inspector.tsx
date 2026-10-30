@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { folderPaths } from '../../components/pickers/Pickers';
-import { getLanguage, t, type MessageKey } from '../../i18n';
+import { formatLocale, ltr, t, type MessageKey } from '../../i18n';
 import { removeFromFolder, setNote, setTitle, untagItems, type Folder, type LibraryItem, type Tag } from '../../ipc';
 import { TRASH_SHORTCUT, formatShortcut } from '../../shortcuts';
 import { duration } from '../shelf/paper';
@@ -86,13 +86,13 @@ export interface InspectorProps {
 function Single({ item, folders, tags }: { item: LibraryItem; folders: Folder[]; tags: Map<number, Tag> }) {
   const title = useAutosave(item.title ?? '', item.id, (text) => setTitle([item.id], text.trim() ? text : null));
   const note = useAutosave(item.note ?? '', item.id, (text) => setNote(item.id, text.trim() ? text : null));
-  const date = new Intl.DateTimeFormat(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' });
+  const date = new Intl.DateTimeFormat(formatLocale(), { dateStyle: 'medium', timeStyle: 'short' });
   const paths = new Map(folderPaths(folders).map((f) => [f.id, f.path]));
   const size =
     item.kind === 'image' && item.width && item.height
-      ? `${item.width}×${item.height}`
+      ? ltr(`${item.width}×${item.height}`)
       : item.charCount !== null
-        ? t('shelf.card.chars', { count: new Intl.NumberFormat(getLanguage()).format(item.charCount) })
+        ? t('shelf.card.chars', { count: new Intl.NumberFormat(formatLocale()).format(item.charCount) })
         : null;
   const source = [t(SOURCE[item.source]), item.sourceApp, item.sourcePath].filter(Boolean).join(' · ');
 
@@ -100,12 +100,12 @@ function Single({ item, folders, tags }: { item: LibraryItem; folders: Folder[];
     <>
       <label className={styles.field}>
         <span>{t('library.inspector.title')}</span>
-        <input value={title.draft} placeholder={t('library.inspector.untitled')} onChange={(e) => title.change(e.target.value)} onBlur={title.flush} />
+        <input value={title.draft} dir="auto" placeholder={t('library.inspector.untitled')} onChange={(e) => title.change(e.target.value)} onBlur={title.flush} />
       </label>
       {title.error && <span className={styles.saveError}>{t('markup.saveFailed', { error: title.error })}</span>}
       <label className={styles.field}>
         <span>{t('library.inspector.note')}</span>
-        <textarea value={note.draft} onChange={(e) => note.change(e.target.value)} onBlur={note.flush} />
+        <textarea value={note.draft} dir="auto" onChange={(e) => note.change(e.target.value)} onBlur={note.flush} />
       </label>
       {note.error && <span className={styles.saveError}>{t('markup.saveFailed', { error: note.error })}</span>}
       <div className={styles.field}>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { boxHandles, dragBox, toCanvas, toImage, type Handle } from '../../../edit/draw';
 import { cropRect, type Area, type EditLayer, type Point } from '../../../edit/layer';
-import { t } from '../../../i18n';
+import { ltr, t } from '../../../i18n';
 import { icons } from './icons';
 import styles from './Preview.module.css';
 import { Stage, useFittedView } from './Stage';
@@ -141,7 +141,7 @@ export function CropEditor({ image, layer, onApply, onCancel }: CropProps) {
     <>
       <div className={styles.bar} role="toolbar" aria-label={t('preview.crop')}>
         <span className={styles.title}>
-          {t('crop.hint')} · {shown ? `${shown.w}×${shown.h}` : ''}
+          {t('crop.hint')} · {shown ? ltr(`${shown.w}×${shown.h}`) : ''}
         </span>
         <button type="button" className={styles.button} onClick={onCancel}>
           {icons.close}

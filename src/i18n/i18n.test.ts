@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import en from '../../locales/en.json';
 import tr from '../../locales/tr.json';
-import { LANGUAGES, getLanguage, languageOf, lookup, needsReview, resolveLanguage, setLanguage, t } from './index';
+import { LANGUAGES, formatLocale, getLanguage, inlineArrow, isolateShortcuts, isRtl, languageOf, lookup, needsReview, resolveLanguage, setLanguage, t } from './index';
 
 const files = import.meta.glob<Record<string, string>>('../../locales/*.json', { eager: true, import: 'default' });
 const dictionaries = Object.entries(files).map(
@@ -22,6 +22,8 @@ describe('i18n', () => {
     expect(languageOf('tr-TR')).toBe('tr');
     expect(languageOf('de_AT')).toBe('de');
     expect(languageOf('pt-PT')).toBe('pt-BR');
+    expect(languageOf('it-CH')).toBe('it');
+    expect(languageOf('ar-EG')).toBe('ar');
     expect(languageOf('zh-Hans-CN')).toBe('zh-CN');
     expect(languageOf('zh-CN')).toBe('zh-CN');
     expect(languageOf('zh-TW')).toBeUndefined();
@@ -44,6 +46,23 @@ describe('i18n', () => {
     expect(t('tray.quit')).toBe('Çıkış');
     setLanguage('zh-CN');
     expect(document.documentElement.lang).toBe('zh-CN');
+  });
+
+  it('mirrors the window for right-to-left languages', () => {
+    setLanguage('ar');
+    expect(isRtl()).toBe(true);
+    expect(document.documentElement.dir).toBe('rtl');
+    // The arrows keep pointing where they move: right goes back towards the start.
+    expect(inlineArrow('ArrowRight')).toBe('ArrowLeft');
+    expect(inlineArrow('ArrowLeft')).toBe('ArrowRight');
+    expect(inlineArrow('ArrowUp')).toBe('ArrowUp');
+    // Mac shortcuts keep their order inside right-to-left text; Windows ones need no help.
+    expect(isolateShortcuts('لصق ⌘Enter · ⇧⌘Z · Ctrl+V')).toBe('لصق \u2066⌘Enter\u2069 · \u2066⇧⌘Z\u2069 · Ctrl+V');
+    // Numbers keep Western digits, like the Arabic texts.
+    expect(new Intl.NumberFormat(formatLocale()).format(1234)).toBe('1,234');
+    setLanguage('it');
+    expect(document.documentElement.dir).toBe('ltr');
+    expect(inlineArrow('ArrowRight')).toBe('ArrowRight');
   });
 
   it('knows which translations wait for review', () => {

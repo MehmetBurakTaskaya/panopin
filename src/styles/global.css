@@ -10,6 +10,8 @@ body {
 /* Korean wraps at spaces, not between syllables; a word too long for its box still breaks.
    Copied text sets its own wrapping. */
 :root:lang(ko) { word-break: keep-all; overflow-wrap: break-word; }
+/* Arabic letters join their neighbours; spacing them apart breaks the word. */
+:root:lang(ar) * { letter-spacing: normal !important; }
 
 /* The shelf overlay is a transparent window: only the board paints. */
 html[data-window='shelf'], html[data-window='shelf'] body { background: transparent; overflow: hidden; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getLanguage, t } from '../../i18n';
+import { formatLocale, t } from '../../i18n';
 import { ocrStatus, openProjectLink, setPause, type OcrStatus, type Settings } from '../../ipc';
 import { useSettings } from '../../state/settings';
 import { Section, Toggle } from './controls';
@@ -25,7 +25,7 @@ export function PrivacyTab({ settings }: { settings: Settings }) {
   };
   const pausedUntil = settings.pausedUntil;
   const paused = pausedUntil !== null && pausedUntil > Date.now();
-  const time = new Intl.DateTimeFormat(getLanguage(), { timeStyle: 'short' });
+  const time = new Intl.DateTimeFormat(formatLocale(), { timeStyle: 'short' });
   const minutes = (n: number) => () => void setPause(Date.now() + n * 60_000);
 
   return (

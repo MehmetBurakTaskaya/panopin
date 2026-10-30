@@ -18,8 +18,8 @@ agree on the approach before you spend time on it. The design is described in
 
 ## Translations
 
-Panopin speaks English, German, Spanish, French, Brazilian Portuguese, Turkish, Russian, Japanese,
-Korean and Simplified Chinese. English is the source; all other languages were translated by
+Panopin speaks English, German, Spanish, French, Italian, Brazilian Portuguese, Turkish, Russian,
+Arabic, Japanese, Korean and Simplified Chinese. English is the source; all other languages were translated by
 machine and are waiting for native speakers to review them. If you speak one of them, your
 corrections are the most useful contribution there is: a single fixed word helps.
 
@@ -78,7 +78,8 @@ everywhere.
   Library and Trash in particular.
 - **Numbers**: there is one text for "1 item" and one for "{count} items". If your language has more
   forms, phrase the `{count}` text so it is right for any number (for example "Items: {count}").
-- Follow your language's punctuation and quotation marks, and keep the "→" in settings paths.
+- Follow your language's punctuation and quotation marks, and keep the "→" in settings paths
+  (a right-to-left language writes "←", so the path points the way it reads).
 
 ### Checking
 
@@ -95,7 +96,8 @@ that is cut off or runs over. Screenshots in the pull request help.
 
 1. Copy `locales/en.json` to `locales/<tag>.json`, set `"@language"` to the language's own name and
    `"@status"` to `"needs review"`, and translate the texts.
-2. Add the language to `LANGUAGES` in `src/i18n/index.ts`, and to the Rust side: the `Language`
-   setting in `src-tauri/src/settings.rs` and `Lang` in `src-tauri/src/i18n.rs` (its file and the
-   language tags that choose it).
+2. Add the language to `LANGUAGES` in `src/i18n/index.ts` (and to `RTL` there if it is written
+   from right to left), and to the Rust side: the `Language` setting in
+   `src-tauri/src/settings.rs` and `Lang` in `src-tauri/src/i18n.rs` (its file and the language
+   tags that choose it).
 3. Run `npm run check:i18n`, `npm test` and, in `src-tauri/`, `cargo test`.

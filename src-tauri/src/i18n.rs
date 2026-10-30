@@ -12,22 +12,26 @@ pub enum Lang {
     De,
     Es,
     Fr,
+    It,
     PtBr,
     Ru,
+    Ar,
     Ja,
     Ko,
     ZhCn,
 }
 
 impl Lang {
-    const ALL: [Lang; 10] = [
+    const ALL: [Lang; 12] = [
         Lang::En,
         Lang::Tr,
         Lang::De,
         Lang::Es,
         Lang::Fr,
+        Lang::It,
         Lang::PtBr,
         Lang::Ru,
+        Lang::Ar,
         Lang::Ja,
         Lang::Ko,
         Lang::ZhCn,
@@ -40,8 +44,10 @@ impl Lang {
             Lang::De => include_str!("../../locales/de.json"),
             Lang::Es => include_str!("../../locales/es.json"),
             Lang::Fr => include_str!("../../locales/fr.json"),
+            Lang::It => include_str!("../../locales/it.json"),
             Lang::PtBr => include_str!("../../locales/pt-BR.json"),
             Lang::Ru => include_str!("../../locales/ru.json"),
+            Lang::Ar => include_str!("../../locales/ar.json"),
             Lang::Ja => include_str!("../../locales/ja.json"),
             Lang::Ko => include_str!("../../locales/ko.json"),
             Lang::ZhCn => include_str!("../../locales/zh-CN.json"),
@@ -76,8 +82,10 @@ pub fn resolve(setting: Language) -> Lang {
         Language::De => Lang::De,
         Language::Es => Lang::Es,
         Language::Fr => Lang::Fr,
+        Language::It => Lang::It,
         Language::PtBr => Lang::PtBr,
         Language::Ru => Lang::Ru,
+        Language::Ar => Lang::Ar,
         Language::Ja => Lang::Ja,
         Language::Ko => Lang::Ko,
         Language::ZhCn => Lang::ZhCn,
@@ -103,8 +111,10 @@ fn from_tag(tag: &str) -> Option<Lang> {
         "de" => Some(Lang::De),
         "es" => Some(Lang::Es),
         "fr" => Some(Lang::Fr),
+        "it" => Some(Lang::It),
         "pt" => Some(Lang::PtBr),
         "ru" => Some(Lang::Ru),
+        "ar" => Some(Lang::Ar),
         "ja" => Some(Lang::Ja),
         "ko" => Some(Lang::Ko),
         "zh" if !traditional => Some(Lang::ZhCn),
@@ -154,6 +164,8 @@ mod tests {
         assert_eq!(pick(&["TR"]), Lang::Tr);
         assert_eq!(pick(&["de_DE"]), Lang::De);
         assert_eq!(pick(&["pt-PT"]), Lang::PtBr);
+        assert_eq!(pick(&["it-CH"]), Lang::It);
+        assert_eq!(pick(&["ar-SA"]), Lang::Ar);
         assert_eq!(pick(&["zh-Hans-CN"]), Lang::ZhCn);
         assert_eq!(pick(&["zh-TW"]), Lang::En);
         assert_eq!(pick(&["nl-NL", "ja-JP"]), Lang::Ja);

@@ -512,6 +512,7 @@ export function MarkupEditor(props: MarkupProps) {
         {text && textStyle && (
           <textarea
             className={styles.textBox}
+            dir="auto"
             style={textStyle}
             value={text.value}
             autoFocus

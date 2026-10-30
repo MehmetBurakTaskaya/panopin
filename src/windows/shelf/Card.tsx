@@ -1,6 +1,6 @@
 import { memo, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
 import { PinIcon } from '../../components/PinIcon';
-import { getLanguage, t } from '../../i18n';
+import { formatLocale, ltr, t } from '../../i18n';
 import { mediaUrl, type ShelfItem } from '../../ipc';
 import { highlight } from '../../search/highlight';
 import styles from './Card.module.css';
@@ -33,7 +33,7 @@ export const cardDomId = (id: number) => `card-${id}`;
 function label(item: ShelfItem): string {
   let text: string;
   if (item.kind === 'image') {
-    text = item.title ?? t('shelf.card.image', { size: `${item.width ?? '?'}×${item.height ?? '?'}` });
+    text = item.title ?? t('shelf.card.image', { size: ltr(`${item.width ?? '?'}×${item.height ?? '?'}`) });
   } else if (item.kind === 'video') {
     text = t('shelf.card.video', { title: item.title ?? '', length: duration(item.durationMs) });
   } else if (item.kind === 'text') {
@@ -45,7 +45,7 @@ function label(item: ShelfItem): string {
 }
 
 function charCount(count: number): string {
-  const formatted = new Intl.NumberFormat(getLanguage()).format(count);
+  const formatted = new Intl.NumberFormat(formatLocale()).format(count);
   return count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: formatted });
 }
 
@@ -85,12 +85,12 @@ function Body({ item, now, terms, withoutAccents }: BodyProps) {
   if (item.kind === 'text') {
     return (
       <>
-        <div className={styles.txt}>
+        <div className={styles.txt} dir="auto">
           <Marked text={item.preview ?? ''} terms={terms} withoutAccents={withoutAccents} />
         </div>
         <div className={styles.meta}>
           <span>{charCount(item.charCount ?? 0)}</span>
-          <span>{age(item.lastCopiedAt, now, getLanguage())}</span>
+          <span>{age(item.lastCopiedAt, now, formatLocale())}</span>
         </div>
       </>
     );
@@ -113,10 +113,10 @@ function Body({ item, now, terms, withoutAccents }: BodyProps) {
             {tile.letter}
           </span>
         )}
-        <div className={styles.lkTitle}>
+        <div className={styles.lkTitle} dir="auto">
           <Marked text={heading} terms={terms} withoutAccents={withoutAccents} />
         </div>
-        <span className={styles.lkDetail}>
+        <span className={styles.lkDetail} dir="auto">
           <Marked
             text={(heading === item.domain ? linkDetail(item.url) : item.domain) ?? ''}
             terms={terms}

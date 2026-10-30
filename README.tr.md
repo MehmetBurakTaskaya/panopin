@@ -46,9 +46,9 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
   monitör desteği.
 - **Türkçe dostu.** İ ile ı'yı bilen arama, istersen aksansız eşleştirme ve ₺, @, € gibi AltGr
   karakterlerini asla engellemeyen varsayılan kısayollar.
-- **On dil.** İngilizce, Almanca, İspanyolca, Fransızca, Brezilya Portekizcesi, Türkçe, Rusça,
-  Japonca, Korece ve Basitleştirilmiş Çince. Panopin sistemin dilini izler; Ayarlar'dan
-  değiştirilebilir.
+- **On iki dil.** İngilizce, Almanca, İspanyolca, Fransızca, İtalyanca, Brezilya Portekizcesi,
+  Türkçe, Rusça, Arapça (sağdan sola), Japonca, Korece ve Basitleştirilmiş Çince. Panopin
+  sistemin dilini izler; Ayarlar'dan değiştirilebilir.
 - **Önce klavye.** Her işin bir tuşu var; Ctrl+K hepsini listeleyen komut paletini açar.
 - **Kolay kurulum.** Yönetici izni istemeyen, yalnızca senin kullanıcın için kurulan bir
   kurulum dosyası ve taşınabilir ZIP.

@@ -45,9 +45,9 @@ window holds everything, with folders, tags, notes and search.
   multiple monitors.
 - **Made for Turkish too.** Search that knows İ and ı, optional accent-free matching, and default
   shortcuts that never block AltGr characters such as ₺, @ and €.
-- **Ten languages.** English, German, Spanish, French, Brazilian Portuguese, Turkish, Russian,
-  Japanese, Korean and Simplified Chinese. Panopin follows the system language; Settings can
-  change it.
+- **Twelve languages.** English, German, Spanish, French, Italian, Brazilian Portuguese, Turkish,
+  Russian, Arabic (right to left), Japanese, Korean and Simplified Chinese. Panopin follows the
+  system language; Settings can change it.
 - **Keyboard first.** Every action has a key, and Ctrl+K opens a command palette that lists them.
 - **Easy to install.** A per-user installer that needs no administrator rights, and a portable
   ZIP.
