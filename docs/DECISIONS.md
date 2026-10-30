@@ -539,6 +539,7 @@ use; Vision needs no main thread.
 | Own copies | `Panopin.OwnCopy` format | `com.mehmetburaktaskaya.panopin.own-copy` type |
 | Source app | clipboard owner, foreground window | the app in front (macOS names no owner); excluded apps match with or without ".exe" or ".app", so the default list works on both |
 | Pictures | PNG, DIB | PNG; TIFF is decoded (the `image` crate's TIFF support, macOS only) and stored as PNG |
+| Screenshot folder | the Screenshots known folder, `ReadDirectoryChangesW` | the folder chosen in the Screenshot app (`com.apple.screencapture` `location`), else the Desktop. A thread waits in `kevent` on the folder and lists it when its entries change. That folder is usually the Desktop, so only pictures with macOS's screenshot mark (`com.apple.metadata:kMDItemIsScreenCapture`) count there, whatever the language of their names; folders the user adds take every picture |
 | Text in images | Windows.Media.Ocr | Vision `VNRecognizeTextRequest`, accurate, Turkish when the system lists it, else English |
 | Copying | text, PNG, DIB, file list | text, PNG, file URLs |
 | Paste into the previous app | `SendInput` Ctrl+V | the app is brought back (`NSRunningApplication`) and Cmd+V is posted with `CGEvent`. macOS asks for Accessibility permission the first time; without it the item stays on the clipboard and the shelf says how to allow it. A focused `AXSecureTextField` is never pasted into |
@@ -549,6 +550,5 @@ use; Vision needs no main thread.
 | Start at login | Run key | LaunchAgent (autostart plugin) |
 | Distribution | NSIS installer, portable ZIP | universal `.dmg`, not notarised: "System Settings → Privacy & Security → Open Anyway" |
 
-Not on macOS yet (BACKLOG): watching the screenshot folder, screen recordings, drag-out, the
-export and import dialogs, edge opening, Mica-like materials, quiet sounds during full-screen apps
-and the accent colour.
+Not on macOS yet (BACKLOG): screen recordings, drag-out, the export and import dialogs, edge
+opening, Mica-like materials, quiet sounds during full-screen apps and the accent colour.

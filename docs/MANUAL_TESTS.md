@@ -308,6 +308,33 @@ with conflicting styles). Everything below needs a Windows session.
       language switch remembers its choice. The embed shows both languages on
       mehmetburaktaskaya.com.
 
+## macOS (Phase 8)
+
+CI builds the app on `macos-latest`, runs the Rust tests there (the folder watcher and the
+screenshot mark on a real file system among them) and checks the code with clippy. Nothing below
+has run on a Mac yet (D-073). macOS 13 or later.
+
+- [ ] The `.dmg` opens; Panopin starts after "Open Anyway" in System Settings → Privacy &
+      Security. The menu bar shows the pushpin, tinted for light and dark menu bars; there is no
+      Dock icon.
+- [ ] Copied text, links and pictures (TextEdit, Safari, Preview, Cmd+Ctrl+Shift+4) become
+      cards. Copies a password manager marks as concealed or transient are not kept; Panopin's
+      own copies are not captured again. The source app shows in the details.
+- [ ] Cmd+Shift+3 and Cmd+Shift+4 screenshots on the Desktop reach the shelf; other pictures saved
+      to the Desktop do not. After choosing another folder in the Screenshot app's Options and
+      restarting Panopin, screenshots there are kept. A folder added in Settings takes every
+      picture.
+- [ ] Cmd+Option+V opens the shelf on the current Space and over a full-screen app;
+      Cmd+Option+C opens it with search; Cmd+Option+S starts the system's capture and opens the
+      result in the crop editor.
+- [ ] Enter pastes into the previous app. The first time, macOS asks for Accessibility
+      permission; without it the item stays on the clipboard and the shelf says how to allow it.
+      With it, Cmd+V reaches TextEdit, Notes, Safari and Terminal; a password field is never
+      pasted into.
+- [ ] Words in a screenshot are found by search (Vision), in Turkish and English.
+- [ ] Settings → Start at login adds and removes the login item.
+- [ ] An update from `latest.json` installs the universal app and Panopin restarts.
+
 ## Full round for v1.0.0
 
 Run every unchecked item in this file on the installed v1.0.0 build, in this order: capture,

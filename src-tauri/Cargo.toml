@@ -39,15 +39,16 @@ encoding_rs = "0.8.42"
 tauri-plugin-autostart = "2.7.0"
 tauri-plugin-updater = "2.14.1"
 
-# macOS (D-073): AppKit pasteboard and apps, Vision text recognition, CoreGraphics key events and
-# Accessibility. Default features would pull in whole frameworks, so only the classes in use.
+# macOS (D-073): AppKit pasteboard and apps, Vision text recognition, CoreGraphics key events,
+# Accessibility and the screenshot folder setting. Default features would pull in whole frameworks,
+# so only the classes in use.
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.5"
 libc = "0.2"
 image = { version = "0.25.10", default-features = false, features = ["tiff"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSData", "NSDictionary", "NSEnumerator", "NSError", "NSString", "NSURL"] }
 objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "NSPasteboard", "NSWorkspace", "NSRunningApplication"] }
-objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString", "CFDictionary", "CFNumber"] }
+objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString", "CFDictionary", "CFNumber", "CFPreferences"] }
 objc2-core-graphics = { version = "0.3.2", default-features = false, features = ["std", "libc", "CGEvent", "CGEventTypes", "CGEventSource", "CGRemoteOperation"] }
 objc2-application-services = { version = "0.3.2", default-features = false, features = ["std", "libc", "HIServices", "AXUIElement", "AXError"] }
 objc2-vision = { version = "0.3.2", default-features = false, features = ["std", "VNRequest", "VNRecognizeTextRequest", "VNObservation", "VNRequestHandler", "VNTypes"] }

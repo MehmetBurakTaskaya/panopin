@@ -45,8 +45,9 @@ src-tauri/src
   settings/              typed settings (serde defaults) stored in SQLite
   capture/
     clipboard_win.rs     message-only window + AddClipboardFormatListener (dedicated thread)
-    clipboard_mac.rs     Phase 8: NSPasteboard changeCount
+    clipboard_mac.rs     NSPasteboard changeCount, compared twice a second (D-073)
     folder_watcher.rs    ReadDirectoryChangesW on a dedicated thread (D-008)
+    folder_watcher_mac.rs kqueue on the folder; the screenshot mark on the Desktop (D-073)
     admission.rs         privacy markers, excluded apps, pause, self-copy, whitespace rule
   store/
     mod.rs               open the database (WAL) and apply migrations
@@ -66,7 +67,7 @@ src-tauri/src
     video.rs             recording poster, length and size from the shell (D-058)
     protocol.rs          custom URI scheme, serves by item id only (D-014)
     video.rs             poster frame + duration via the shell (D-024)
-  ocr/        mod.rs (queue), engine_win.rs (Windows.Media.Ocr); Vision in Phase 8 (D-056)
+  ocr/        mod.rs (queue), engine_win.rs (Windows.Media.Ocr, D-056), engine_mac.rs (Vision)
   links/      mod.rs (queue, storage), guard.rs (network guard, D-010), page.rs (D-057)
   look.rs                Mica support and the Windows accent colour (D-060)
   edge.rs                edge opening: low-level mouse hook while enabled (D-022)
@@ -77,6 +78,8 @@ src-tauri/src
     clipboard_win.rs     clipboard writer with the own-copy marker
     paste_win.rs         UIPI and password-field checks, SendInput (D-046)
     drag_win.rs          shell data object + SHDoDragDrop (D-023)
+    clipboard_mac.rs     pasteboard writer with the own-copy type (D-073)
+    paste_mac.rs         Accessibility permission, password-field check, CGEvent Cmd+V
   focus.rs               remember/restore the previous foreground window, Alt mask key
   system_state.rs        full-screen / presentation / focus-session detection (D-021)
   hotkeys.rs             global shortcut registry, recorder suspend/restore

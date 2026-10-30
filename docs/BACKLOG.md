@@ -21,7 +21,6 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 ## Not on macOS yet (D-073)
 
-- Watching the screenshot folder
 - Screen recordings (macOS saves them as `.mov`)
 - Dragging cards out of the shelf and the Library
 - The export and import dialogs

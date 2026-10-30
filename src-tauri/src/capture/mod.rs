@@ -1,7 +1,7 @@
 //! Capture pipeline (ARCHITECTURE §5): platform listeners feed one worker thread, which applies
 //! the admission rules and writes to the store. Clipboard content never reaches the logs.
 
-// Only Windows has listeners so far; the macOS ones arrive in Phase 8 and feed the same pipeline.
+// A few helpers and image formats only serve the Windows listeners.
 #![cfg_attr(not(windows), allow(dead_code))]
 
 pub mod admission;
@@ -10,6 +10,9 @@ pub(crate) mod clipboard_mac;
 #[cfg(windows)]
 pub(crate) mod clipboard_win;
 #[cfg(windows)]
+mod folder_watcher;
+#[cfg(target_os = "macos")]
+#[path = "folder_watcher_mac.rs"]
 mod folder_watcher;
 
 use std::{
@@ -51,7 +54,6 @@ const VIDEO_EXTENSIONS: [&str; 1] = ["mp4"];
 pub struct CaptureState {
     tx: Sender<Event>,
     media: MediaStore,
-    #[cfg(windows)]
     watchers: std::sync::Mutex<Vec<folder_watcher::Watcher>>,
 }
 
@@ -83,7 +85,6 @@ pub fn start(app: &AppHandle, data_dir: &Path) -> Result<()> {
     app.manage(CaptureState {
         tx,
         media,
-        #[cfg(windows)]
         watchers: std::sync::Mutex::new(Vec::new()),
     });
     reconfigure(app);
@@ -100,47 +101,47 @@ pub fn start(app: &AppHandle, data_dir: &Path) -> Result<()> {
 
 /// (Re)starts the screenshot-folder watchers from the current settings.
 pub fn reconfigure(app: &AppHandle) {
-    #[cfg(windows)]
-    {
-        let settings = app.state::<AppState>().settings();
-        let state = app.state::<CaptureState>();
-        let mut watchers = state
-            .watchers
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
-        watchers.clear(); // dropping a watcher stops it
-        let sources = &settings.sources;
-        if !settings.onboarded || !(sources.screenshots || sources.screen_recordings) {
-            return;
-        }
-        let mut folders = Vec::new();
-        if sources.screenshots {
-            match folder_watcher::screenshots_folder() {
-                Some(dir) => folders.push(dir),
-                None => log::warn!("the Windows Screenshots folder could not be resolved"),
-            }
-        }
-        if sources.screen_recordings {
-            match folder_watcher::recordings_folder() {
-                Some(dir) => folders.push(dir),
-                None => log::warn!("the Screen Recordings folder could not be resolved"),
-            }
-        }
-        // Extra folders hold screenshots, recordings or both; each file goes by its source.
-        for dir in settings.watched_folders.iter().map(PathBuf::from) {
-            if !folders.contains(&dir) {
-                folders.push(dir);
-            }
-        }
-        for dir in folders {
-            match folder_watcher::watch(dir, state.tx.clone()) {
-                Ok(watcher) => watchers.push(watcher),
-                Err(err) => log::warn!("cannot watch a screenshot folder: {err}"),
-            }
+    let settings = app.state::<AppState>().settings();
+    let state = app.state::<CaptureState>();
+    let mut watchers = state
+        .watchers
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    watchers.clear(); // dropping a watcher stops it
+    let sources = &settings.sources;
+    if !settings.onboarded || !(sources.screenshots || sources.screen_recordings) {
+        return;
+    }
+    // Each folder, and whether only the pictures the system marked as screenshots count there.
+    let mut folders = Vec::new();
+    if sources.screenshots {
+        match folder_watcher::screenshots_folder() {
+            Some(dir) => folders.push((dir, true)),
+            None => log::warn!("the screenshot folder could not be resolved"),
         }
     }
-    #[cfg(not(windows))]
-    let _ = app;
+    // macOS saves recordings as .mov, which Panopin does not keep yet (D-073).
+    #[cfg(windows)]
+    if sources.screen_recordings {
+        match folder_watcher::recordings_folder() {
+            Some(dir) => folders.push((dir, false)),
+            None => log::warn!("the Screen Recordings folder could not be resolved"),
+        }
+    }
+    // Extra folders hold screenshots, recordings or both; each file goes by its source, and every
+    // picture in them counts.
+    for dir in settings.watched_folders.iter().map(PathBuf::from) {
+        match folders.iter_mut().find(|(known, _)| *known == dir) {
+            Some((_, screenshots_only)) => *screenshots_only = false,
+            None => folders.push((dir, false)),
+        }
+    }
+    for (dir, screenshots_only) in folders {
+        match folder_watcher::watch(dir, screenshots_only, state.tx.clone()) {
+            Ok(watcher) => watchers.push(watcher),
+            Err(err) => log::warn!("cannot watch a screenshot folder: {err}"),
+        }
+    }
 }
 
 /// Pauses capture until `until` (Unix ms; `PAUSED_UNTIL_RESUMED` = until resumed) or resumes it.

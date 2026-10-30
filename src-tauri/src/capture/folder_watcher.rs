@@ -80,7 +80,9 @@ impl Drop for Watcher {
     }
 }
 
-pub fn watch(dir: PathBuf, tx: Sender<Event>) -> Result<Watcher> {
+/// Watches `dir`. Every picture counts, also with `screenshots_only`: the Windows Screenshots
+/// folder holds nothing else.
+pub fn watch(dir: PathBuf, _screenshots_only: bool, tx: Sender<Event>) -> Result<Watcher> {
     let wide: Vec<u16> = dir.as_os_str().encode_wide().chain(Some(0)).collect();
     let handle = unsafe {
         CreateFileW(
@@ -198,5 +200,26 @@ mod tests {
             vec!["Ekran görüntüsü 1.png".to_owned()]
         );
         assert!(changed_names(&[]).is_empty());
+    }
+
+    #[test]
+    fn new_pictures_are_reported() {
+        use std::{collections::BTreeSet, ffi::OsString, fs, sync::mpsc, time::Duration};
+
+        let dir = std::env::temp_dir().join(format!("panopin-watch-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("before.png"), b"old").unwrap();
+        let (tx, rx) = mpsc::channel();
+        let watcher = watch(dir.clone(), true, tx).unwrap();
+        fs::write(dir.join("notes.txt"), b"text").unwrap();
+        fs::write(dir.join("new.png"), b"picture").unwrap();
+        // A file is reported again while it is written; the capture worker skips repeats.
+        let mut reported = BTreeSet::new();
+        while let Ok(Event::File(path)) = rx.recv_timeout(Duration::from_millis(1500)) {
+            reported.insert(path.file_name().unwrap().to_owned());
+        }
+        assert_eq!(reported, BTreeSet::from([OsString::from("new.png")]));
+        drop(watcher); // returns once the thread has stopped
+        fs::remove_dir_all(&dir).unwrap();
     }
 }
