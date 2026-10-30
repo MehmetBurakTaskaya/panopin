@@ -67,8 +67,8 @@ pub struct TextCapture<'a> {
 /// replaces the old one, it moves to the front and out of Trash, while title, pin and note stay.
 pub fn upsert_text(conn: &Connection, capture: &TextCapture<'_>, now: i64) -> Result<i64> {
     let id = conn.query_row(
-        "INSERT INTO items (kind, identity, created_at, last_copied_at, source, source_app, text_body, url)
-         VALUES (?1, ?2, ?3, ?3, 'clipboard', ?4, ?5, ?6)
+        "INSERT INTO items (id, kind, identity, created_at, last_copied_at, source, source_app, text_body, url)
+         VALUES ((SELECT last + 1 FROM item_ids), ?1, ?2, ?3, ?3, 'clipboard', ?4, ?5, ?6)
          ON CONFLICT (kind, identity) DO UPDATE SET
              text_body = excluded.text_body,
              url = excluded.url,
@@ -124,9 +124,9 @@ pub struct ImageRow<'a> {
 
 pub fn insert_image(conn: &Connection, row: &ImageRow<'_>, now: i64) -> Result<i64> {
     conn.execute(
-        "INSERT INTO items (kind, identity, created_at, last_copied_at, source, source_app,
+        "INSERT INTO items (id, kind, identity, created_at, last_copied_at, source, source_app,
                             source_path, width, height, byte_size, media_ext, thumb_ext)
-         VALUES ('image', ?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+         VALUES ((SELECT last + 1 FROM item_ids), 'image', ?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             &row.identity[..],
             now,
@@ -159,9 +159,9 @@ pub struct VideoRow<'a> {
 
 pub fn insert_video(conn: &Connection, row: &VideoRow<'_>, now: i64) -> Result<i64> {
     conn.execute(
-        "INSERT INTO items (kind, identity, created_at, last_copied_at, source, source_path, width,
-                            height, byte_size, media_ext, thumb_ext, duration_ms)
-         VALUES ('video', ?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, 'mp4', ?8, ?9)",
+        "INSERT INTO items (id, kind, identity, created_at, last_copied_at, source, source_path,
+                            width, height, byte_size, media_ext, thumb_ext, duration_ms)
+         VALUES ((SELECT last + 1 FROM item_ids), 'video', ?1, ?2, ?2, ?3, ?4, ?5, ?6, ?7, 'mp4', ?8, ?9)",
         params![
             &row.identity[..],
             now,
@@ -258,6 +258,30 @@ mod tests {
         assert_eq!(field::<String>(&conn, id, "title"), "Kept");
         assert_eq!(field::<i64>(&conn, id, "pinned"), 1);
         assert_eq!(field::<Option<i64>>(&conn, id, "trashed_at"), None);
+    }
+
+    #[test]
+    fn ids_of_deleted_items_are_never_given_again() {
+        let conn = store::open_in_memory().unwrap();
+        let first = upsert_text(&conn, &text(Kind::Text, "one"), 1).unwrap();
+        let newest = upsert_text(&conn, &text(Kind::Text, "two"), 2).unwrap();
+        // Deleting the newest item for good would let SQLite hand its id out again.
+        conn.execute("DELETE FROM items WHERE id = ?1", [newest])
+            .unwrap();
+        let next = upsert_text(&conn, &text(Kind::Text, "three"), 3).unwrap();
+        assert!(next > newest, "id {next} reused after {newest}");
+        let note = crate::store::library::new_note(&conn, 4).unwrap();
+        assert!(note > next);
+        // Copying an existing text again keeps its id and takes no new one.
+        assert_eq!(
+            upsert_text(&conn, &text(Kind::Text, "one"), 5).unwrap(),
+            first
+        );
+        assert_eq!(
+            conn.query_row("SELECT last FROM item_ids", [], |row| row.get::<_, i64>(0))
+                .unwrap(),
+            note
+        );
     }
 
     #[test]

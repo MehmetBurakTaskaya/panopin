@@ -4,6 +4,23 @@ Checks that automated tests cannot cover: real focus and paste, global shortcuts
 DPI, sleep/resume, sounds. Each phase adds or ticks items. Record the date, Windows build and result
 next to each item when it is run.
 
+## Live run, 2026-10-30
+
+The installed release build (v1.0.0, per-user NSIS install, Windows 11 25H2 build 26200, one
+monitor at 100 %, Turkish Q) was driven by scripts: simulated keys sent only to a test window or to
+Panopin, UI Automation to read and press controls, the database to check results, and the
+clipboard put back afterwards. 90 checks passed in the end: install 0.9.9, find 1.0.0 on a local
+update server, "Update and restart", data kept, uninstall (14 + 5), and Phases 1–6 (71). Items
+below marked "(live 2026-10-30)" were covered; notes say when only part of an item was.
+
+The run found four bugs, all fixed and checked again:
+
+- Settings and the Library opened blank from the palette, L, the tray and shortcuts (D-070).
+- Win+Alt+C focused the search box only the first time; afterwards typed letters reached the
+  shelf's letter keys, and S took a card down (the search box now takes the focus as it appears).
+- Item ids could be given again after a delete for good, showing an old picture (D-071).
+- Pictures stayed in the webview's disk cache after their items were deleted (D-072).
+
 ## Phase 0: concept mockup
 
 Run `python -m http.server 4317 --directory docs/concept` and open `http://localhost:4317/mockup/`.
@@ -31,20 +48,22 @@ at 100 %, Turkish Q, debug build) with simulated key presses and screen captures
 Still to check by hand:
 
 - [ ] Tray icon: left click toggles the shelf; the menu shows "Rafı göster", "Ayarlar…", "Çıkış".
-- [ ] Clicking outside the board (desktop, taskbar, another window) closes the shelf.
+- [x] Clicking outside the board (desktop, taskbar, another window) closes the shelf. (live 2026-10-30: beside the
+      board; the taskbar and other windows not)
 - [ ] A tray click while the shelf is open closes it and does not reopen it.
 - [ ] Settings → Dil: switching to English updates Settings, the shelf and the tray menu at once, and
       survives a restart.
-- [ ] Starting Panopin a second time does not start a copy; the shelf (or the open Settings window)
-      comes forward.
-- [ ] Win+Alt+C opens the shelf too (search focus arrives in Phase 6).
+- [x] Starting Panopin a second time does not start a copy; the shelf (or the open Settings window)
+      comes forward. (live 2026-10-30)
+- [x] Win+Alt+C opens the shelf too (search focus arrives in Phase 6). (live 2026-10-30)
 - [ ] With Windows "Animation effects" off, the shelf appears and disappears without sliding.
-- [ ] Alt+F4 on the shelf slides it away instead of quitting.
+- [x] Alt+F4 on the shelf slides it away instead of quitting. (live 2026-10-30)
 
 ## Global shortcuts and keyboard layouts (Phase 1–3)
 
 - [ ] On Turkish Q: Win+Alt+V toggles the shelf, Win+Alt+C opens it with search focused, Win+Alt+S starts a snip.
-- [ ] With the app running, AltGr+Q/E/T still type @ € ₺ on Turkish Q, and AltGr+F/E/T on Turkish F.
+- [x] With the app running, AltGr+Q/E/T still type @ € ₺ on Turkish Q, and AltGr+F/E/T on Turkish F.
+      (live 2026-10-30: Turkish Q; Turkish F not checked)
 - [ ] After Win+Alt+V and Enter, Notepad's menu bar and Word's KeyTips are not left active.
 - [ ] Recorder: a combination already used by another app shows a warning and is not taken over.
 - [ ] Letter shortcuts inside the shelf (P, S, F, Shift+I/T/L) work on Turkish Q and Turkish F.
@@ -70,17 +89,18 @@ clipboard through .NET and the database was checked afterwards; the test items w
 Still to check by hand:
 
 - [ ] Copy a sentence in Notepad: texts +1. Copy it again: the count stays the same.
-- [ ] Copy an image in a browser ("Copy image", PNG path): images +1.
+- [x] Copy an image in a browser ("Copy image", PNG path): images +1. (live 2026-10-30: a "PNG"
+      clipboard format as browsers write it)
 - [ ] Win+Shift+S capture: images +1 exactly once (clipboard and auto-saved file merge).
 - [ ] Win+PrtScn: images +1; the file in the Screenshots folder is unchanged and never moved.
 - [ ] The Screenshots folder is found although Pictures is redirected to OneDrive and localised.
 - [ ] Copies from KeePass, KeePassXC, Bitwarden and 1Password are not captured.
-- [ ] Copying files in Explorer captures nothing.
+- [x] Copying files in Explorer captures nothing. (live 2026-10-30: a file list on the clipboard)
 - [ ] Tray → Pause capture → 5 minutes: icon greys out, copies are ignored, capture resumes by
       itself after 5 minutes. "Until I resume" survives a restart.
 - [ ] Capture keeps working after sleep and resume.
 - [ ] Content already on the clipboard when a source is enabled is not captured.
-- [ ] `%APPDATA%\Panopin\media\<id>\` holds `original.*` and `thumb.*` for each image.
+- [x] `%APPDATA%\Panopin\media\<id>\` holds `original.*` and `thumb.*` for each image. (live 2026-10-30)
 
 ## Shelf, focus and paste (Phase 3)
 
@@ -94,34 +114,35 @@ below needs the real app on Windows.
 
 The board:
 
-- [ ] Win+Alt+V shows Images, Texts and Links with their counts; the first image is selected.
+- [x] Win+Alt+V shows Images, Texts and Links with their counts; the first image is selected. (live 2026-10-30)
 - [ ] ←/→, ↑/↓ (keeps the column, skips empty rows), Tab, Ctrl+←/→, Alt+←/→ and 1–9 move as
       expected; Shift+arrows and Ctrl+A select several cards.
 - [ ] A click copies, shows "Kopyalandı" and the board stays open; Ctrl+click and Shift+click select.
 - [ ] Right click and Shift+F10 open the menu with every action; Esc closes the menu first.
-- [ ] P pins and unpins; S takes down (a pinned card stays in the database, a temporary one goes to
-      Trash); Backspace undoes; Delete asks first and Backspace undoes it too.
+- [x] P pins and unpins; S takes down (a pinned card stays in the database, a temporary one goes to
+      Trash); Backspace undoes; Delete asks first and Backspace undoes it too. (live 2026-10-30; S on
+      a pinned card not checked)
 - [ ] F shows pinned items only; Shift+I/T/L hide rows; hiding the last row closes the shelf.
 - [ ] Settings → Shelf: card size S/M/L and "Slides in from: Bottom" apply at once.
 
 Copy, focus and paste:
 
-- [ ] Enter copies, closes the board and focus returns to the previous app; Ctrl+V pastes there.
+- [x] Enter copies, closes the board and focus returns to the previous app; Ctrl+V pastes there. (live 2026-10-30)
 - [ ] Ctrl+Enter pastes into Notepad, Word, Chrome, Edge and VS Code.
-- [ ] Three texts selected with Shift+→: they are pasted in selection order, one per line.
+- [x] Three texts selected with Shift+→: they are pasted in selection order, one per line. (live 2026-10-30)
 - [ ] One image: pastes into Paint and Word at full resolution; a transparent PNG keeps its
       transparency where the app supports PNG.
 - [ ] Two images (Ctrl+click), Ctrl+C, paste in Explorer: two files named
       `Panopin-<date>-<n>.<ext>`; Paint pastes the first image.
-- [ ] Copies made from the shelf are not captured again and do not move their card.
-- [ ] Ctrl+Enter after closing the previous window: the board says nothing was pasted.
+- [x] Copies made from the shelf are not captured again and do not move their card. (live 2026-10-30)
+- [x] Ctrl+Enter after closing the previous window: the board says nothing was pasted. (live 2026-10-30)
 - [ ] Ctrl+Enter into an elevated (administrator) window explains why, and Ctrl+V there works.
-- [ ] Ctrl+Enter into a password field (a browser login form): refused, the board reopens with the
-      reason.
+- [x] Ctrl+Enter into a password field (a browser login form): refused, the board reopens with the
+      reason. (live 2026-10-30: a Windows password box; a browser form not checked)
 - [ ] After closing the shelf with Win+Alt+V in Notepad, releasing Alt does not activate the menu
       bar; same for Word's KeyTips.
 - [ ] Clicking the taskbar while the board is open closes it without moving focus elsewhere.
-- [ ] Starting Panopin.exe again from Explorer while it runs brings the shelf up with focus.
+- [x] Starting Panopin.exe again from Explorer while it runs brings the shelf up with focus. (live 2026-10-30)
 
 Drag:
 
@@ -164,8 +185,9 @@ and a 4K flatten takes about 0.45 s in a release build. Everything below needs t
       untouched picture and its thumbnail.
 - [ ] Enter or Ctrl+C on an edited image pastes the edited picture at full resolution into Paint
       and Word; the card thumbnail shows the edit; dragging it out gives the edited picture too.
-- [ ] Text: E or a click edits, saved about 300 ms after typing; Ctrl+Enter or Esc finishes; the
-      card updates; copying the new text later moves the same card forward.
+- [x] Text: E or a click edits, saved about 300 ms after typing; Ctrl+Enter or Esc finishes; the
+      card updates; copying the new text later moves the same card forward. (live 2026-10-30: E,
+      typing and Esc)
 - [ ] Taking down the last card while the preview is open leaves the empty preview with "Undo".
 
 ## Library (Phase 5)
@@ -180,7 +202,8 @@ the details saving a title; L and Ctrl+Shift+E on the shelf. No renders while id
 folders, tags (Turkish i forms), the saved rule, Trash and notes in Rust; filters, sorting and the
 keyboard model in vitest. Everything below needs the real app.
 
-- [ ] Tray → Open Library and L on the shelf (the shelf closes): one window, brought forward if open.
+- [x] Tray → Open Library and L on the shelf (the shelf closes): one window, brought forward if open.
+      (live 2026-10-30: L; the tray not checked)
 - [ ] Mica on Windows 11; an opaque window on Windows 10; light, dark and high contrast.
 - [ ] After a restart the window keeps grid or list, sorting, panel widths and column widths.
 - [ ] Sections: Recent shows only unsaved items; Pinned; Unsorted (saved, without folder or tag);
@@ -191,7 +214,8 @@ keyboard model in vitest. Everything below needs the real app.
 - [ ] P, Alt+P (several items one after another; Esc stops), Shift+P (Ctrl+N makes a folder) and
       Ctrl+Shift+T (new and existing tags; "İş" and "iş" are one tag), in the Library and on the shelf.
 - [ ] Details: title and note save on their own; when a save fails the typed text stays.
-- [ ] Ctrl+N note: pinned, the editor opens, it never expires; in a folder view it joins the folder.
+- [x] Ctrl+N note: pinned, the editor opens, it never expires; in a folder view it joins the folder.
+      (live 2026-10-30: outside a folder)
 - [ ] Ctrl+Shift+N folder, F2 rename, Delete (asks; the items stay); renaming a tag to an existing
       name shows an error; deleting a tag removes it from every item.
 - [ ] A card dropped on a folder joins it and keeps its pin; Alt+drag to Explorer gives .txt, .url
@@ -217,13 +241,16 @@ real app.
 
 - [ ] Shift+S and Win+Alt+C open the search box below the board; "istanbul" finds "İstanbul",
       "ışık" finds "IŞIK"; with "Ignore accents" on, "cicek" finds "çiçek"; hidden rows stay out.
+      (live 2026-10-30: Win+Alt+C and "istanbul"; the rest not yet)
 - [ ] Ctrl+F in the Library searches with the section and filters; "Relevance" sorts while searching.
 - [ ] Ten minutes after copying screenshots with text, the text is found by search; Ctrl+Shift+C
       copies it; a pixelated area of an edited image is not found.
+      (live 2026-10-30: read within seconds, found and copied; the pixelated area not checked)
 - [ ] With link previews on: a news page, a GitHub page and a YouTube video get title, site,
       picture and icon on the card and in the preview; Ctrl+O opens the browser; "Refresh preview".
       With them off, nothing goes out (check with a network monitor if possible).
-- [ ] Links to localhost, 192.168.x.x, http:// or with ?token= get no preview.
+- [x] Links to localhost, 192.168.x.x, http:// or with ?token= get no preview. (live 2026-10-30:
+      http://localhost; the rest by the Rust network-guard tests)
 - [ ] Screen recordings on: a Snipping Tool recording appears in the image row with poster and
       length; Space plays it, seeking works; Ctrl+C pastes it as a file in Explorer; drag and export.
 - [ ] "Import…" adds pictures and MP4 files; the originals are untouched.
@@ -233,6 +260,7 @@ real app.
 - [ ] Copy the last image and pause/resume through their shortcuts (the tray icon changes).
 - [ ] Ctrl+K on the shelf, in the preview, in the Library and in Settings; each command runs on the
       selection of the moment.
+      (live 2026-10-30: the shelf and Settings palettes; the preview and the Library not yet)
 - [ ] Settings → General: Start with Windows (sign out and in), edge opening (top and bottom edge,
       not during a full-screen video), accent-free search.
 - [ ] Settings → Appearance: theme, Windows accent colour (change it in Windows; Panopin follows),
@@ -240,7 +268,8 @@ real app.
 - [ ] Settings → Sources and History: watched folders, retention, Clear history counts, asks and
       moves only unsaved items. Privacy: excluded apps, pause, link previews, OCR language hint.
 - [ ] Settings → About: version, links, third-party licences.
-- [ ] Idle CPU stays near 0 % with OCR finished and previews off; Task Manager memory is noted.
+- [x] Idle CPU stays near 0 % with OCR finished and previews off; Task Manager memory is noted.
+      (2026-10-30, release build: 0.2 s of CPU per minute, about 120 MB private working set)
 
 ## Appearance and accessibility (Phase 3–5)
 
@@ -255,19 +284,23 @@ the Settings update states, the tray's tab request and the release-note text in 
 the website and the embed in a browser (desktop, 375 px phone emulation, dark mode, a host page
 with conflicting styles). Everything below needs a Windows session.
 
-- [ ] The installer runs without administrator rights, installs to `%LOCALAPPDATA%\Panopin`, adds
+- [x] The installer runs without administrator rights, installs to `%LOCALAPPDATA%\Panopin`, adds
       a Start menu entry and speaks Turkish on a Turkish Windows; SmartScreen steps match the
-      README.
+      README. (live 2026-10-30, silent install: the installer's pages and SmartScreen not seen)
 - [ ] The tray icon reads well at 100 %, 125 %, 150 % and 200 % scaling on a light and a dark
       taskbar, in the normal, paused and update states.
 - [ ] Settings → About → Licence texts opens `THIRD_PARTY_NOTICES.txt`.
-- [ ] Updates off: no request to github.com (network monitor). On: a newer published release puts
+- [x] Updates off: no request to github.com (network monitor). On: a newer published release puts
       a dot on the tray icon and "Update to x…" in its menu; Settings shows the notes; "Update and
       restart" installs it and Panopin comes back with every item, pin, folder and setting.
+      (live 2026-10-30: 0.9.9 found 1.0.0 on a local server, showed the notes, updated, restarted and
+      kept every item and setting, the database moving from schema 7 to 8; the tray dot and the
+      network monitor not checked)
 - [ ] The portable ZIP runs from any folder; it offers "Download from GitHub" instead of
       installing, and its Licence texts button works.
-- [ ] Uninstalling without "Delete the application data" keeps `%APPDATA%\Panopin`; with it, the
-      folder is gone. The "Start with Windows" entry is removed both times.
+- [x] Uninstalling without "Delete the application data" keeps `%APPDATA%\Panopin`; with it, the
+      folder is gone. The "Start with Windows" entry is removed both times. (live 2026-10-30: without
+      it; ticking it would have deleted the development data, so not checked)
 - [ ] Tag `v1.0.0`: the draft release has `Panopin_1.0.0_x64-setup.exe` (+ `.sig`),
       `Panopin-Setup-x64.exe`, both ZIPs, `latest.json` and `SHA256SUMS.txt`, and the hashes
       match the downloads.

@@ -89,9 +89,14 @@ fn serve_video(file: &Path, range: Option<&str>) -> Response<Vec<u8>> {
         .header("Content-Type", "video/mp4")
         .header("Accept-Ranges", "bytes")
         .header("Content-Range", format!("bytes {start}-{end}/{len}"))
+        .header("Cache-Control", NO_STORE)
         .body(bytes)
         .unwrap_or_default()
 }
+
+/// Media never goes into the webview's disk cache: a copy there would outlive the item when it
+/// is deleted for good or the history is cleared (D-072). Reading the file again is cheap.
+const NO_STORE: &str = "no-store";
 
 pub fn serve(
     store: &MediaStore,
@@ -140,7 +145,7 @@ pub fn serve(
     match fs::read(file) {
         Ok(bytes) => Response::builder()
             .header("Content-Type", content_type(&ext))
-            .header("Cache-Control", "max-age=31536000, immutable")
+            .header("Cache-Control", NO_STORE)
             .body(bytes)
             .unwrap_or_default(),
         Err(_) => empty(404),

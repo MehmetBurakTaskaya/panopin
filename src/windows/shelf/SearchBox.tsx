@@ -35,6 +35,9 @@ export function SearchBox(props: SearchBoxProps) {
         </svg>
         <input
           ref={props.inputRef}
+          // The box exists only while searching, so it takes the focus as it appears: a focus
+          // request made before React has added it would leave typing to the shelf's letter keys.
+          autoFocus
           type="search"
           value={props.query}
           placeholder={t('shelf.search.placeholder')}

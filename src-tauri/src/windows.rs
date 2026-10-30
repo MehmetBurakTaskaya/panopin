@@ -7,19 +7,57 @@ use crate::{error::Result, i18n};
 pub const SETTINGS: &str = "settings";
 pub const ONBOARDING: &str = "onboarding";
 
-fn open(app: &AppHandle, label: &str, title_key: &str, size: (f64, f64)) -> Result<()> {
-    if let Some(window) = app.get_webview_window(label) {
-        window.unminimize()?;
-        window.show()?;
-        window.set_focus()?;
+/// WebView2 cannot finish setting up a webview while the main thread waits in a command or an
+/// event handler, so a window built there stays blank (a documented Tauri limitation on
+/// Windows). New windows are built from a thread of their own, which hands the work to the event
+/// loop (D-070).
+fn build_apart(
+    app: &AppHandle,
+    label: &'static str,
+    build: impl FnOnce(&AppHandle) -> tauri::Result<()> + Send + 'static,
+) {
+    let app = app.clone();
+    let spawned = std::thread::Builder::new()
+        .name(format!("open-{label}"))
+        .spawn(move || {
+            if let Err(err) = build(&app) {
+                log::error!("the {label} window could not be created: {err}");
+            }
+        });
+    if let Err(err) = spawned {
+        log::error!("the {label} window could not be created: {err}");
+    }
+}
+
+/// Brings an open window forward; false when it does not exist yet.
+fn bring_forward(app: &AppHandle, label: &str) -> Result<bool> {
+    let Some(window) = app.get_webview_window(label) else {
+        return Ok(false);
+    };
+    window.unminimize()?;
+    window.show()?;
+    window.set_focus()?;
+    Ok(true)
+}
+
+fn open(
+    app: &AppHandle,
+    label: &'static str,
+    title_key: &'static str,
+    size: (f64, f64),
+) -> Result<()> {
+    if bring_forward(app, label)? {
         return Ok(());
     }
-    WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
-        .title(i18n::t(crate::current_lang(app), title_key))
-        .inner_size(size.0, size.1)
-        .min_inner_size(440.0, 320.0)
-        .center()
-        .build()?;
+    build_apart(app, label, move |app| {
+        WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+            .title(i18n::t(crate::current_lang(app), title_key))
+            .inner_size(size.0, size.1)
+            .min_inner_size(440.0, 320.0)
+            .center()
+            .build()
+            .map(|_| ())
+    });
     Ok(())
 }
 
@@ -111,27 +149,26 @@ fn with_material<'a>(
 
 fn open_with_material(
     app: &AppHandle,
-    label: &str,
-    title_key: &str,
+    label: &'static str,
+    title_key: &'static str,
     size: (f64, f64),
     min: (f64, f64),
 ) -> Result<()> {
-    if let Some(window) = app.get_webview_window(label) {
-        window.unminimize()?;
-        window.show()?;
-        window.set_focus()?;
+    if bring_forward(app, label)? {
         return Ok(());
     }
-    let builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
-        .title(i18n::t(crate::current_lang(app), title_key))
-        .inner_size(size.0, size.1)
-        .min_inner_size(min.0, min.1)
-        .center()
-        .theme(window_theme(app))
-        // Cards are dragged onto folders with HTML drag and drop, which Tauri's file drop would
-        // otherwise swallow on Windows.
-        .disable_drag_drop_handler();
-    with_material(app, builder).build()?;
+    build_apart(app, label, move |app| {
+        let builder = WebviewWindowBuilder::new(app, label, WebviewUrl::App("index.html".into()))
+            .title(i18n::t(crate::current_lang(app), title_key))
+            .inner_size(size.0, size.1)
+            .min_inner_size(min.0, min.1)
+            .center()
+            .theme(window_theme(app))
+            // Cards are dragged onto folders with HTML drag and drop, which Tauri's file drop
+            // would otherwise swallow on Windows.
+            .disable_drag_drop_handler();
+        with_material(app, builder).build().map(|_| ())
+    });
     Ok(())
 }
 

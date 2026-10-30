@@ -397,8 +397,8 @@ pub fn empty_trash(conn: &mut Connection) -> Result<Vec<i64>> {
 /// expire like a copy.
 pub fn new_note(conn: &Connection, now: i64) -> Result<i64> {
     conn.execute(
-        "INSERT INTO items (kind, identity, created_at, last_copied_at, source, pinned, text_body)
-         VALUES (?1, ?2, ?3, ?3, 'manual', 1, '')",
+        "INSERT INTO items (id, kind, identity, created_at, last_copied_at, source, pinned, text_body)
+         VALUES ((SELECT last + 1 FROM item_ids), ?1, ?2, ?3, ?3, 'manual', 1, '')",
         params![Kind::Text.as_str(), &note_identity(now)[..], now],
     )?;
     let id = conn.last_insert_rowid();

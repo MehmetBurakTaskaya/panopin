@@ -503,3 +503,24 @@ personal data appears. `pages.yml` publishes the page to GitHub Pages only when 
 `site/embed/download-section.html` is a self-contained section for mehmetburaktaskaya.com: styles
 scoped under `.panopin-embed`, an inline picture, no script; docs/WEBSITE.md explains how to add it
 to the Astro site.
+
+## D-070 New windows are built off the main thread — Accepted
+The first live test of the release build (2026-10-30) found Settings blank when the shelf's palette
+opened it: the window appeared, but its webview never did. The palette, L, the tray menu and the
+global shortcuts run as synchronous commands or event handlers on the main thread, where WebView2
+cannot finish creating a webview (a documented Tauri limitation on Windows); the Library is opened
+the same way. New windows are now built from a short-lived thread that hands the work to the event
+loop, and a window that is already open is still brought forward at once.
+
+## D-071 Item ids are never reused — Accepted
+Items had `INTEGER PRIMARY KEY` ids, which SQLite hands out again once the newest item is deleted
+for good. Media addresses (`/original/<id>`, `/thumb/<id>?v=`) are cached by the webview for a
+year, so a new picture could have shown the picture deleted before it. Migration 0008 adds an
+`item_ids` counter: every insert takes `last + 1`, and a trigger keeps the counter at the highest
+id ever used. Found while checking the live test results on 2026-10-30; a test covers it.
+
+## D-072 Media stays out of the webview's disk cache — Accepted
+Media answers were marked cacheable for a year, so WebView2 kept its own copies of every
+thumbnail and picture shown (31 MB on the development PC), and those copies outlived items deleted
+for good or a cleared history. Media is now answered with `Cache-Control: no-store`; pictures that
+are on screen stay in memory, and reading a file again from `media/` is cheap.

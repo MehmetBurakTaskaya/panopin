@@ -12,6 +12,7 @@ const MIGRATIONS: &[&str] = &[
     include_str!("migrations/0005_library.sql"),
     include_str!("migrations/0006_search.sql"),
     include_str!("migrations/0007_enrichment.sql"),
+    include_str!("migrations/0008_item_ids.sql"),
 ];
 
 #[cfg(test)]
