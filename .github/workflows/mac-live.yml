@@ -1,0 +1,61 @@
+name: Mac live test
+
+# Builds the Mac app, installs it from its .dmg and drives it as a user would on GitHub's Mac
+# runners (tests/macos/live.sh, D-073): copies, screenshots, the global shortcuts, the shelf, paste,
+# text recognition, Settings, the Library and the login item, on Apple silicon and Intel.
+# Screenshots, window texts, the app log and the results stay under the run's artifacts. Started
+# by hand (Actions → Mac live test → Run workflow).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: Live (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-15-intel, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      # A test build installs no updates, so it needs no update packages and no update key.
+      - name: Build the app and its .dmg
+        run: npm run tauri build -- --bundles app,dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
+
+      - name: Install from the .dmg
+        run: |
+          dmg=$(ls src-tauri/target/release/bundle/dmg/*.dmg | head -n 1)
+          hdiutil attach -nobrowse -readonly -mountpoint /tmp/panopin-dmg "$dmg"
+          cp -R /tmp/panopin-dmg/Panopin.app /Applications/
+          hdiutil detach /tmp/panopin-dmg
+
+      - name: Live test
+        run: bash tests/macos/live.sh /Applications/Panopin.app "$RUNNER_TEMP/mac-live"
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: mac-live-${{ matrix.os }}
+          path: ${{ runner.temp }}/mac-live
+          retention-days: 14
