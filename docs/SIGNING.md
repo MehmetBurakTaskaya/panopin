@@ -37,6 +37,8 @@ The updater installs only packages signed with the project's updater key (D-028,
   version differs from what `latest.json` announces (`requireSignedVersion`).
 - If the private key is lost, installed copies cannot accept updates signed with a new key: users
   have to install the next version by hand once.
+- Every action the workflows use is pinned to a commit (D-079), so a changed tag cannot alter a
+  step that runs while this key or the Mac certificate is in reach.
 - To replace the key: make a new pair, ship one release signed with the old key that carries the
   new public key, then switch the secret to the new private key.
 

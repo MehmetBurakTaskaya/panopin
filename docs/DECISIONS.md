@@ -712,3 +712,15 @@ blocks its first opening as before (D-075).
   update key (D-065) is the one that must never be lost. A new certificate needs a new
   `macos-requirement.txt` in the same commit.
 This changes D-073, D-075 and D-076.
+
+## D-079 Actions pinned to commits — Accepted
+Every `uses:` in `.github/workflows/` names the full commit SHA of a release, with the release in a
+comment (`actions/checkout@3d3c42e… # v7.0.1`), so a moved or taken-over tag cannot change a step
+that runs while the update key or the signing certificate is in reach (D-065, D-078). The owner
+agreed on 2026-10-30. The pins are the commits the major tags pointed at that day:
+actions/checkout v7.0.1, actions/setup-node v7.1.0, actions/upload-artifact v7.0.2,
+Swatinem/rust-cache v2.9.3 and EmbarkStudios/cargo-deny-action v2.1.1, a Docker action built from
+the Dockerfile at that commit, whose base image is pinned by digest; it runs only in CI, which has
+no secrets. Nothing updates the pins by itself: for a new release, look up its tag's commit (`gh api
+repos/<owner>/<repo>/git/ref/tags/<tag>`, then `git/tags/<sha>` when the tag is annotated) and
+change the SHA and the comment together.
