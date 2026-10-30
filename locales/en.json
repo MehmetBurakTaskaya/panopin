@@ -56,6 +56,7 @@
   "shelf.paste.elevated": "That app runs as administrator, so Windows does not let Panopin paste into it. The item is on the clipboard: press Ctrl+V there.",
   "shelf.paste.password": "That is a password field, so nothing was pasted.",
   "shelf.paste.failed": "Pasting did not work. The item is on the clipboard: press Ctrl+V.",
+  "shelf.paste.permission": "Panopin needs Accessibility permission to paste: System Settings → Privacy & Security → Accessibility. The item is on the clipboard: press Cmd+V.",
   "shelf.error": "Something went wrong: {error}",
   "preview.label": "Preview",
   "preview.image": "Image",

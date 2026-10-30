@@ -1,8 +1,8 @@
 //! Decides what a clipboard change becomes. Pure, so every rule is unit-tested; the platform
 //! listeners only fill in a `Snapshot`.
 
-// Only the Windows listener builds snapshots so far; the macOS one arrives in Phase 8.
-#![cfg_attr(not(windows), allow(dead_code))]
+// The Windows and macOS listeners build snapshots; other systems have none yet.
+#![cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
 
 use crate::settings::Sources;
 
@@ -23,9 +23,23 @@ pub struct Snapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 pub enum RawImage {
     Png(Vec<u8>),
     Dib(Vec<u8>),
+    /// Another encoded picture (TIFF on macOS); it is stored as PNG.
+    Encoded(Vec<u8>),
+}
+
+/// An app as the excluded-apps list names it: "KeePassXC.exe" on Windows matches "KeePassXC" on
+/// macOS, and "Name.app" matches "Name".
+fn app_name(name: &str) -> &str {
+    let lower = name.to_ascii_lowercase();
+    if lower.ends_with(".exe") || lower.ends_with(".app") {
+        &name[..name.len() - 4]
+    } else {
+        name
+    }
 }
 
 pub struct Policy<'a> {
@@ -62,7 +76,7 @@ pub fn decide(snapshot: Snapshot, policy: &Policy<'_>) -> Decision {
             policy
                 .excluded_apps
                 .iter()
-                .any(|app| app.eq_ignore_ascii_case(exe))
+                .any(|app| app_name(app).eq_ignore_ascii_case(app_name(exe)))
         })
     };
     let skip = if !policy.onboarded {
@@ -301,6 +315,27 @@ mod tests {
         assert_eq!(
             decide_with(png, images_off),
             Decision::Skip(Skip::SourceOff)
+        );
+    }
+
+    #[test]
+    fn excluded_apps_match_with_or_without_an_extension() {
+        let from = |app: &str| Snapshot {
+            owner_exe: Some(app.to_owned()),
+            ..text("secret")
+        };
+        // The list holds "KeePassXC.exe"; macOS reports the app as "KeePassXC".
+        assert_eq!(
+            decide_default(from("KeePassXC")),
+            Decision::Skip(Skip::ExcludedApp)
+        );
+        assert_eq!(
+            decide_default(from("keepassxc.app")),
+            Decision::Skip(Skip::ExcludedApp)
+        );
+        assert_eq!(
+            decide_default(from("KeePass")),
+            Decision::Text("secret".into())
         );
     }
 

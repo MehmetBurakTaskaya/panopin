@@ -44,6 +44,9 @@ pub enum AppError {
     Interrupted,
     #[error("update error: {0}")]
     Update(#[from] tauri_plugin_updater::Error),
+    #[cfg(target_os = "macos")]
+    #[error("macOS error: {0}")]
+    Mac(String),
 }
 
 pub type Result<T, E = AppError> = std::result::Result<T, E>;

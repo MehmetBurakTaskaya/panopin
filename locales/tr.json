@@ -56,6 +56,7 @@
   "shelf.paste.elevated": "O uygulama yönetici olarak çalışıyor, Windows oraya yapıştırmaya izin vermiyor. Öğe panoda: orada Ctrl+V'ye bas.",
   "shelf.paste.password": "Odaktaki alan bir parola alanı, bu yüzden yapıştırılmadı.",
   "shelf.paste.failed": "Yapıştırılamadı. Öğe panoda: Ctrl+V'ye bas.",
+  "shelf.paste.permission": "Yapıştırmak için Panopin'in Erişilebilirlik izni gerekiyor: Sistem Ayarları → Gizlilik ve Güvenlik → Erişilebilirlik. Öğe panoda: Cmd+V'ye bas.",
   "shelf.error": "Bir sorun çıktı: {error}",
   "preview.label": "Önizleme",
   "preview.image": "Görsel",

@@ -270,7 +270,7 @@ export const undoTakeDown = () => invoke<number[]>('undo_take_down');
 export const copyItems = (ids: number[]) => invoke<void>('copy_items', { ids });
 
 /** Ctrl+Enter. `pasted`: the shelf closed and Ctrl+V was sent; otherwise the shelf stays open. */
-export type PasteOutcome = 'pasted' | 'windowGone' | 'elevated' | 'refused';
+export type PasteOutcome = 'pasted' | 'windowGone' | 'elevated' | 'refused' | 'noPermission';
 export const pasteItems = (ids: number[]) => invoke<PasteOutcome>('paste_items', { ids });
 export interface BoardRect {
   left: number;

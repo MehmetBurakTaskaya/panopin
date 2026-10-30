@@ -46,10 +46,33 @@ try {
     }
   }
 
+  // The macOS menu bar wants template pictures: black on transparent, which macOS tints for light
+  // and dark menu bars (D-073). A note with its pin; paused is faint with a pause badge, an update
+  // adds a dot. 44 px is 22 pt at 2x.
+  const note =
+    '<g transform="rotate(-6 32 38)"><rect x="12" y="20" width="40" height="36" rx="5" fill="none" stroke="#000" stroke-width="5"/>' +
+    '<path d="M20 35h24M20 44h14" stroke="#000" stroke-width="4" stroke-linecap="round"/></g>' +
+    '<circle cx="32" cy="17" r="9" fill="#000"/>';
+  const macPause = '<rect x="41" y="40" width="6" height="20" rx="1.5" fill="#000"/><rect x="51" y="40" width="6" height="20" rx="1.5" fill="#000"/>';
+  const macDot = '<circle cx="54" cy="12" r="8" fill="#000"/>';
+  const template = (body) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`;
+  const macStates = {
+    normal: note,
+    update: note + macDot,
+    paused: `<g opacity=".45">${note}</g>${macPause}`,
+    'paused-update': `<g opacity=".45">${note}</g>${macPause}${macDot}`,
+  };
+  for (const [name, body] of Object.entries(macStates)) {
+    const file = path.join(work, `mac-${name}.svg`);
+    writeFileSync(file, template(body));
+    tauriIcon(`"${file}" --png 44 -o "${path.join(work, `mac-${name}`)}"`);
+    copyFileSync(path.join(work, `mac-${name}`, '44x44.png'), path.join(icons, 'tray', `mac-${name}.png`));
+  }
+
   // The website and the READMEs use the same picture.
   copyFileSync(source, path.join(root, 'site', 'assets', 'panopin.svg'));
   copyFileSync(path.join(icons, '32x32.png'), path.join(root, 'site', 'assets', 'favicon-32.png'));
-  console.log('icons: app icon, 4 tray states × 4 sizes, website icons');
+  console.log('icons: app icon, 4 tray states × 4 sizes, 4 macOS menu bar templates, website icons');
 } finally {
   rmSync(work, { recursive: true, force: true });
 }

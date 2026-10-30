@@ -8,12 +8,16 @@
 //! - A drag carries the text and the images as files the same way.
 #![cfg_attr(not(windows), allow(dead_code))]
 
+#[cfg(target_os = "macos")]
+mod clipboard_mac;
 #[cfg(windows)]
 mod clipboard_win;
 #[cfg(windows)]
 mod drag_win;
 #[cfg(windows)]
 mod folder_win;
+#[cfg(target_os = "macos")]
+mod paste_mac;
 #[cfg(windows)]
 mod paste_win;
 pub mod staging;
@@ -162,6 +166,9 @@ pub struct Formats {
     pub dib: Option<Vec<u8>>,
     /// `DROPFILES` and the paths (`CF_HDROP`).
     pub files: Option<Vec<u8>>,
+    /// The same files as paths, which macOS puts on the pasteboard as file URLs.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    pub paths: Vec<PathBuf>,
 }
 
 impl Formats {
@@ -195,6 +202,7 @@ pub fn prepare(selection: &Selection, staging: &Staging) -> Result<Formats> {
         };
         paths.extend(stage_files(&selection.files, staging)?);
         formats.files = Some(dropfiles(&paths));
+        formats.paths = paths;
     }
     Ok(formats)
 }
@@ -286,6 +294,10 @@ pub enum PasteOutcome {
     /// Pasting was refused after the shelf closed (a password field, or input was blocked); the
     /// shelf reopened with the reason.
     Refused,
+    /// macOS: Panopin may not send keys until it has Accessibility permission; the item is on
+    /// the clipboard.
+    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
+    NoPermission,
 }
 
 fn formats_for(app: &AppHandle, ids: &[i64]) -> Result<Formats> {
@@ -511,7 +523,12 @@ fn write(app: &AppHandle, formats: &Formats) -> Result<()> {
     clipboard_win::write(window.hwnd()?.0 as isize, formats)
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+fn write(_app: &AppHandle, formats: &Formats) -> Result<()> {
+    clipboard_mac::write(formats)
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 fn write(_app: &AppHandle, _formats: &Formats) -> Result<()> {
     Err(AppError::Unsupported)
 }
@@ -549,7 +566,28 @@ fn paste_into(app: &AppHandle, target: crate::focus::Target) -> Result<PasteOutc
     }
 }
 
-#[cfg(not(windows))]
+/// macOS (D-073): the previous app comes back and gets Cmd+V, which needs Accessibility
+/// permission. Without it the item stays on the clipboard and the shelf says how to allow it.
+#[cfg(target_os = "macos")]
+fn paste_into(app: &AppHandle, target: crate::focus::Target) -> Result<PasteOutcome> {
+    if !paste_mac::may_paste() {
+        return Ok(PasteOutcome::NoPermission);
+    }
+    crate::shelf::request_close(app, true)?;
+    match paste_mac::send_paste(target) {
+        paste_mac::Sent::Pasted => Ok(PasteOutcome::Pasted),
+        paste_mac::Sent::PasswordField => {
+            crate::shelf::open_with_notice(app, "shelf.paste.password")?;
+            Ok(PasteOutcome::Refused)
+        }
+        paste_mac::Sent::Blocked => {
+            crate::shelf::open_with_notice(app, "shelf.paste.failed")?;
+            Ok(PasteOutcome::Refused)
+        }
+    }
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 fn paste_into(_app: &AppHandle, _target: crate::focus::Target) -> Result<PasteOutcome> {
     Err(AppError::Unsupported)
 }

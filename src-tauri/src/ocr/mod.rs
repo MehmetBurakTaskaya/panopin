@@ -4,10 +4,16 @@
 //!
 //! The thread sleeps until something wakes it (a new or edited image, a settings change); it never
 //! polls.
-#![cfg_attr(not(windows), allow(dead_code))]
+#![cfg_attr(not(any(windows, target_os = "macos")), allow(dead_code))]
 
+#[cfg(target_os = "macos")]
+mod engine_mac;
 #[cfg(windows)]
 mod engine_win;
+#[cfg(target_os = "macos")]
+use engine_mac as engine;
+#[cfg(windows)]
+use engine_win as engine;
 
 use std::sync::{Condvar, Mutex, PoisonError};
 
@@ -65,17 +71,17 @@ pub struct OcrStatus {
 }
 
 pub fn status() -> OcrStatus {
-    #[cfg(windows)]
+    #[cfg(any(windows, target_os = "macos"))]
     {
-        engine_win::init_thread(false);
-        let languages = engine_win::languages().unwrap_or_default();
+        engine::init_thread(false);
+        let languages = engine::languages().unwrap_or_default();
         OcrStatus {
             supported: true,
-            reading: engine_win::Engine::new().map(|engine| engine.language),
+            reading: engine::Engine::new().map(|engine| engine.language),
             languages,
         }
     }
-    #[cfg(not(windows))]
+    #[cfg(not(any(windows, target_os = "macos")))]
     OcrStatus {
         supported: false,
         languages: Vec::new(),
@@ -138,11 +144,11 @@ fn pixels(app: &AppHandle, id: i64) -> Result<Option<RgbaImage>> {
     }
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 fn run(app: &AppHandle) {
-    engine_win::init_thread(true);
+    engine::init_thread(true);
     let queue = app.state::<OcrQueue>();
-    let mut engine: Option<engine_win::Engine> = None;
+    let mut engine: Option<engine::Engine> = None;
     loop {
         queue.wait();
         loop {
@@ -154,11 +160,11 @@ fn run(app: &AppHandle) {
                 break;
             };
             if engine.is_none() {
-                engine = engine_win::Engine::new();
+                engine = engine::Engine::new();
             }
             // Without an OCR language the images wait; a later wake tries again.
             let Some(reader) = engine.as_ref() else {
-                log::info!("no Windows OCR language is installed; images wait");
+                log::info!("no OCR language is available; images wait");
                 break;
             };
             let text = match pixels(app, id) {
@@ -180,9 +186,9 @@ fn run(app: &AppHandle) {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn run(app: &AppHandle) {
-    // Apple Vision arrives in Phase 8; until then the queue only sleeps.
+    // No OCR on this system; the queue only sleeps.
     let queue = app.state::<OcrQueue>();
     loop {
         queue.wait();
@@ -237,10 +243,10 @@ pub fn copy_text(app: &AppHandle, id: i64) -> Result<TextCopy> {
     Ok(TextCopy::Copied)
 }
 
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "macos"))]
 fn read_now(app: &AppHandle, id: i64) -> Result<Option<String>> {
-    engine_win::init_thread(false);
-    let Some(engine) = engine_win::Engine::new() else {
+    engine::init_thread(false);
+    let Some(engine) = engine::Engine::new() else {
         return Ok(None);
     };
     match pixels(app, id)? {
@@ -249,7 +255,7 @@ fn read_now(app: &AppHandle, id: i64) -> Result<Option<String>> {
     }
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn read_now(_app: &AppHandle, _id: i64) -> Result<Option<String>> {
     Ok(None)
 }

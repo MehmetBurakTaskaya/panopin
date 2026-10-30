@@ -290,6 +290,7 @@ export function ShelfApp() {
       const outcome = await pasteItems(ids);
       if (outcome === 'windowGone') setNotice(t('shelf.paste.gone'));
       if (outcome === 'elevated') setNotice(t('shelf.paste.elevated'));
+      if (outcome === 'noPermission') setNotice(t('shelf.paste.permission'));
     } catch (err) {
       fail(err);
     }

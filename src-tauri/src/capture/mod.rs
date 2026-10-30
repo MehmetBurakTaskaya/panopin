@@ -5,6 +5,8 @@
 #![cfg_attr(not(windows), allow(dead_code))]
 
 pub mod admission;
+#[cfg(target_os = "macos")]
+pub(crate) mod clipboard_mac;
 #[cfg(windows)]
 pub(crate) mod clipboard_win;
 #[cfg(windows)]
@@ -76,6 +78,8 @@ pub fn start(app: &AppHandle, data_dir: &Path) -> Result<()> {
         })?;
     #[cfg(windows)]
     clipboard_win::spawn(tx.clone())?;
+    #[cfg(target_os = "macos")]
+    clipboard_mac::spawn(tx.clone())?;
     app.manage(CaptureState {
         tx,
         media,
@@ -307,6 +311,11 @@ fn save_clipboard_image(
         RawImage::Png(bytes) => (decode::decode(&bytes)?, bytes),
         RawImage::Dib(bytes) => {
             let pixels = decode::decode_dib(&bytes)?;
+            let png = decode::encode_png(&pixels)?;
+            (pixels, png)
+        }
+        RawImage::Encoded(bytes) => {
+            let pixels = decode::decode(&bytes)?;
             let png = decode::encode_png(&pixels)?;
             (pixels, png)
         }

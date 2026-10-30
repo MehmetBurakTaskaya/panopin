@@ -300,6 +300,9 @@ pub fn run() {
             });
         })
         .setup(|app| {
+            // A menu bar app on macOS: no Dock icon and no app menu (D-073).
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             // updates::start reads the plugin's state, so it is registered first (D-065).
             app.handle()
                 .plugin(tauri_plugin_updater::Builder::new().build())?;

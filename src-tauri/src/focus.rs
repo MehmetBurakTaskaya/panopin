@@ -136,7 +136,45 @@ mod imp {
 #[cfg(windows)]
 pub use imp::*;
 
-#[cfg(not(windows))]
+/// macOS (D-073): apps rather than windows; the app in front is recorded and brought back.
+#[cfg(target_os = "macos")]
+mod imp {
+    use objc2::rc::Retained;
+    use objc2_app_kit::{NSApplicationActivationOptions, NSRunningApplication, NSWorkspace};
+
+    use super::Target;
+
+    fn running(target: Target) -> Option<Retained<NSRunningApplication>> {
+        let pid = libc::pid_t::try_from(target.pid).ok()?;
+        NSRunningApplication::runningApplicationWithProcessIdentifier(pid)
+    }
+
+    /// The app in front; Panopin itself never counts.
+    pub fn foreground() -> Option<Target> {
+        let app = NSWorkspace::sharedWorkspace().frontmostApplication()?;
+        let pid = u32::try_from(app.processIdentifier()).ok()?;
+        (pid != std::process::id()).then_some(Target { hwnd: 0, pid })
+    }
+
+    pub fn is_alive(target: Target) -> bool {
+        running(target).is_some()
+    }
+
+    pub fn restore(target: Target) -> bool {
+        running(target)
+            .is_some_and(|app| app.activateWithOptions(NSApplicationActivationOptions(0)))
+    }
+
+    /// Option opens no menu bar on macOS, and the shelf takes the focus when it is shown.
+    pub fn mask_alt_release() {}
+
+    pub fn claim_foreground() {}
+}
+
+#[cfg(target_os = "macos")]
+pub use imp::*;
+
+#[cfg(not(any(windows, target_os = "macos")))]
 mod imp {
     use super::Target;
 
@@ -157,5 +195,5 @@ mod imp {
     pub fn claim_foreground() {}
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 pub use imp::*;

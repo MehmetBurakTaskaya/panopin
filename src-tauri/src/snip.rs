@@ -58,7 +58,16 @@ fn open_overlay() -> Result<()> {
     }
 }
 
-#[cfg(not(windows))]
+/// macOS (D-073): `screencapture -i -c` lets the user pick an area and puts it on the clipboard.
+#[cfg(target_os = "macos")]
+fn open_overlay() -> Result<()> {
+    std::process::Command::new("/usr/sbin/screencapture")
+        .args(["-i", "-c"])
+        .spawn()?;
+    Ok(())
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 fn open_overlay() -> Result<()> {
     Err(crate::error::AppError::Unsupported)
 }

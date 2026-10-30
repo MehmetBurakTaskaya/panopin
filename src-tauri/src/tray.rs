@@ -22,7 +22,9 @@ const TRAY_ID: &str = "panopin";
 
 /// One tray picture per small-icon size from 100 % to 200 % scaling, drawn from the SVG at that
 /// size so Windows never shrinks a larger one (D-067). `npm run icons` makes them.
+#[cfg(not(target_os = "macos"))]
 type Pictures = [(u32, &'static [u8]); 4];
+#[cfg(not(target_os = "macos"))]
 macro_rules! pictures {
     ($name:literal) => {
         [
@@ -45,18 +47,37 @@ macro_rules! pictures {
         ]
     };
 }
-const NORMAL: Pictures = pictures!("normal");
-const PAUSED: Pictures = pictures!("paused");
-const UPDATE: Pictures = pictures!("update");
-const PAUSED_UPDATE: Pictures = pictures!("paused-update");
-
-/// The smallest picture at least as large as Windows' small icons, else the largest.
-fn picture(set: &Pictures) -> &'static [u8] {
+/// The picture for the tray's state: whether capture is paused and an update is on offer.
+#[cfg(not(target_os = "macos"))]
+fn state_picture(paused: bool, update: bool) -> &'static [u8] {
+    const NORMAL: Pictures = pictures!("normal");
+    const PAUSED: Pictures = pictures!("paused");
+    const UPDATE: Pictures = pictures!("update");
+    const PAUSED_UPDATE: Pictures = pictures!("paused-update");
+    let set = match (paused, update) {
+        (false, false) => &NORMAL,
+        (true, false) => &PAUSED,
+        (false, true) => &UPDATE,
+        (true, true) => &PAUSED_UPDATE,
+    };
+    // The smallest picture at least as large as Windows' small icons, else the largest.
     let want = small_icon_size();
     set.iter()
         .find(|(size, _)| *size >= want)
         .unwrap_or(&set[set.len() - 1])
         .1
+}
+
+/// The macOS menu bar gets template pictures, black on transparent, which macOS tints for light
+/// and dark menu bars (D-073).
+#[cfg(target_os = "macos")]
+fn state_picture(paused: bool, update: bool) -> &'static [u8] {
+    match (paused, update) {
+        (false, false) => include_bytes!("../icons/tray/mac-normal.png"),
+        (true, false) => include_bytes!("../icons/tray/mac-paused.png"),
+        (false, true) => include_bytes!("../icons/tray/mac-update.png"),
+        (true, true) => include_bytes!("../icons/tray/mac-paused-update.png"),
+    }
 }
 
 #[cfg(windows)]
@@ -67,7 +88,7 @@ fn small_icon_size() -> u32 {
     u32::try_from(size).unwrap_or(16)
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn small_icon_size() -> u32 {
     32
 }
@@ -133,13 +154,10 @@ pub fn refresh(app: &AppHandle) -> Result<()> {
         return Ok(());
     };
     tray.set_menu(Some(menu(app)?))?;
-    let set = match (is_paused(app), updates::offered(app).is_some()) {
-        (false, false) => &NORMAL,
-        (true, false) => &PAUSED,
-        (false, true) => &UPDATE,
-        (true, true) => &PAUSED_UPDATE,
-    };
-    tray.set_icon(Some(Image::from_bytes(picture(set))?))?;
+    let picture = state_picture(is_paused(app), updates::offered(app).is_some());
+    tray.set_icon(Some(Image::from_bytes(picture)?))?;
+    #[cfg(target_os = "macos")]
+    tray.set_icon_as_template(true)?;
     tray.set_tooltip(Some(tooltip(app, capture::counts(app))))?;
     Ok(())
 }
