@@ -23,7 +23,6 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 - Screen recordings (macOS saves them as `.mov`)
 - Dragging cards out of the shelf and the Library
-- The export and import dialogs
 - Opening the shelf from the screen edge
 - Window materials and the system accent colour
 - Quiet sounds while a full-screen app is in front

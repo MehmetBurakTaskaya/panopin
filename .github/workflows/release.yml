@@ -1,8 +1,9 @@
 name: Release
 
-# Pushing a tag such as v1.0.0 builds the Windows installer, the portable ZIP and the universal
-# macOS .dmg and puts them on a draft release with latest.json and SHA256SUMS.txt (D-068, D-073).
-# Publishing the draft is a manual step.
+# Pushing a tag such as v1.0.0 builds the Windows installer and the portable ZIP and puts them on a
+# draft release with latest.json and SHA256SUMS.txt (D-068). The universal macOS .dmg joins them
+# once the repository variable PANOPIN_MACOS is "true" (D-073). Publishing the draft is a manual
+# step.
 on:
   push:
     tags: ['v*']
@@ -105,6 +106,8 @@ jobs:
   macos:
     name: macOS universal .dmg
     needs: windows
+    # Released only after the Mac build has been tried on a Mac (D-073).
+    if: ${{ vars.PANOPIN_MACOS == 'true' }}
     runs-on: macos-latest
     # A failed Mac build leaves the Windows release intact; latest.json then offers Windows only.
     continue-on-error: true

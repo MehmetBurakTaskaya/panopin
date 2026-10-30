@@ -491,7 +491,9 @@ installer and creates a **draft** release whose notes are the CHANGELOG section 
 notes. The workflow then adds the portable ZIP (`Panopin.exe`, `LICENSE.txt`,
 `THIRD_PARTY_NOTICES.txt`), copies with fixed names (`Panopin-Setup-x64.exe`,
 `Panopin-Portable-x64.zip`) so `releases/latest/download/<file>` links never change, `latest.json`
-and `SHA256SUMS.txt`. The owner publishes the draft. The macOS `.dmg` joins in Phase 8; code
+and `SHA256SUMS.txt`. The owner publishes the draft. The universal macOS `.dmg` (Phase 8, D-073)
+is built only when the repository variable `PANOPIN_MACOS` is `true`, which the owner sets once
+the Mac build has been tried on a Mac; until then releases and `latest.json` are Windows only. Code
 signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a Changelog
 and versions follow SemVer.
 
@@ -542,13 +544,14 @@ use; Vision needs no main thread.
 | Screenshot folder | the Screenshots known folder, `ReadDirectoryChangesW` | the folder chosen in the Screenshot app (`com.apple.screencapture` `location`), else the Desktop. A thread waits in `kevent` on the folder and lists it when its entries change. That folder is usually the Desktop, so only pictures with macOS's screenshot mark (`com.apple.metadata:kMDItemIsScreenCapture`) count there, whatever the language of their names; folders the user adds take every picture |
 | Text in images | Windows.Media.Ocr | Vision `VNRecognizeTextRequest`, accurate, Turkish when the system lists it, else English |
 | Copying | text, PNG, DIB, file list | text, PNG, file URLs |
+| Folder and file dialogs | common item dialog | `NSOpenPanel` on the main thread, its message carrying the title; imports limited to the known extensions through `UTType` (`objc2-uniform-type-identifiers`) |
 | Paste into the previous app | `SendInput` Ctrl+V | the app is brought back (`NSRunningApplication`) and Cmd+V is posted with `CGEvent`. macOS asks for Accessibility permission the first time; without it the item stays on the clipboard and the shelf says how to allow it. A focused `AXSecureTextField` is never pasted into |
 | Global shortcuts | Win+Alt+V/C/S | the same accelerators become Cmd+Option+V/C/S. Cmd+Option+V is Finder's "Move here", so **the owner decides** whether macOS keeps it |
 | In-app keys | Ctrl+… | Cmd+… (the key tables already accept either) |
 | Tray | notification area icon | menu bar template icon that macOS tints; no Dock icon (accessory app) |
 | Screen snip | Snipping Tool overlay | `screencapture -i -c` |
 | Start at login | Run key | LaunchAgent (autostart plugin) |
-| Distribution | NSIS installer, portable ZIP | universal `.dmg`, not notarised: "System Settings → Privacy & Security → Open Anyway" |
+| Distribution | NSIS installer, portable ZIP | universal `.dmg`, not notarised: "System Settings → Privacy & Security → Open Anyway". Releases carry it once the `PANOPIN_MACOS` variable is `true` (D-068) |
 
-Not on macOS yet (BACKLOG): screen recordings, drag-out, the export and import dialogs, edge
-opening, Mica-like materials, quiet sounds during full-screen apps and the accent colour.
+Not on macOS yet (BACKLOG): screen recordings, drag-out, edge opening, Mica-like materials, quiet
+sounds during full-screen apps and the accent colour.

@@ -893,6 +893,11 @@
    "license": "Zlib OR Apache-2.0 OR MIT"
   },
   {
+   "name": "objc2-uniform-type-identifiers",
+   "version": "0.3.2",
+   "license": "Zlib OR Apache-2.0 OR MIT"
+  },
+  {
    "name": "objc2-vision",
    "version": "0.3.2",
    "license": "Zlib OR Apache-2.0 OR MIT"

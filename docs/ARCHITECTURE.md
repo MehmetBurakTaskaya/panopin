@@ -78,6 +78,8 @@ src-tauri/src
     clipboard_win.rs     clipboard writer with the own-copy marker
     paste_win.rs         UIPI and password-field checks, SendInput (D-046)
     drag_win.rs          shell data object + SHDoDragDrop (D-023)
+    folder_win.rs        the common item dialog for exports, imports and watched folders
+    folder_mac.rs        NSOpenPanel for the same (D-073)
     clipboard_mac.rs     pasteboard writer with the own-copy type (D-073)
     paste_mac.rs         Accessibility permission, password-field check, CGEvent Cmd+V
   focus.rs               remember/restore the previous foreground window, Alt mask key

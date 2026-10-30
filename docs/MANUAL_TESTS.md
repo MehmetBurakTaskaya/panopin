@@ -312,7 +312,8 @@ with conflicting styles). Everything below needs a Windows session.
 
 CI builds the app on `macos-latest`, runs the Rust tests there (the folder watcher and the
 screenshot mark on a real file system among them) and checks the code with clippy. Nothing below
-has run on a Mac yet (D-073). macOS 13 or later.
+has run on a Mac yet (D-073). macOS 13 or later. Releases carry the `.dmg` once this list has
+passed and the owner sets the repository variable `PANOPIN_MACOS` to `true` (D-068).
 
 - [ ] The `.dmg` opens; Panopin starts after "Open Anyway" in System Settings → Privacy &
       Security. The menu bar shows the pushpin, tinted for light and dark menu bars; there is no
@@ -332,6 +333,9 @@ has run on a Mac yet (D-073). macOS 13 or later.
       With it, Cmd+V reaches TextEdit, Notes, Safari and Terminal; a password field is never
       pasted into.
 - [ ] Words in a screenshot are found by search (Vision), in Turkish and English.
+- [ ] Export… (Library and shelf), Import… and Settings → Sources → Add folder open the macOS
+      panel above the window that asked; Import offers only pictures and MP4 files; Cancel
+      changes nothing.
 - [ ] Settings → Start at login adds and removes the login item.
 - [ ] An update from `latest.json` installs the universal app and Panopin restarts.
 

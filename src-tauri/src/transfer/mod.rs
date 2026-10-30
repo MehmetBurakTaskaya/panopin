@@ -14,6 +14,8 @@ mod clipboard_mac;
 mod clipboard_win;
 #[cfg(windows)]
 mod drag_win;
+#[cfg(target_os = "macos")]
+mod folder_mac;
 #[cfg(windows)]
 mod folder_win;
 #[cfg(target_os = "macos")]
@@ -400,7 +402,7 @@ fn pick_folder(app: &AppHandle, window: &WebviewWindow, title: String) -> Result
     rx.recv().map_err(|_| AppError::Interrupted)?
 }
 
-/// A folder chosen in the Windows dialog, with a title from the strings (`None` = cancelled).
+/// A folder chosen in the system dialog, with a title from the strings (`None` = cancelled).
 pub fn pick_folder_titled(
     app: &AppHandle,
     window: &WebviewWindow,
@@ -410,7 +412,7 @@ pub fn pick_folder_titled(
     pick_folder(app, window, title)
 }
 
-/// "Import…": pictures and recordings, chosen in the Windows file dialog.
+/// "Import…": pictures and recordings, chosen in the system file dialog.
 #[cfg(windows)]
 pub fn pick_import(app: &AppHandle, window: &WebviewWindow) -> Result<Vec<PathBuf>> {
     let lang = crate::current_lang(app);
@@ -432,12 +434,33 @@ pub fn pick_import(app: &AppHandle, window: &WebviewWindow) -> Result<Vec<PathBu
     rx.recv().map_err(|_| AppError::Interrupted)?
 }
 
-#[cfg(not(windows))]
+#[cfg(target_os = "macos")]
+pub fn pick_import(app: &AppHandle, _window: &WebviewWindow) -> Result<Vec<PathBuf>> {
+    let title = crate::i18n::t(crate::current_lang(app), "library.import.pick");
+    let (tx, rx) = std::sync::mpsc::channel();
+    app.run_on_main_thread(move || {
+        let extensions = ["png", "jpg", "jpeg", "gif", "bmp", "webp", "mp4"];
+        let _ = tx.send(folder_mac::pick_files(&title, &extensions));
+    })?;
+    rx.recv().map_err(|_| AppError::Interrupted)?
+}
+
+#[cfg(target_os = "macos")]
+fn pick_folder(app: &AppHandle, _window: &WebviewWindow, title: String) -> Result<Option<PathBuf>> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    // AppKit panels run on the main thread, above every window of the app.
+    app.run_on_main_thread(move || {
+        let _ = tx.send(folder_mac::pick(&title));
+    })?;
+    rx.recv().map_err(|_| AppError::Interrupted)?
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
 pub fn pick_import(_app: &AppHandle, _window: &WebviewWindow) -> Result<Vec<PathBuf>> {
     Err(AppError::Unsupported)
 }
 
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "macos")))]
 fn pick_folder(
     _app: &AppHandle,
     _window: &WebviewWindow,
