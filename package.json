@@ -1,7 +1,7 @@
 {
   "name": "panopin",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Windows-first clipboard and screenshot shelf, styled as a cork board.",
   "license": "MIT",
   "author": "Mehmet Burak Taşkaya",
