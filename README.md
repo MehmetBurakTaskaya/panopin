@@ -86,8 +86,8 @@ Apple, so macOS blocks its first opening:
 Or, in Terminal: `xattr -dr com.apple.quarantine /Applications/Panopin.app`.
 
 Panopin lives in the menu bar. macOS asks once before Panopin may read the Desktop, where screenshots are
-saved; ⌘Enter pastes for you once Panopin is allowed under **Privacy & Security → Accessibility**
-(after an update macOS may ask again). On a Mac the shortcuts are ⌥⌘V, ⌥⌘C and ⌥⌘S.
+saved; ⌘Enter pastes for you once Panopin is allowed under **Privacy & Security → Accessibility**.
+Updates keep both permissions. On a Mac the shortcuts are ⌥⌘V, ⌥⌘C and ⌥⌘S.
 
 ## Shortcuts
 

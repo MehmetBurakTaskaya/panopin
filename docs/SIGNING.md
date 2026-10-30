@@ -1,8 +1,8 @@
 # Signing
 
-Panopin uses two kinds of signatures. Update signatures are in place from the first release;
-code signing (Authenticode) is not, because certificates cost money and the project uses only free
-tools.
+Panopin uses update signatures from the first release, and the Mac app is code-signed with the
+project's own certificate (D-078). Windows code signing (Authenticode) is not in place, because
+certificates cost money and the project uses only free tools.
 
 ## What users see today
 
@@ -72,12 +72,41 @@ conditions (signpath.org/terms, read on 2026-10-30) and where Panopin stands:
 
 ## macOS
 
-The Mac app is signed ad hoc (`signingIdentity` `-` in `src-tauri/tauri.macos.conf.json`), which
-Apple silicon needs, but it has no Developer ID and is not notarised. macOS 15 and later therefore
-block its first opening with "Apple could not verify Panopin". The README gives the way through:
-close the warning (**Done** on macOS 15 and later, **Cancel** before), then **System Settings →
-Privacy & Security → Open Anyway** and the password. A
-Developer ID certificate and notarisation need the Apple Developer Program (99 USD a year); the
+Apple silicon runs only signed apps. Every Mac build from CI is signed with the project's own
+self-signed certificate, the same for every version, so macOS knows each update as the same app
+and keeps the Accessibility and Desktop permissions given to Panopin (D-078); an ad-hoc signature
+would change with every build. The certificate is not from Apple: the app has no Developer ID and
+is not notarised, so macOS 15 and later block its first opening with "Apple could not verify
+Panopin". The README gives the way through: close the warning (**Done** on macOS 15 and later,
+**Cancel** before), then **System Settings → Privacy & Security → Open Anyway** and the
+password.
+
+### The signing certificate
+
+- Made once, on 2026-10-30, with `scripts/mac-signing.sh new panopin-macos-signing.p12 10950
+  Panopin`: CN Panopin, O Mehmet Burak Taşkaya, RSA 3072, valid until 2056-10-22, SHA-1
+  `C8:53:29:0F:0E:4A:65:DA:5A:9C:B3:A3:3A:DB:98:EC:D4:9C:3E:CC`. The app's designated requirement,
+  which names it, is in `src-tauri/macos-requirement.txt`.
+- The `.p12` and its password exist only in the repository's GitHub Secrets and in the owner's
+  offline backup, for example a password manager. They are never committed. To store them:
+  `base64 -w0 panopin-macos-signing.p12 | gh secret set MACOS_CERTIFICATE` and
+  `gh secret set MACOS_CERTIFICATE_PASSWORD < panopin-macos-signing.password.txt`.
+- `release.yml` and `mac-test.yml` import it into a keychain of the run's own
+  (`scripts/mac-signing.sh import`) and pass it to `tauri build` as `APPLE_SIGNING_IDENTITY`. The
+  release stops if the app's designated requirement differs from `macos-requirement.txt`.
+  `mac-live.yml` signs with a certificate made for each run. A build on a Mac without the
+  certificate is signed ad hoc (`signingIdentity` `-` in `src-tauri/tauri.macos.conf.json`).
+- Nothing on a Mac trusts the certificate, and nothing has to: `security find-identity` lists it
+  as `CSSMERR_TP_NOT_TRUSTED`, `codesign` signs with it all the same, and macOS compares only its
+  hash when it matches a later build to a permission.
+- Copies up to 1.3.0 are ad-hoc signed, so the update to the first certificate-signed version asks
+  for Accessibility once more. Replacing the certificate (lost, or before it expires) does the same
+  once: make a new one, store it in the secrets, and change `macos-requirement.txt` in the same
+  commit.
+
+### Developer ID and notarisation
+
+A Developer ID certificate and notarisation need the Apple Developer Program (99 USD a year); the
 owner decided on 2026-10-30 not to join for now (D-075). If that changes:
 
 1. Join, create a "Developer ID Application" certificate and export it as a `.p12` file; create an
@@ -88,3 +117,6 @@ owner decided on 2026-10-30 not to join for now (D-075). If that changes:
 3. In the macOS job of `release.yml`, import the certificate into a temporary keychain and pass the
    variables to `tauri build`, which then signs and notarises (its log says when they are missing).
    The first notarisation can take hours.
+4. Put the Developer ID build's designated requirement in `src-tauri/macos-requirement.txt`. It
+   differs from the self-signed one, so the update that switches asks users for Accessibility once
+   more.

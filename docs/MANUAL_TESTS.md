@@ -334,7 +334,8 @@ and writing to it looked empty and was never read again. With the listener readi
 change again, and the script waiting for the shelf's and the Library's texts, 48 checks passed
 on each of the four (commit 2648861).
 The script presses keys through System Events, so the shortcuts are synthetic, and it grants
-Accessibility and Desktop access through the privacy database instead of macOS's prompts. Items
+Accessibility and Desktop access through the privacy database instead of macOS's prompts; since
+D-078 it binds them to the app's designated requirement, as System Settings does. Items
 below marked "(live Mac)" were covered; notes say when only part of one was. On a real Mac (a
 friend's, 2026-10-30) the first try stopped at macOS's "could not verify" dialog, the step the
 README now spells out (D-075); nothing further has been tried there yet. To try a test build, start Actions → Mac test build → Run workflow and
@@ -385,6 +386,26 @@ download the `.dmg` from the run's artifacts (kept for 14 days).
 - [x] Settings → Start at login adds and removes the login item. (live Mac: through the setting
       and a restart)
 - [ ] An update from `latest.json` installs the universal app and Panopin restarts.
+- [x] Every build is signed with one certificate, so its designated requirement names the
+      certificate, not the build (D-078). (live Mac, 2026-10-30, runs 41095683679 and
+      41098617458 on a test branch with these changes, macOS 14.8, 15.8, 15.7 Intel and 26.6, with
+      a certificate made for each run: `codesign` signed with it although nothing on the runner
+      trusts it, and the requirement was
+      `identifier "com.mehmetburaktaskaya.panopin" and certificate root = H"…"`; 48 of 48 in the
+      live test with the permissions bound to it)
+- [x] An update keeps Accessibility and Desktop access: after Panopin updated itself to a bundle
+      signed again with the same certificate, ⌘Enter still pasted into TextEdit and a ⇧⌘3
+      screenshot on the Desktop still became a card. (live Mac, same runs: 10 of 10 in the update
+      step on each runner)
+- [x] The privacy database holds to the requirement: a test app given Accessibility in one build
+      keeps it in a second build signed with the same certificate, loses it in an ad-hoc signed
+      build, and of two ad-hoc builds only the first has it; a permission stored without a
+      requirement, as the live test stored it before, covers any build. (live Mac, same runs:
+      10 of 10 in `tests/macos/permission.sh` on each runner)
+- [ ] On a real Mac: allow Accessibility, let Panopin update itself, and ⌘Enter still pastes; the
+      first update from 1.3.0, which is ad-hoc signed, asks once more and later ones do not.
+- [ ] A build signed with the project's certificate from the repository secrets (Actions → Mac
+      test build) has the designated requirement in `src-tauri/macos-requirement.txt`.
 
 ## Languages (D-074)
 
@@ -452,7 +473,8 @@ sent no keys and opened no windows; the release 1.2.0 was installed again afterw
 - [x] On a Mac in Applications, an update installs by itself and Panopin starts again from the new
       bundle (Actions → Mac live test, its update step). (2026-10-30, run 41083660234 on 2faeacc:
       6 of 6 on macOS 14, 15, 15 Intel and 26, next to 48 of 48 in the live test; on GitHub's
-      runners, not on a real Mac)
+      runners, not on a real Mac. With the certificate of D-078, runs 41095683679 and
+      41098617458: 10 of 10, the permissions kept)
 - [x] The release's own installer installs over the previous release with the data kept, and the
       new version's first update check against GitHub works. (2026-10-30: the 1.3.0 draft's
       installer over 1.2.0 on the development PC; the draft's checksums and all five update

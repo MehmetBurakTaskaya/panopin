@@ -2,7 +2,8 @@
 # Drives the macOS app on a GitHub macOS runner as a user would (D-073): the first start, copies,
 # screenshots, the global shortcuts, the shelf, paste into TextEdit, text recognition, Settings,
 # the Library and the login item. The runner allows System Events, keystrokes and screen captures
-# from the shell; Panopin gets Accessibility and Desktop access through the same privacy database.
+# from the shell; Panopin gets Accessibility and Desktop access through the same privacy database,
+# bound to its designated requirement as System Settings would store them (tcc.sh).
 # Usage: bash tests/macos/live.sh <Panopin.app> <output folder>
 # Results, screenshots, window texts and the app log go to the output folder. Exits with 1 when a
 # check failed.
@@ -10,6 +11,7 @@ set -u
 APP=${1:?usage: live.sh <Panopin.app> <output folder>}
 OUT=${2:?usage: live.sh <Panopin.app> <output folder>}
 HERE=$(cd "$(dirname "$0")" && pwd)
+. "$HERE/tcc.sh"
 ID=com.mehmetburaktaskaya.panopin
 DATA="$HOME/Library/Application Support/Panopin"
 DB="$DATA/data.db"
@@ -63,17 +65,6 @@ search_focused() { AXT focus | grep -q -E 'AXTextField|AXSearchField'; }
 type_in_search() {
   if wait_for 3 search_focused; then UI type "$1" > /dev/null; else fail "the search box has the keyboard" "focus: $(AXT focus)"; return 1; fi
 }
-# grant <service> <system|user>: allows Panopin a privacy service the way the runner image does
-grant() {
-  local now row
-  now=$(date +%s)
-  row="'$1','$ID',0,2,4,1,NULL,NULL,0,'UNUSED',NULL,0,$now,NULL,NULL,'UNUSED',$now"
-  if [ "$2" = system ]; then
-    sudo sqlite3 "/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES($row);"
-  else
-    sqlite3 "$HOME/Library/Application Support/com.apple.TCC/TCC.db" "INSERT OR REPLACE INTO access VALUES($row);"
-  fi
-}
 onboarded() { [ "$(sql "SELECT json_extract(value, '\$.onboarded') FROM settings WHERE key = 'app';")" = 1 ]; }
 # finish_first_run: presses Start in the first-run window, again while its web view builds the
 # accessibility tree
@@ -96,13 +87,18 @@ note "$(csrutil status 2>&1 | head -1)"
 
 section "the app bundle"
 check "the code signature is intact" "$(codesign --verify --deep --strict "$APP" 2>&1 | head -2 | tr '\n' ' ')" codesign --verify --deep --strict "$APP"
-adhoc() { codesign -dv "$APP" 2>&1 | grep -q 'Signature=adhoc'; }
-check "the app is ad-hoc signed" "" adhoc
+REQ=$(designated "$APP")
+note "signed by: $(codesign -dvv "$APP" 2>&1 | grep -m1 -E '^(Authority|Signature)=')"
+note "designated requirement: $REQ"
+# Signed with a certificate (D-078), the requirement names it instead of this build's code hash, so
+# the next build signed with it satisfies the requirement too.
+by_certificate() { [[ $REQ == *'H"'* && $REQ != *cdhash* ]]; }
+check "the designated requirement names the signing certificate, not this build" "$REQ" by_certificate
 note "Gatekeeper: $(spctl --assess --type execute -v "$APP" 2>&1 | tr '\n' ' ')"
 
 section "privacy permissions for the test"
-if grant kTCCServiceAccessibility system && grant kTCCServiceAccessibility user; then ax=1; note "Accessibility granted to Panopin"; else ax=0; note "Accessibility could not be granted"; fi
-grant kTCCServiceSystemPolicyDesktopFolder user && note "Desktop folder access granted to Panopin" || note "Desktop folder access could not be granted"
+if grant kTCCServiceAccessibility system "$ID" "$REQ" && grant kTCCServiceAccessibility user "$ID" "$REQ"; then ax=1; note "Accessibility granted to Panopin"; else ax=0; note "Accessibility could not be granted"; fi
+grant kTCCServiceSystemPolicyDesktopFolder user "$ID" "$REQ" && note "Desktop folder access granted to Panopin" || note "Desktop folder access could not be granted"
 
 section "first start"
 rm -rf "$DATA"

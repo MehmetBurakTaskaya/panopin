@@ -89,8 +89,8 @@ Ya da Terminal'de: `xattr -dr com.apple.quarantine /Applications/Panopin.app`.
 
 Panopin menü çubuğunda yaşar. macOS, ekran görüntülerinin kaydedildiği Masaüstü'nü
 okumak için bir kez izin ister; ⌘Enter'ın senin yerine yapıştırması için Panopin'e **Gizlilik ve
-Güvenlik → Erişilebilirlik**'te izin ver (bir güncellemeden sonra macOS yeniden sorabilir). Mac'te
-kısayollar ⌥⌘V, ⌥⌘C ve ⌥⌘S.
+Güvenlik → Erişilebilirlik**'te izin ver. Güncellemeler iki izni de korur. Mac'te kısayollar ⌥⌘V,
+⌥⌘C ve ⌥⌘S.
 
 ## Kısayollar
 

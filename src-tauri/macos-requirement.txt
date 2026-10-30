@@ -1,0 +1,1 @@
+identifier "com.mehmetburaktaskaya.panopin" and certificate root = H"c853290f0e4a65da5a9cb3a33adb98ecd49c3ecc"

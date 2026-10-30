@@ -3,9 +3,10 @@ name: Mac live test
 # Builds the Mac app, installs it from its .dmg and drives it as a user would on GitHub's Mac
 # runners (tests/macos/live.sh, D-073): copies, screenshots, the global shortcuts, the shelf, paste,
 # text recognition, Settings, the Library and the login item, on Apple silicon and Intel; then
-# lets it install an update by itself (tests/macos/update.sh, D-076). Screenshots, window texts,
-# the app log and the results stay under the run's artifacts. Started by hand (Actions → Mac live
-# test → Run workflow).
+# lets it install an update by itself and keep its permissions (tests/macos/update.sh, D-076,
+# D-078), and checks which later builds macOS lets keep a permission (tests/macos/permission.sh).
+# Screenshots, window texts, the app log and the results stay under the run's artifacts. Started by
+# hand (Actions → Mac live test → Run workflow).
 on:
   workflow_dispatch:
 
@@ -52,6 +53,15 @@ jobs:
             fs.writeFileSync(process.argv[2], JSON.stringify({ bundle: { createUpdaterArtifacts: true }, plugins: { updater } }));
           ' "$RUNNER_TEMP/update.key.pub" "$RUNNER_TEMP/test-config.json"
 
+      # Signed like a release (D-078), with a certificate made for this run only; `tauri build`
+      # and the update test read APPLE_SIGNING_IDENTITY.
+      - name: Signing certificate for the test build
+        run: |
+          openssl version
+          export MACOS_CERTIFICATE_PASSWORD=$(openssl rand -hex 16)
+          bash scripts/mac-signing.sh new "$RUNNER_TEMP/signing.p12" 2 "Panopin test"
+          bash scripts/mac-signing.sh import "$RUNNER_TEMP/signing.p12"
+
       - name: Build the app and its .dmg
         env:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
@@ -74,6 +84,10 @@ jobs:
         run: |
           bash tests/macos/update.sh /Applications/Panopin.app \
             src-tauri/target/release/bundle/macos/Panopin.app.tar.gz "$RUNNER_TEMP/update.key" "$RUNNER_TEMP/mac-live"
+
+      - name: Permission across builds
+        if: always()
+        run: bash tests/macos/permission.sh "$RUNNER_TEMP/mac-live"
 
       - uses: actions/upload-artifact@v7
         if: always()

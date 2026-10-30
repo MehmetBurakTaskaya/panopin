@@ -137,11 +137,38 @@ jobs:
 
       - run: npm ci
 
+      # Every Mac build is signed with the project's own certificate, so macOS keeps the
+      # permissions given to Panopin across updates (D-078).
+      - name: Signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "$MACOS_CERTIFICATE" ] || [ -z "$MACOS_CERTIFICATE_PASSWORD" ]; then
+            echo "::error::The MACOS_CERTIFICATE or MACOS_CERTIFICATE_PASSWORD secret is missing (docs/SIGNING.md)"
+            exit 1
+          fi
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          bash scripts/mac-signing.sh import "$RUNNER_TEMP/signing.p12"
+          rm "$RUNNER_TEMP/signing.p12"
+
       - name: Build and sign the app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npm run tauri build -- --target universal-apple-darwin
+
+      # Signed with any other certificate, the release would cost every Mac user the permissions
+      # they gave Panopin.
+      - name: Check the designated requirement
+        run: |
+          app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Panopin.app
+          requirement=$(codesign -d -r- "$app" 2>&1 | sed -n 's/^#* *designated => //p')
+          echo "$requirement"
+          if [ "$requirement" != "$(cat src-tauri/macos-requirement.txt)" ]; then
+            echo "::error::The app's designated requirement differs from src-tauri/macos-requirement.txt (D-078)"
+            exit 1
+          fi
 
       # The .dmg to download and the archive that updates install, under names that never change
       # (D-068). The update signature goes into latest.json, not onto the release page.

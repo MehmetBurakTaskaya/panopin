@@ -6,6 +6,13 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **On a Mac, updates keep the permissions you gave Panopin.** Every version is now signed with the
+  same certificate, so macOS knows each update as the same app. After this one update, allow
+  Panopin under Privacy & Security → Accessibility once more; macOS may also ask once more before
+  Panopin reads the Desktop. From then on ⌘Enter keeps pasting after every update.
+
 ## [1.3.0] - 2026-10-30
 
 ### Changed

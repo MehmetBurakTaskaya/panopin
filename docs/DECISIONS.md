@@ -568,7 +568,7 @@ with only the classes in use; Vision needs no main thread.
 | Tray | notification area icon | menu bar template icon that macOS tints; no Dock icon (accessory app). The policy is set before the event loop starts: set in setup, the launch put the default back |
 | Screen snip | Snipping Tool overlay | `screencapture -i -c` |
 | Start at login | Run key | LaunchAgent (autostart plugin) |
-| Distribution | NSIS installer, portable ZIP | universal `.dmg`, ad-hoc signed (`signingIdentity` `-`, which Apple silicon needs for apps from the internet) but not notarised: "System Settings → Privacy & Security → Open Anyway". The ad-hoc signature changes with every build, so macOS may ask for Accessibility again after an update. `mac-test.yml`, started by hand, builds a test `.dmg` as a workflow artifact; releases carry the `.dmg` and the update archive while the `PANOPIN_MACOS` variable is `true` (D-068), from 1.1.0 on |
+| Distribution | NSIS installer, portable ZIP | universal `.dmg`, ad-hoc signed (`signingIdentity` `-`, which Apple silicon needs for apps from the internet) but not notarised: "System Settings → Privacy & Security → Open Anyway". The ad-hoc signature changed with every build, so macOS asked for Accessibility again after an update; since D-078 every CI build is signed with one self-signed certificate instead. `mac-test.yml`, started by hand, builds a test `.dmg` as a workflow artifact; releases carry the `.dmg` and the update archive while the `PANOPIN_MACOS` variable is `true` (D-068), from 1.1.0 on |
 
 Not on macOS yet (BACKLOG): screen recordings, drag-out (a card dragged on a Mac stays where it
 is), edge opening (Settings shows it as unavailable), Mica-like materials and quiet sounds during
@@ -612,7 +612,8 @@ The owner decided on 2026-10-30 not to join the Apple Developer Program (99 USD 
 The Mac app stays ad-hoc signed and unnotarised, so macOS blocks its first opening until the user
 chooses Open Anyway; the README and the release notes give the steps, and the README also gives
 the Terminal command that removes the quarantine flag. docs/SIGNING.md lists what signing and
-notarisation would take.
+notarisation would take. Since D-078 the app is signed with the project's own self-signed
+certificate instead of ad hoc; it is still unnotarised.
 
 ## D-076 Updates are always on and install by themselves — Accepted
 The owner decided on 2026-10-30 that every copy keeps itself up to date: no switch, and no update
@@ -638,8 +639,9 @@ left for the user to install. This changes D-065 and D-066.
   start removes `Panopin.old`. The `zip` crate (MIT), already in the build through the updater,
   unpacks it with its flate2 feature.
 - A Mac app bundle that macOS has not translocated replaces itself with the update archive and
-  restarts. Being ad-hoc signed (D-075), it may have to be allowed again under Accessibility after
-  an update. Where the user may not change the bundle or its folder, the updater would ask for an
+  restarts. Ad-hoc signed up to 1.3.0 (D-075), it had to be allowed again under Accessibility
+  after an update; signed with one certificate since D-078, it keeps the permission. Where the
+  user may not change the bundle or its folder, the updater would ask for an
   administrator's password, so there the update never installs by itself: it waits for "Update and
   restart". One that runs translocated (opened where it was downloaded) cannot replace itself, and
   its Updates tab asks the user to move it to Applications; development runs only point to the
@@ -668,3 +670,45 @@ copies in use. These are downloads, not people: repeated downloads and the owner
 and copies before 1.3.0 with checks off are not seen. The workflow has write access only because
 GitHub lists draft releases to writers alone. The release page now also shows
 `Panopin-Update-x64.exe` (this changes D-068).
+
+## D-078 One signing certificate for every Mac build — Accepted
+macOS keeps a privacy permission together with the designated requirement of the build it was
+given to, and lets a later build use it only while that build satisfies the requirement (Apple
+TN3127). An ad-hoc signature's requirement is that build's code hash (`cdhash H"…"`), so since
+copies update themselves (D-076) every update made macOS see Panopin as a new app: ⌘Enter stopped
+pasting until Panopin was allowed under Accessibility again, and the Desktop could ask again.
+Every Mac build from CI is now signed with one self-signed code signing certificate (CN Panopin,
+O Mehmet Burak Taşkaya, RSA 3072, valid until 2056, made with `scripts/mac-signing.sh new`). The
+designated requirement then names the certificate instead of the build, `identifier
+"com.mehmetburaktaskaya.panopin" and certificate root = H"c853290f…"` (in full in
+`src-tauri/macos-requirement.txt`), and every later build signed with it keeps the permissions.
+Nothing on a Mac has to trust the certificate: a requirement that names a certificate's hash
+checks no trust, and `codesign` signs with an identity that `security find-identity` lists as
+`CSSMERR_TP_NOT_TRUSTED`. No Apple account is involved; the app stays unnotarised and Gatekeeper
+blocks its first opening as before (D-075).
+- The certificate and its key exist only as the repository secrets `MACOS_CERTIFICATE` (the
+  `.p12`, base64) and `MACOS_CERTIFICATE_PASSWORD`, and in the owner's offline backup.
+  `release.yml` and `mac-test.yml` import them into a keychain of the run's own
+  (`scripts/mac-signing.sh import`) and hand the identity to `tauri build` as
+  `APPLE_SIGNING_IDENTITY`, which signs the binary, the app and the `.dmg`. Tauri's own import
+  (`APPLE_CERTIFICATE`) takes only certificates named like Apple's, such as "Developer ID
+  Application: …" (CLI 2.12.4). A release stops if the app's designated requirement differs from
+  `src-tauri/macos-requirement.txt`.
+- `signingIdentity` stays `-` in `tauri.macos.conf.json`, so a build on a Mac without the
+  certificate is signed ad hoc as before.
+- `mac-live.yml` signs its build with a certificate made for the run. `live.sh` and `update.sh`
+  give Accessibility and Desktop access bound to the installed build's designated requirement,
+  as System Settings stores them; until now the test stored them for any code with Panopin's
+  bundle id, which no update could lose. After its update the app still pastes with ⌘Enter and
+  still takes a screenshot from the Desktop. `permission.sh` shows that the runner's privacy
+  database holds to the requirement: a second build with the same certificate keeps Accessibility,
+  an ad-hoc build does not, and neither does a second ad-hoc build after a first. Runs
+  41095683679 and 41098617458 passed all of this on macOS 14.8, 15.8 and 26.6 (Apple silicon) and
+  15.7 (Intel).
+- Copies up to 1.3.0 are ad-hoc signed: after the update to the first certificate-signed version,
+  Panopin has to be allowed under Accessibility once more, and the Desktop may ask once; from then
+  on updates keep both.
+- A lost or replaced certificate costs users that one permission again and nothing else; the
+  update key (D-065) is the one that must never be lost. A new certificate needs a new
+  `macos-requirement.txt` in the same commit.
+This changes D-073, D-075 and D-076.

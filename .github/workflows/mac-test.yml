@@ -34,10 +34,27 @@ jobs:
 
       - run: npm ci
 
+      # Signed like a release (D-078), so the permissions given to a test build stay with the
+      # releases that follow.
+      - name: Signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -z "$MACOS_CERTIFICATE" ] || [ -z "$MACOS_CERTIFICATE_PASSWORD" ]; then
+            echo "::error::The MACOS_CERTIFICATE or MACOS_CERTIFICATE_PASSWORD secret is missing (docs/SIGNING.md)"
+            exit 1
+          fi
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/signing.p12"
+          bash scripts/mac-signing.sh import "$RUNNER_TEMP/signing.p12"
+          rm "$RUNNER_TEMP/signing.p12"
+
       # A test build installs no updates, so it needs no update packages and no update key.
       - name: Build
         run: |
           npm run tauri build -- --target universal-apple-darwin --config '{"bundle":{"createUpdaterArtifacts":false}}'
+          app=src-tauri/target/universal-apple-darwin/release/bundle/macos/Panopin.app
+          codesign -d -r- "$app" 2>&1 | sed -n 's/^#* *designated => //p'
           version=$(node -p "require('./src-tauri/tauri.conf.json').version")
           cp src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg "Panopin-${version}-${GITHUB_SHA::7}-macOS-test.dmg"
 
