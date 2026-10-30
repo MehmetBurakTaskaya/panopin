@@ -52,8 +52,9 @@ window holds everything, with folders, tags, notes and search.
 ## Install
 
 1. Download **Panopin-Setup-x64.exe** from the
-   [latest release](https://github.com/MehmetBurakTaskaya/panopin/releases/latest) and run it. It
-   installs for your user only and needs no administrator rights.
+   [latest release](https://github.com/MehmetBurakTaskaya/panopin/releases/latest) and open it.
+   Panopin installs right away for your user only, with no administrator rights and no pages to
+   click through, and starts when it is done.
 2. Panopin is not code-signed yet (certificates cost money; see [docs/SIGNING.md](docs/SIGNING.md)),
    so Windows SmartScreen may say "Windows protected your PC". Choose **More info → Run anyway**.
    Each release lists the SHA-256 of its files in `SHA256SUMS.txt` if you want to check your

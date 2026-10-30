@@ -469,10 +469,13 @@ An installed copy has Tauri's `uninstall.exe` next to `Panopin.exe`; the portabl
 development runs have none, so their update button opens the release page instead of replacing
 files. The installer works per user (`%LOCALAPPDATA%\Panopin`), speaks English or Turkish after
 the Windows language, and puts `LICENSE.txt` and `THIRD_PARTY_NOTICES.txt` next to the app, which
-Settings → About opens. An installer hook (`src-tauri/windows/installer-hooks.nsh`) makes the
-uninstaller remove the "Start with Windows" entry and, only when "Delete the application data"
-is ticked, `%APPDATA%\Panopin` as well; Tauri itself removes only its identifier folders. Neither
-happens during an update.
+Settings → About opens. Opening it installs at once: a hook in
+`src-tauri/windows/installer-hooks.nsh` starts it again in Tauri's passive mode (`/P /R`), which
+shows only a progress bar, closes a running Panopin and starts Panopin when it is done; there is
+no folder to choose. Silent installs and the updater's own runs (which pass `/P`) are unchanged.
+The same file makes the uninstaller remove the "Start with Windows" entry and, only when "Delete
+the application data" is ticked, `%APPDATA%\Panopin` as well; Tauri itself removes only its
+identifier folders. Neither happens during an update.
 
 ## D-067 Icon — Accepted
 A note pinned to a cork tile in a wooden frame, candidate B of three (A: the note alone, C: a round
@@ -486,26 +489,26 @@ taskbars.
 ## D-068 Release pipeline — Accepted
 A `v*` tag runs `release.yml` on `windows-latest`. It first checks that the tag matches the version
 in `package.json`, `tauri.conf.json` and `Cargo.toml`, that the third-party notices are current and
-that the signing key secret exists. `tauri-apps/tauri-action@v1` builds and signs the NSIS
-installer and creates a **draft** release whose notes are the CHANGELOG section plus download
-notes. The workflow then adds the portable ZIP (`Panopin.exe`, `LICENSE.txt`,
-`THIRD_PARTY_NOTICES.txt`), copies with fixed names (`Panopin-Setup-x64.exe`,
-`Panopin-Portable-x64.zip`) so `releases/latest/download/<file>` links never change, `latest.json`
-and `SHA256SUMS.txt`. The owner publishes the draft. The universal macOS `.dmg` (Phase 8, D-073)
-is built only when the repository variable `PANOPIN_MACOS` is `true`, which the owner sets once
-the test build from `mac-test.yml` has been tried on a Mac; until then releases and `latest.json` are Windows only. Code
-signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a Changelog
-and versions follow SemVer.
+that the signing key secret exists. `tauri build` builds and signs the NSIS installer, and the
+workflow creates a **draft** release whose notes are the CHANGELOG section plus download notes,
+with two files whose names never change, so `releases/latest/download/<file>` links keep
+working: `Panopin-Setup-x64.exe` and `Panopin-Portable-x64.zip` (`Panopin.exe`, `LICENSE.txt`,
+`THIRD_PARTY_NOTICES.txt`). A last job adds `latest.json`, which carries the installer's update
+signature, and `SHA256SUMS.txt`; the release page shows no `.sig` file and no second copy.
+Publishing the draft is a manual step. The universal macOS `.dmg` (Phase 8, D-073) is built only
+when the repository variable `PANOPIN_MACOS` is `true`, which the owner sets once the test build
+from `mac-test.yml` has been tried on a Mac; until then releases and `latest.json` are Windows
+only. Code signing waits for SignPath Foundation (docs/SIGNING.md). `CHANGELOG.md` follows Keep a
+Changelog and versions follow SemVer.
 
 ## D-069 Website and embed — Accepted
-`site/` is one static page in English and Turkish (the browser's languages, or the visitor's
-choice, remembered), with system fonts and no requests to other sites. Its download button offers
-the installer on Windows, says that macOS is coming on a Mac and lists all downloads elsewhere.
-The screenshots show the real shelf components with sample items, rendered in a browser, so no
-personal data appears. `pages.yml` publishes the page to GitHub Pages only when started by hand.
-`site/embed/download-section.html` is a self-contained section for mehmetburaktaskaya.com: styles
-scoped under `.panopin-embed`, an inline picture, no script; docs/WEBSITE.md explains how to add it
-to the Astro site.
+Panopin has no website of its own: on 2026-10-30 the owner chose a page among the projects on
+mehmetburaktaskaya.com over GitHub Pages. `site/` holds the material for that page.
+`site/embed/download-section.html` is a self-contained section: styles scoped under
+`.panopin-embed`, an inline picture, no script; docs/WEBSITE.md explains how to add it to the Astro
+site. The screenshots in `site/assets/` show the real shelf components with sample items, rendered
+in a browser, so no personal data appears. `site/index.html` is a one-page draft in English and
+Turkish, with system fonts and no requests to other sites, whose texts the project page can reuse.
 
 ## D-070 New windows are built off the main thread — Accepted
 The first live test of the release build (2026-10-30) found Settings blank when the shelf's palette

@@ -53,8 +53,8 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
 ## Kurulum
 
 1. [Son sürümden](https://github.com/MehmetBurakTaskaya/panopin/releases/latest)
-   **Panopin-Setup-x64.exe** dosyasını indirip çalıştır. Yalnızca senin kullanıcın için kurulur,
-   yönetici izni istemez.
+   **Panopin-Setup-x64.exe** dosyasını indirip aç. Panopin hemen, yalnızca senin kullanıcın için
+   kurulur; yönetici izni istemez, tıklanacak sayfa yoktur ve bitince açılır.
 2. Panopin henüz kod imzalı değil (sertifikalar ücretli; bkz. [docs/SIGNING.md](docs/SIGNING.md)).
    Bu yüzden Windows SmartScreen "Windows bilgisayarınızı korudu" diyebilir: **Daha fazla bilgi →
    Yine de çalıştır**'ı seç. İndirdiğin dosyayı kontrol etmek istersen her sürüm, dosyalarının

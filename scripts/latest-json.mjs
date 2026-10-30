@@ -2,7 +2,7 @@
 // download address on github.com. Plain release URLs need no GitHub API call, so users never meet
 // the API's rate limit.
 // Usage: node scripts/latest-json.mjs <version> <notes file> <folder with the release files>
-// The folder holds the Windows installer and, once macOS ships, the macOS update archive, each
+// The folder holds Panopin-Setup-x64.exe and, once macOS ships, the macOS update archive, each
 // next to its .sig file.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -21,7 +21,7 @@ function entry(pattern) {
 }
 
 const platforms = {};
-const windows = entry(new RegExp(`^Panopin_${version.replaceAll('.', '\\.')}_x64-setup\\.exe$`));
+const windows = entry(/^Panopin-Setup-x64\.exe$/);
 if (!windows) {
   console.error('the Windows installer or its signature is missing');
   process.exit(1);

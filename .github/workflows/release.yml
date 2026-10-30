@@ -24,6 +24,8 @@ jobs:
         shell: bash
     env:
       GH_TOKEN: ${{ github.token }}
+    outputs:
+      signature: ${{ steps.draft.outputs.signature }}
     steps:
       - uses: actions/checkout@v7
 
@@ -62,46 +64,33 @@ jobs:
             exit 1
           fi
 
-      - name: Release notes
-        id: notes
-        run: |
-          {
-            echo 'body<<PANOPIN_NOTES'
-            node scripts/release-notes.mjs "${GITHUB_REF_NAME#v}" --release
-            echo 'PANOPIN_NOTES'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build, sign and upload to a draft release
-        uses: tauri-apps/tauri-action@v1
+      - name: Build and sign the installer
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Panopin __VERSION__
-          releaseBody: ${{ steps.notes.outputs.body }}
-          releaseDraft: true
-          prerelease: false
-          # latest.json is written by the last job with github.com download addresses (D-065).
-          uploadUpdaterJson: false
+        run: npm run tauri build
 
-      - name: Portable ZIP and fixed names
+      # Two downloads with names that never change, so releases/latest/download/<file> links keep
+      # working (D-068). The update signature goes into latest.json, not onto the release page.
+      - name: Draft release with the installer and the portable ZIP
+        id: draft
         run: |
           version="${GITHUB_REF_NAME#v}"
-          setup="src-tauri/target/release/bundle/nsis/Panopin_${version}_x64-setup.exe"
+          bundle=src-tauri/target/release/bundle/nsis
           mkdir -p out portable
+          cp "$bundle/Panopin_${version}_x64-setup.exe" out/Panopin-Setup-x64.exe
           cp src-tauri/target/release/panopin.exe portable/Panopin.exe
           cp LICENSE portable/LICENSE.txt
           cp THIRD_PARTY_NOTICES.txt portable/THIRD_PARTY_NOTICES.txt
-          (cd portable && 7z a -tzip -mx=9 "../out/Panopin_${version}_x64-portable.zip" . > /dev/null)
-          # Names without a version, so releases/latest/download/<file> always works (D-068).
-          cp "out/Panopin_${version}_x64-portable.zip" out/Panopin-Portable-x64.zip
-          cp "$setup" out/Panopin-Setup-x64.exe
-          gh release upload "$GITHUB_REF_NAME" --clobber \
-            out/Panopin-Setup-x64.exe \
-            out/Panopin-Portable-x64.zip \
-            "out/Panopin_${version}_x64-portable.zip"
+          (cd portable && 7z a -tzip -mx=9 ../out/Panopin-Portable-x64.zip . > /dev/null)
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --clobber out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip
+          else
+            node scripts/release-notes.mjs "$version" --release > notes.md
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "Panopin $version" \
+              --notes-file notes.md out/Panopin-Setup-x64.exe out/Panopin-Portable-x64.zip
+          fi
+          echo "signature=$(tr -d '\r\n' < "$bundle/Panopin_${version}_x64-setup.exe.sig")" >> "$GITHUB_OUTPUT"
 
   macos:
     name: macOS universal .dmg
@@ -170,6 +159,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      WINDOWS_SIGNATURE: ${{ needs.windows.outputs.signature }}
     steps:
       - uses: actions/checkout@v7
 
@@ -183,7 +173,8 @@ jobs:
           mkdir -p out
           gh release download "$GITHUB_REF_NAME" --dir out --skip-existing
           rm -f out/latest.json out/SHA256SUMS.txt
+          printf '%s' "$WINDOWS_SIGNATURE" > out/Panopin-Setup-x64.exe.sig
           node scripts/release-notes.mjs "$version" > notes.md
           node scripts/latest-json.mjs "$version" notes.md out > out/latest.json
-          (cd out && sha256sum $(ls | grep -v '^SHA256SUMS.txt$') > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          (cd out && sha256sum $(ls | grep -v -E '^SHA256SUMS\.txt$|\.sig$') > SHA256SUMS.txt && cat SHA256SUMS.txt)
           gh release upload "$GITHUB_REF_NAME" --clobber out/latest.json out/SHA256SUMS.txt

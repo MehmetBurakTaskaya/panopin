@@ -1,29 +1,13 @@
 # Website
 
-Two pieces live in `site/` (D-069): Panopin's own page for GitHub Pages, and a download section
-for mehmetburaktaskaya.com.
-
-The download links point to `releases/latest/download/<file>`. GitHub serves them only for a
-published release (drafts do not count), so they return 404 until v1.0.0 is published.
-
-## Panopin's page on GitHub Pages
-
-`site/index.html` is one static page in English and Turkish. It needs no build step and loads
-nothing from other sites.
-
-1. On GitHub, open **Settings → Pages → Build and deployment** and set **Source** to
-   **GitHub Actions**. This is needed once.
-2. Open **Actions → Website → Run workflow**. The page appears at
-   <https://mehmetburaktaskaya.github.io/panopin/>.
-3. Run the workflow again after changing `site/`; nothing is published automatically.
-
-To serve it from a subdomain such as `panopin.mehmetburaktaskaya.com` instead, enter it under
-**Settings → Pages → Custom domain**, add a `CNAME` record for it pointing to
-`mehmetburaktaskaya.github.io` at your DNS provider, and change the `og:image` address at the top
-of `site/index.html` to the new domain.
-
-To look at the page locally: `python -m http.server 4318 --directory site`, then open
+Panopin has no site of its own; its page is one of the projects on mehmetburaktaskaya.com
+(D-069). `site/` holds the material for it: the download section below, the shelf screenshots in
+`site/assets/`, and `site/index.html`, a one-page draft in English and Turkish whose texts can be
+reused. To look at the draft locally: `python -m http.server 4318 --directory site`, then open
 <http://localhost:4318/>.
+
+The download links point to `releases/latest/download/<file>`, which GitHub serves for the latest
+published release.
 
 ## The download section for mehmetburaktaskaya.com
 
@@ -57,7 +41,7 @@ The site is built with Astro, with English pages at the root and Turkish pages u
      `<PanopinDownload lang="tr" />`.
 4. Run the site locally (`npm run dev`) and check both languages, on a phone width too, and in
    dark mode if the site has one.
-5. Once v1.0.0 is published, click "Download for Windows" once to make sure the file arrives.
+5. Click "Download for Windows" once to make sure the file arrives.
 
 ### On any other page
 

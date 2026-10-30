@@ -46,8 +46,8 @@ The first release, for Windows 10 22H2 and Windows 11 (x64).
   About with third-party licences.
 - **Updates**, off until turned on: a check at start and every 6 hours, a mark on the tray icon,
   and "Update and restart" when you choose. Packages are verified with the project's update key.
-- **Installer and portable ZIP.** A per-user installer that needs no administrator rights, in
-  English and Turkish, and a portable ZIP.
+- **Installer and portable ZIP.** A per-user installer that needs no administrator rights and no
+  clicks: opened, it installs and starts Panopin, in English or Turkish. And a portable ZIP.
 
 [Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/MehmetBurakTaskaya/panopin/releases/tag/v1.0.0

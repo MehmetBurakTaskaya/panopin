@@ -18,8 +18,9 @@ const notes = (end === -1 ? rest : rest.slice(0, end)).trim();
 
 const downloads = `### Downloads
 
-- **Panopin-Setup-x64.exe**: the installer for Windows 10 22H2 and Windows 11 (x64). It installs for
-  your user only and needs no administrator rights.
+- **Panopin-Setup-x64.exe**: the installer for Windows 10 22H2 and Windows 11 (x64). Open it and
+  Panopin installs for your user, with no administrator rights and no pages to click through, then
+  starts.
 - **Panopin-Portable-x64.zip**: unzip it anywhere and run \`Panopin.exe\`.
 
 Panopin is not code-signed yet. If SmartScreen says "Windows protected your PC", choose

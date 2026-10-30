@@ -294,6 +294,10 @@ with conflicting styles). Everything below needs a Windows session.
 - [x] The installer runs without administrator rights, installs to `%LOCALAPPDATA%\Panopin`, adds
       a Start menu entry and speaks Turkish on a Turkish Windows; SmartScreen steps match the
       README. (live 2026-10-30, silent install: the installer's pages and SmartScreen not seen)
+- [x] Opened as a double-click opens it, the installer installs without a single click: only a
+      progress bar shows, a running Panopin is closed, and Panopin starts when it is done; items
+      and settings stay. (live 2026-10-30: over the installed copy and after an uninstall; the
+      SmartScreen prompt of a downloaded copy not seen)
 - [ ] The tray icon reads well at 100 %, 125 %, 150 % and 200 % scaling on a light and a dark
       taskbar, in the normal, paused and update states.
 - [ ] Settings → About → Licence texts opens `THIRD_PARTY_NOTICES.txt`.
@@ -308,9 +312,8 @@ with conflicting styles). Everything below needs a Windows session.
 - [x] Uninstalling without "Delete the application data" keeps `%APPDATA%\Panopin`; with it, the
       folder is gone. The "Start with Windows" entry is removed both times. (live 2026-10-30: without
       it; ticking it would have deleted the development data, so not checked)
-- [ ] Tag `v1.0.0`: the draft release has `Panopin_1.0.0_x64-setup.exe` (+ `.sig`),
-      `Panopin-Setup-x64.exe`, both ZIPs, `latest.json` and `SHA256SUMS.txt`, and the hashes
-      match the downloads.
+- [ ] Tag `v1.0.0`: the draft release has `Panopin-Setup-x64.exe`, `Panopin-Portable-x64.zip`,
+      `latest.json` and `SHA256SUMS.txt`, and the hashes match the downloads.
 - [ ] The website on Windows offers "Download for Windows", on a phone "See all downloads"; the
       language switch remembers its choice. The embed shows both languages on
       mehmetburaktaskaya.com.

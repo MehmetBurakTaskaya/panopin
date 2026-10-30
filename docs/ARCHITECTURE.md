@@ -233,13 +233,16 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 
 ## 12. Release and website
 
-- `release.yml` (tag `v*`): version and notices checks, tauri-action v1 builds and signs the
-  installer into a draft release, then the portable ZIP, fixed-name copies, `latest.json` and
-  `SHA256SUMS.txt` are added (D-068). `pages.yml`, started by hand, publishes `site/` (D-069).
+- `release.yml` (tag `v*`): version and notices checks, `tauri build` builds and signs the
+  installer, a draft release gets `Panopin-Setup-x64.exe` and `Panopin-Portable-x64.zip`, then
+  `latest.json` (with the update signature) and `SHA256SUMS.txt` (D-068). `mac-test.yml`, started
+  by hand, builds a test `.dmg` (D-073). Panopin's page lives on mehmetburaktaskaya.com; `site/`
+  holds its material (D-069).
 - Scripts: `icons.mjs` draws every icon from one SVG (D-067); `third-party.mjs` writes the
   licence list and `THIRD_PARTY_NOTICES.txt`, and CI checks that both are current (D-064);
   `release-notes.mjs` and `latest-json.mjs` serve the release workflow.
-- `src-tauri/windows/installer-hooks.nsh` adds to the uninstaller (D-066).
+- `src-tauri/windows/installer-hooks.nsh` makes the installer install at once and adds to the
+  uninstaller (D-066).
 
 ## 13. Open questions and spikes
 
