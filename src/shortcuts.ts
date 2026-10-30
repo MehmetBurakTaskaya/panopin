@@ -1,12 +1,26 @@
 // Turns a Tauri accelerator ("Super+Alt+V") into the label users expect on their platform.
-export type Platform = 'windows' | 'mac';
+import { t, type MessageKey } from './i18n';
+import { detectPlatform, type Platform } from './platform';
 
-export function detectPlatform(userAgent: string = navigator.userAgent): Platform {
-  return /Mac OS X|Macintosh/.test(userAgent) ? 'mac' : 'windows';
-}
+export { detectPlatform, type Platform };
+
+// Windows names keys in the UI language (German writes Strg, French Maj); Win and Alt read the
+// same everywhere. A Mac writes symbols.
+const WINDOWS_KEYS: Record<string, MessageKey> = {
+  control: 'key.ctrl',
+  ctrl: 'key.ctrl',
+  commandorcontrol: 'key.ctrl',
+  shift: 'key.shift',
+  enter: 'key.enter',
+  space: 'key.space',
+  esc: 'key.esc',
+  escape: 'key.esc',
+  backspace: 'key.backspace',
+  delete: 'key.delete',
+};
 
 const NAMES: Record<Platform, Record<string, string>> = {
-  windows: { super: 'Win', alt: 'Alt', control: 'Ctrl', ctrl: 'Ctrl', shift: 'Shift', commandorcontrol: 'Ctrl' },
+  windows: { super: 'Win', alt: 'Alt' },
   mac: {
     super: '⌘',
     alt: '⌥',
@@ -30,8 +44,9 @@ const MAC_ORDER = ['⌃', '⌥', '⇧', '⌘'];
 
 export function formatShortcut(accelerator: string, platform: Platform = detectPlatform()): string {
   const parts = accelerator.split('+').map((part) => {
-    const name = NAMES[platform][part.toLowerCase()];
-    // Letters read as capitals; named keys keep their name: Enter, Space, Delete.
+    const key = platform === 'windows' ? WINDOWS_KEYS[part.toLowerCase()] : undefined;
+    const name = key ? t(key) : NAMES[platform][part.toLowerCase()];
+    // Letters read as capitals; other keys keep their name: Tab, F9.
     return name ?? (part.length === 1 ? part.toUpperCase() : part.charAt(0).toUpperCase() + part.slice(1));
   });
   if (platform !== 'mac') return parts.join('+');

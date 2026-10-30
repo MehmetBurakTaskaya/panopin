@@ -1,12 +1,26 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setLanguage } from './i18n';
 import { acceleratorFrom, clashesWithAltGr, detectPlatform, formatShortcut, type RecordedKey } from './shortcuts';
 
 describe('formatShortcut', () => {
+  afterEach(() => setLanguage('en'));
+
   it('uses Windows key names', () => {
     expect(formatShortcut('Super+Alt+V', 'windows')).toBe('Win+Alt+V');
     expect(formatShortcut('Control+Shift+t', 'windows')).toBe('Ctrl+Shift+T');
     expect(formatShortcut('Ctrl+Enter', 'windows')).toBe('Ctrl+Enter');
     expect(formatShortcut('Delete', 'windows')).toBe('Delete');
+  });
+
+  it('names Windows keys in the UI language', () => {
+    setLanguage('de');
+    expect(formatShortcut('CommandOrControl+Shift+T', 'windows')).toBe('Strg+Umschalt+T');
+    expect(formatShortcut('Delete', 'windows')).toBe('Entf');
+    expect(formatShortcut('Super+Alt+V', 'windows')).toBe('Win+Alt+V');
+    setLanguage('fr');
+    expect(formatShortcut('Ctrl+Shift+Esc', 'windows')).toBe('Ctrl+Maj+Échap');
+    // A Mac writes the same symbols in every language.
+    expect(formatShortcut('Super+Shift+T', 'mac')).toBe('⇧⌘T');
   });
 
   it('uses macOS symbols in the macOS order', () => {

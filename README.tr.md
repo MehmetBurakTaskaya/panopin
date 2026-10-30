@@ -159,10 +159,9 @@ Projeyi uzun bir klasör yoluna indirdiysen önce `CARGO_TARGET_DIR`'i kısa bir
 ## Katkı
 
 Issue ve pull request'ler memnuniyetle karşılanır; büyük değişiklikler için lütfen önce bir issue
-aç. Yukarıdaki kontrolleri yeşil tut, her yeni arayüz metnini hem `locales/en.json` hem
-`locales/tr.json` dosyasına ekle ve yalnızca `src-tauri/deny.toml`'daki lisanslarla gelen
-bağımlılıkları kullan. Tasarım [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)'de, gerekçeleri
-[docs/DECISIONS.md](docs/DECISIONS.md)'de anlatılıyor (İngilizce).
+aç. Nasıl yapılacağı [CONTRIBUTING.md](CONTRIBUTING.md)'de anlatılıyor (İngilizce). Özellikle
+çeviriler: İngilizce dışındaki bütün diller makineyle çevrildi ve anadili o dil olanların gözden
+geçirmesini bekliyor.
 
 ## Lisans
 

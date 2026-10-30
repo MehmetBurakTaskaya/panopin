@@ -1,7 +1,7 @@
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { CommandPalette, type PaletteCommand } from '../../components/pickers/CommandPalette';
-import { t, type LanguageSetting, type MessageKey } from '../../i18n';
+import { LANGUAGES, needsReview, t, type LanguageSetting, type MessageKey } from '../../i18n';
 import { detectPlatform } from '../../shortcuts';
 import {
   checkForUpdates,
@@ -27,7 +27,6 @@ export const TABS = ['general', 'sources', 'history', 'shortcuts', 'appearance',
 export type TabId = (typeof TABS)[number];
 
 const ON_MAC = detectPlatform() === 'mac';
-const LANGUAGES: LanguageSetting[] = ['system', 'en', 'tr'];
 const CARD_SIZES: CardSize[] = ['s', 'm', 'l'];
 const EDGES: ShelfEdge[] = ['top', 'bottom'];
 const THEMES: [Theme, MessageKey][] = [
@@ -38,14 +37,16 @@ const THEMES: [Theme, MessageKey][] = [
 
 function GeneralTab({ settings }: { settings: Settings }) {
   const update = useSettings((s) => s.update);
+  const lang = useSettings((s) => s.lang);
   return (
     <>
       <Section title={t('settings.general.app')}>
         <Toggle label={t('settings.launchAtLogin')} checked={settings.launchAtLogin} onChange={(on) => void update({ launchAtLogin: on })} />
         <Choice
           label={t('settings.language')}
+          hint={needsReview(lang) ? t('settings.language.review') : undefined}
           value={settings.language}
-          options={LANGUAGES.map((language) => [language, t(`settings.language.${language}`)])}
+          options={[['system', t('settings.language.system')], ...LANGUAGES.map(({ code, name }): [string, string] => [code, name])]}
           onChange={(value) => void update({ language: value as LanguageSetting })}
         />
       </Section>

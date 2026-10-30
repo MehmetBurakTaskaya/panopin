@@ -7,6 +7,9 @@ body {
   user-select: none;
 }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Korean wraps at spaces, not between syllables; a word too long for its box still breaks.
+   Copied text sets its own wrapping. */
+:root:lang(ko) { word-break: keep-all; overflow-wrap: break-word; }
 
 /* The shelf overlay is a transparent window: only the board paints. */
 html[data-window='shelf'], html[data-window='shelf'] body { background: transparent; overflow: hidden; }

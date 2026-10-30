@@ -163,8 +163,9 @@ Web Audio synthesis (no audio files), ported from `docs/concept/mockup/sound.js`
 0.3, a compressor on the master bus, a per-sound minimum gap and at most three voices per 160 ms.
 
 ## D-027 Localisation — Accepted
-`/locales/en.json` and `tr.json` are the single string source for TypeScript (small `t()` helper
-with `Intl.PluralRules`) and Rust (tray, notifications). A CI script fails on missing or unused keys.
+`/locales/*.json` (English and Turkish at first, ten languages since D-074) are the single string
+source for TypeScript (small `t()` helper with `Intl.PluralRules`) and Rust (tray, notifications).
+A CI script fails on missing or unused keys.
 
 ## D-028 Installer and updates — Accepted
 NSIS only (no MSI), `installMode: currentUser` (no admin), WebView2 `downloadBootstrapper`.
@@ -568,3 +569,27 @@ with only the classes in use; Vision needs no main thread.
 Not on macOS yet (BACKLOG): screen recordings, drag-out (a card dragged on a Mac stays where it
 is), edge opening (Settings shows it as unavailable), Mica-like materials and quiet sounds during
 full-screen apps.
+
+## D-074 Ten languages — Accepted
+Panopin speaks English (the source), German, Spanish, French, Brazilian Portuguese, Turkish,
+Russian, Japanese, Korean and Simplified Chinese. Each is one flat file in `locales/`, named by its
+language tag and read by the webviews (every file comes with the code, so `t()` stays synchronous)
+and by the Rust side (tray, window titles), as in D-027. The first two entries describe the file:
+`"@language"`, its own name, and `"@status"`: `"source"` for English, `"needs review"` for a machine
+translation until a native speaker has gone through it, then `"reviewed"`. While the language in
+use needs review, Settings → General says so under the language choice; CONTRIBUTING.md tells
+translators how to review a language or add one. The language is chosen in Settings and in the
+first-run window, where it applies at once. "System default" takes the first of the system's
+preferred languages Panopin speaks: any Portuguese gets Brazilian Portuguese, Chinese only in its
+simplified script (Traditional Chinese falls through to the next language), and English when none
+fits. The page's `lang` follows the language: it gives Turkish its casing and, for Chinese,
+Japanese and Korean, a UI font with that language's forms of the Han characters (`tokens.css`).
+Korean wraps at spaces (`word-break: keep-all`) instead of between syllables; copied text keeps
+its own wrapping. On Windows the code writes key names from the `key.*` entries, so each
+language can use its keyboard's names (German Strg, Umschalt, Entf; French Maj, Suppr, Échap;
+Spanish Mayús, Supr, Intro), and the texts that mention keys use the same names. Win, Alt and
+the Mac symbols are the same everywhere. The Windows installer speaks the same ten languages,
+and the macOS app lists them in `CFBundleLocalizations` (`src-tauri/Info.plist`), so the panels
+macOS draws for it follow.
+`npm run check:i18n` compares every file with English (keys, placeholders, status) and checks
+that the app's two language lists name every file.

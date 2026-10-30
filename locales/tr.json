@@ -1,4 +1,6 @@
 {
+  "@language": "Türkçe",
+  "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Panopin rafı",
   "shelf.hints": "Önizle Space · Kopyala Enter · Yapıştır Ctrl+Enter · Sabitle P · İndir S · Kütüphane L · Kapat Esc",
@@ -119,8 +121,7 @@
   "settings.general": "Genel",
   "settings.language": "Dil",
   "settings.language.system": "Sistem dili",
-  "settings.language.en": "English",
-  "settings.language.tr": "Türkçe",
+  "settings.language.review": "Bu çeviri makineyle yapıldı ve anadili Türkçe olan birinin gözden geçirmesini bekliyor. Düzeltmelere GitHub'da açığız.",
   "settings.shelf": "Raf",
   "settings.cardSize": "Kart boyutu",
   "settings.cardSize.s": "Küçük",
@@ -422,5 +423,12 @@
   "settings.about.licenceTexts": "Lisans metinleri",
   "tray.checkUpdates": "Güncellemeleri denetle",
   "tray.updateTo": "{version} sürümüne güncelle…",
-  "tray.updateAvailable": "{version} güncellemesi hazır"
+  "tray.updateAvailable": "{version} güncellemesi hazır",
+  "key.ctrl": "Ctrl",
+  "key.shift": "Shift",
+  "key.enter": "Enter",
+  "key.space": "Space",
+  "key.esc": "Esc",
+  "key.backspace": "Backspace",
+  "key.delete": "Delete"
 }

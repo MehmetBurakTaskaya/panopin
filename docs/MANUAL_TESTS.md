@@ -380,6 +380,32 @@ download the `.dmg` from the run's artifacts (kept for 14 days).
       and a restart)
 - [ ] An update from `latest.json` installs the universal app and Panopin restarts.
 
+## Languages (D-074)
+
+Checked on 2026-10-30 in a browser (Chromium on Windows 11, display at 125 %) with the real
+windows and a mocked backend, in all ten languages, with English as the baseline. A script looked
+at every visible text and picker: Settings at 820×640 and at its smallest size, 640×480, on every
+tab; the first-run window; the Library; the shelf, its card menu and the empty board. Screenshots
+of each window were then read by eye for the font and the line breaks.
+
+- [x] No text is cut off or runs over its box in any language, German lengths included (the row
+      tags, the Settings sidebar, the hint line under the board, the Library toolbar, which wraps
+      to a third row in French and Spanish).
+- [x] Russian shows in the regular UI font, which covers Cyrillic; Chinese, Japanese and Korean
+      show their own Windows UI fonts (Microsoft YaHei UI, Yu Gothic UI, Malgun Gothic) with no
+      missing glyphs, and the page's `lang` follows the language.
+- [x] Korean wraps between words, not inside them. (fixed during this check)
+- [x] German, French and Spanish write keys with their keyboards' names in the card menu, the hints,
+      the Library and Settings → Shortcuts: Strg+Eingabe, Strg+Umschalt+T, Entf; Ctrl+Maj+C,
+      Suppr, Échap; Ctrl+Intro, Mayús, Supr. Other languages keep Ctrl, Shift, Enter.
+- [x] Settings → General and the first-run window list the ten languages by their own names;
+      Settings shows the review note under the choice for every language except English.
+- [ ] In the installed app, "System default" follows the Windows display language, and choosing a
+      language in Settings changes every open window and the tray menu at once. (the tag matching
+      is covered by unit tests in TypeScript and Rust; not tried in the real app)
+- [ ] The installer shows its pages in the Windows display language when it is one of the ten.
+- [ ] On a Mac, the panels macOS draws (Open, Save, permission prompts) follow the language.
+
 ## Full round for v1.0.0
 
 Run every unchecked item in this file on the installed v1.0.0 build, in this order: capture,

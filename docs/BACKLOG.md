@@ -19,6 +19,12 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - Windows ARM64 build
 - winget and Scoop packages
 
+## Languages (D-074)
+
+- Native speakers' reviews of the machine translations (CONTRIBUTING.md)
+- Text in images read in the UI language too: Windows OCR reads Turkish or English today
+- Accent-free search beyond Turkish letters (é, ü, ñ, ç …)
+
 ## Not on macOS yet (D-073)
 
 - Screen recordings (macOS saves them as `.mov`)

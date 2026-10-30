@@ -157,11 +157,9 @@ If your checkout path is long, set `CARGO_TARGET_DIR` to a short folder first, f
 
 ## Contributing
 
-Issues and pull requests are welcome; for larger changes, please open an issue first. Keep the
-checks above green, put every new UI string in both `locales/en.json` and `locales/tr.json`, and
-use only dependencies under the licences listed in `src-tauri/deny.toml`. The design is described
-in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and the reasons behind it in
-[docs/DECISIONS.md](docs/DECISIONS.md).
+Issues and pull requests are welcome; for larger changes, please open an issue first.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains how. Translations especially: every language except
+English was translated by machine and is waiting for native speakers to review it.
 
 ## Licence
 

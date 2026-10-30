@@ -60,6 +60,24 @@
   --grain-v: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='600'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.55 .004' numOctaves='3' seed='9' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .16  0 0 0 0 .08  0 0 0 0 .02  0 0 0 -2 1.15'/></filter><rect width='40' height='600' filter='url(%23g)'/></svg>");
 }
 
+/* Han characters are drawn differently in Chinese, Japanese and Korean, so each language gets its
+   own UI font after the Latin one: the Windows font, then the system font and its macOS partner.
+   The page's lang (set with the UI language) picks the set. */
+:root:lang(zh-CN) {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', 'Microsoft YaHei UI', -apple-system, 'PingFang SC', system-ui, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', 'Microsoft YaHei UI', -apple-system, 'PingFang SC', system-ui, sans-serif;
+}
+
+:root:lang(ja) {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', 'Yu Gothic UI', -apple-system, 'Hiragino Sans', system-ui, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', 'Yu Gothic UI', -apple-system, 'Hiragino Sans', system-ui, sans-serif;
+}
+
+:root:lang(ko) {
+  --font: 'Segoe UI Variable Text', 'Segoe UI', 'Malgun Gothic', -apple-system, 'Apple SD Gothic Neo', system-ui, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', 'Malgun Gothic', -apple-system, 'Apple SD Gothic Neo', system-ui, sans-serif;
+}
+
 :root[data-scheme='dark'] {
   color-scheme: dark;
   --accent: #60cdff;

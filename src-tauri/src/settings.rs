@@ -19,6 +19,16 @@ pub enum Language {
     System,
     En,
     Tr,
+    De,
+    Es,
+    Fr,
+    #[serde(rename = "pt-BR")]
+    PtBr,
+    Ru,
+    Ja,
+    Ko,
+    #[serde(rename = "zh-CN")]
+    ZhCn,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -588,11 +598,19 @@ mod tests {
         assert_eq!(s.language, Language::En);
         assert_eq!(s.shortcuts.shelf_search, None);
         assert_eq!(s.shortcuts.shelf.as_deref(), Some("Super+Alt+V"));
+        // Regional languages are stored as their tags.
+        let s = apply_patch(&s, json!({ "language": "pt-BR" })).unwrap();
+        assert_eq!(s.language, Language::PtBr);
+        assert_eq!(
+            serde_json::to_value(Language::ZhCn).unwrap(),
+            json!("zh-CN")
+        );
     }
 
     #[test]
     fn invalid_patch_is_rejected() {
-        assert!(apply_patch(&Settings::default(), json!({ "language": "de" })).is_err());
+        assert!(apply_patch(&Settings::default(), json!({ "language": "nl" })).is_err());
+        assert!(apply_patch(&Settings::default(), json!({ "language": "pt" })).is_err());
         assert!(apply_patch(&Settings::default(), json!({ "theme": 3 })).is_err());
     }
 }

@@ -6,6 +6,20 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Eight more languages.** German, Spanish, French, Brazilian Portuguese, Russian, Japanese, Korean
+  and Simplified Chinese join English and Turkish. Choose the language in Settings or in the
+  first-run window; by default Panopin follows the system and falls back to English. The
+  translations were made by machine and are waiting for native speakers to review them;
+  `CONTRIBUTING.md` explains how to help. The Windows installer and the panels macOS draws for
+  Panopin follow the same language, and on Windows keys carry their keyboard names, such as Strg
+  in German or Maj in French.
+
+### Fixed
+
+- The link preview choice in the first-run window had no room at its sides.
+
 ## [1.1.0] - 2026-10-30
 
 ### Added

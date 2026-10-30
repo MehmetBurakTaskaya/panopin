@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { t } from '../../i18n';
+import { LANGUAGES, t, type LanguageSetting } from '../../i18n';
 import type { Sources } from '../../ipc';
 import { useSettings } from '../../state/settings';
 import styles from './Onboarding.module.css';
 
 const SOURCES = ['screenshots', 'clipboardImages', 'clipboardText', 'links'] as const;
 
-/** First run: choose what to collect. Nothing is captured until "Start" is pressed. */
+/**
+ * First run: choose the language and what to collect. The language applies at once; nothing is
+ * captured until "Start" is pressed.
+ */
 export function OnboardingApp() {
   useSettings((s) => s.lang);
   const settings = useSettings((s) => s.settings);
@@ -14,11 +17,27 @@ export function OnboardingApp() {
   const update = useSettings((s) => s.update);
   const [sources, setSources] = useState<Sources | null>(settings?.sources ?? null);
   const [linkPreviews, setLinkPreviews] = useState(settings?.linkPreviews ?? false);
-  if (!sources) return null;
+  if (!sources || !settings) return null;
 
   return (
     <main className={styles.page}>
-      <h1>{t('onboarding.title')}</h1>
+      <header className={styles.header}>
+        <h1>{t('onboarding.title')}</h1>
+        <label className={styles.language}>
+          <span>{t('settings.language')}</span>
+          <select
+            value={settings.language}
+            onChange={(e) => void update({ language: e.target.value as LanguageSetting })}
+          >
+            <option value="system">{t('settings.language.system')}</option>
+            {LANGUAGES.map(({ code, name }) => (
+              <option key={code} value={code}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </header>
       <p className={styles.lead}>{t('onboarding.intro')}</p>
 
       <section className={styles.card} role="group" aria-labelledby="onboarding-sources">

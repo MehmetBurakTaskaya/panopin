@@ -1,4 +1,6 @@
 {
+  "@language": "English",
+  "@status": "source",
   "app.name": "Panopin",
   "shelf.label": "Panopin shelf",
   "shelf.hints": "Preview Space · Copy Enter · Paste Ctrl+Enter · Pin P · Take down S · Library L · Close Esc",
@@ -119,8 +121,7 @@
   "settings.general": "General",
   "settings.language": "Language",
   "settings.language.system": "System default",
-  "settings.language.en": "English",
-  "settings.language.tr": "Türkçe",
+  "settings.language.review": "This translation was made by machine and is waiting for a native speaker's review. Corrections are welcome on GitHub.",
   "settings.shelf": "Shelf",
   "settings.cardSize": "Card size",
   "settings.cardSize.s": "Small",
@@ -422,5 +423,12 @@
   "settings.about.licenceTexts": "Licence texts",
   "tray.checkUpdates": "Check for updates",
   "tray.updateTo": "Update to {version}…",
-  "tray.updateAvailable": "Update {version} is available"
+  "tray.updateAvailable": "Update {version} is available",
+  "key.ctrl": "Ctrl",
+  "key.shift": "Shift",
+  "key.enter": "Enter",
+  "key.space": "Space",
+  "key.esc": "Esc",
+  "key.backspace": "Backspace",
+  "key.delete": "Delete"
 }
