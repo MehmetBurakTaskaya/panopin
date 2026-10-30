@@ -29,6 +29,9 @@ const STOP: usize = 1;
 /// One pause for pictures that appear without the screenshot mark, in case it comes just after.
 const MARK_GRACE: Duration = Duration::from_millis(300);
 
+/// Each visible picture of a folder with its size and time.
+type Listing = HashMap<OsString, (u64, Option<SystemTime>)>;
+
 /// Where macOS saves screenshots: the folder chosen in the Screenshot app's options, else the
 /// Desktop.
 pub fn screenshots_folder() -> Option<PathBuf> {
@@ -73,6 +76,9 @@ impl Drop for Watcher {
 /// Desktop, only the pictures macOS marked as screenshots count; in folders the user added, every
 /// picture does.
 pub fn watch(dir: PathBuf, screenshots_only: bool, tx: Sender<Event>) -> Result<Watcher> {
+    // Pictures already there were saved before Panopin watched; only new ones are reported. The
+    // list is taken before the watch starts, so a picture saved in between still counts as new.
+    let known = listing(&dir);
     let path = CString::new(dir.as_os_str().as_bytes())
         .map_err(|_| io::Error::from(io::ErrorKind::InvalidInput))?;
     // SAFETY: plain system calls whose descriptors are owned right away.
@@ -93,7 +99,7 @@ pub fn watch(dir: PathBuf, screenshots_only: bool, tx: Sender<Event>) -> Result<
     let thread_queue = Arc::clone(&queue);
     let thread = thread::Builder::new()
         .name("folder-watch".into())
-        .spawn(move || run(&thread_queue, folder, &dir, screenshots_only, &tx))?;
+        .spawn(move || run(&thread_queue, folder, &dir, known, screenshots_only, &tx))?;
     Ok(Watcher {
         queue,
         thread: Some(thread),
@@ -142,9 +148,14 @@ fn change(queue: &OwnedFd, request: &libc::kevent) -> io::Result<()> {
 }
 
 // `_folder` keeps the watched descriptor open as long as the thread runs.
-fn run(queue: &OwnedFd, _folder: OwnedFd, dir: &Path, screenshots_only: bool, tx: &Sender<Event>) {
-    // Pictures already there were saved before Panopin watched; only new ones are reported.
-    let mut known = listing(dir);
+fn run(
+    queue: &OwnedFd,
+    _folder: OwnedFd,
+    dir: &Path,
+    mut known: Listing,
+    screenshots_only: bool,
+    tx: &Sender<Event>,
+) {
     loop {
         let mut got = event(0, 0, 0, 0);
         // SAFETY: room for one event and no timeout: the thread sleeps until something happens.
@@ -180,7 +191,7 @@ fn run(queue: &OwnedFd, _folder: OwnedFd, dir: &Path, screenshots_only: bool, tx
 
 /// The visible pictures in `dir` with their size and time. macOS writes a screenshot under a
 /// hidden name and renames it when it is complete.
-fn listing(dir: &Path) -> HashMap<OsString, (u64, Option<SystemTime>)> {
+fn listing(dir: &Path) -> Listing {
     let Ok(entries) = fs::read_dir(dir) else {
         return HashMap::new();
     };

@@ -212,9 +212,16 @@ mod tests {
         let (tx, rx) = mpsc::channel();
         let watcher = watch(dir.clone(), true, tx).unwrap();
         fs::write(dir.join("notes.txt"), b"text").unwrap();
-        fs::write(dir.join("new.png"), b"picture").unwrap();
-        // A file is reported again while it is written; the capture worker skips repeats.
+        // The thread starts listening a moment after `watch` returns: write until it reports.
         let mut reported = BTreeSet::new();
+        for _ in 0..10 {
+            fs::write(dir.join("new.png"), b"picture").unwrap();
+            if let Ok(Event::File(path)) = rx.recv_timeout(Duration::from_millis(500)) {
+                reported.insert(path.file_name().unwrap().to_owned());
+                break;
+            }
+        }
+        // A file is reported again while it is written; the capture worker skips repeats.
         while let Ok(Event::File(path)) = rx.recv_timeout(Duration::from_millis(1500)) {
             reported.insert(path.file_name().unwrap().to_owned());
         }
