@@ -404,8 +404,11 @@ download the `.dmg` from the run's artifacts (kept for 14 days).
       10 of 10 in `tests/macos/permission.sh` on each runner)
 - [ ] On a real Mac: allow Accessibility, let Panopin update itself, and ⌘Enter still pastes; the
       first update from 1.3.0, which is ad-hoc signed, asks once more and later ones do not.
-- [ ] A build signed with the project's certificate from the repository secrets (Actions → Mac
+- [x] A build signed with the project's certificate from the repository secrets (Actions → Mac
       test build) has the designated requirement in `src-tauri/macos-requirement.txt`.
+      (2026-10-30, run 41119078075 on 5d53db4: the universal app and its `.dmg` signed with
+      "Panopin", SHA-1 C853290F…3ECC, which `security find-identity` lists as not trusted; the
+      requirement matched the file exactly)
 
 ## Languages (D-074)
 
