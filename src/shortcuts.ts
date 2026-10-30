@@ -19,6 +19,9 @@ const NAMES: Record<Platform, Record<string, string>> = {
   },
 };
 
+/** Dragging items out to other apps as text and files; macOS has no such drag yet (D-073). */
+export const DRAG_OUT = detectPlatform() !== 'mac';
+
 /** Moving to Trash: Delete, or ⌘⌫ on a Mac, as in Finder (the Delete key needs fn there). */
 export const TRASH_SHORTCUT = detectPlatform() === 'mac' ? 'Super+Backspace' : 'Delete';
 

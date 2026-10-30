@@ -556,5 +556,6 @@ use; Vision needs no main thread.
 | Start at login | Run key | LaunchAgent (autostart plugin) |
 | Distribution | NSIS installer, portable ZIP | universal `.dmg`, not notarised: "System Settings → Privacy & Security → Open Anyway". Releases carry it once the `PANOPIN_MACOS` variable is `true` (D-068) |
 
-Not on macOS yet (BACKLOG): screen recordings, drag-out, edge opening (Settings shows it as
-unavailable), Mica-like materials and quiet sounds during full-screen apps.
+Not on macOS yet (BACKLOG): screen recordings, drag-out (a card dragged on a Mac stays where it
+is), edge opening (Settings shows it as unavailable), Mica-like materials and quiet sounds during
+full-screen apps.

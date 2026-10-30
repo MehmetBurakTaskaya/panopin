@@ -61,7 +61,7 @@ import {
   type KindFilter,
   type Section,
 } from '../../library/query';
-import { TRASH_SHORTCUT } from '../../shortcuts';
+import { DRAG_OUT, TRASH_SHORTCUT } from '../../shortcuts';
 import { useSettings } from '../../state/settings';
 import { Preview, type PreviewMode } from '../shelf/preview/Preview';
 import { trackSave, whenSaved } from '../shelf/preview/saves';
@@ -547,7 +547,7 @@ export function LibraryApp() {
   };
   const onDragStart = (id: number, e: DragEvent) => {
     const list = model.selection.includes(id) ? model.selection : [id];
-    if (e.altKey) {
+    if (e.altKey && DRAG_OUT) {
       // Alt+drag hands the items out as files (.txt, .url, .png).
       e.preventDefault();
       whenSaved()

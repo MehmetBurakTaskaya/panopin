@@ -47,7 +47,7 @@ import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type Shelf
 import { displayTitle } from '../../library/query';
 import { reducedMotion as reducedMotionSetting } from '../../look';
 import { queryTerms } from '../../search/highlight';
-import { TRASH_SHORTCUT } from '../../shortcuts';
+import { DRAG_OUT, TRASH_SHORTCUT } from '../../shortcuts';
 import { configure, play, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
 import { cardDomId, type Effect } from './Card';
@@ -724,7 +724,7 @@ export function ShelfApp() {
   }, []);
 
   const onCardPointerDown = useCallback((id: number, event: ReactPointerEvent) => {
-    const ready = event.button === 0 && latest.current.phase === 'settled';
+    const ready = DRAG_OUT && event.button === 0 && latest.current.phase === 'settled';
     pressed.current = ready ? { id, x: event.clientX, y: event.clientY } : null;
   }, []);
 

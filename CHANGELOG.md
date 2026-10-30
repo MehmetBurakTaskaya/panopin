@@ -6,6 +6,14 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **macOS, in progress.** A version for macOS 13 or later (Apple silicon and Intel) with the menu
+  bar icon, capture of copies and of screenshots, pasting into the previous app, text recognition,
+  macOS texts and key names. It will be released once it has been tested on a Mac; until then
+  releases stay Windows only. What it does differently, and what it cannot do yet, is in
+  `docs/DECISIONS.md` (D-073).
+
 ## [1.0.0] - 2026-10-30
 
 The first release, for Windows 10 22H2 and Windows 11 (x64).
