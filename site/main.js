@@ -30,7 +30,7 @@
   });
   setLanguage(root.dataset.lang === 'tr' ? 'tr' : 'en', false);
 
-  // Windows gets the installer, macOS hears that its version is coming, others see all downloads.
+  // Windows gets the installer, macOS the .dmg, others see all downloads.
   var ua = navigator.userAgent;
   var platform = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
   var system = /iPhone|iPad|Android/i.test(ua)
@@ -42,8 +42,9 @@
         : 'other';
   var button = document.getElementById('download-main');
   if (system !== 'windows' && button) {
-    button.href = 'https://github.com/MehmetBurakTaskaya/panopin/releases/latest';
-    button.classList.toggle('muted', system === 'mac');
+    button.href = system === 'mac'
+      ? 'https://github.com/MehmetBurakTaskaya/panopin/releases/latest/download/Panopin-macOS.dmg'
+      : 'https://github.com/MehmetBurakTaskaya/panopin/releases/latest';
   }
   document.querySelectorAll('[data-download-label]').forEach(function (label) {
     label.hidden = label.dataset.downloadLabel !== system;
