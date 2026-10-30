@@ -75,12 +75,13 @@ grant() {
   fi
 }
 onboarded() { [ "$(sql "SELECT json_extract(value, '\$.onboarded') FROM settings WHERE key = 'app';")" = 1 ]; }
-# finish_first_run: presses Start in the first-run window
+# finish_first_run: presses Start in the first-run window, again while its web view builds the
+# accessibility tree
+press_start() { AXT press Welcome Start > /dev/null; onboarded; }
 finish_first_run() {
   wait_for 20 window_is_open Welcome
   sleep 2
-  AXT press Welcome Start > /dev/null
-  wait_for 10 onboarded
+  wait_for 20 press_start
 }
 
 for tool in pasteboard:pbtool ax:axtool; do
@@ -328,6 +329,7 @@ panel_closed() { ! AXT shown | grep -q -x Open; }
 wait_for 5 panel_closed
 UI close Settings > /dev/null
 defaults write -g AppleAccentColor -int 1
+"$PB" accent-changed
 sleep 1
 AXT menu Settings > /dev/null
 wait_for 15 window_is_open Settings
@@ -337,6 +339,7 @@ sleep 1
 shot settings-orange-accent
 UI close Settings > /dev/null
 defaults delete -g AppleAccentColor
+"$PB" accent-changed
 AXT menu "Open Library" > /dev/null
 check "the Library opens from the menu bar icon" "windows: $(AXT shown | tr '\n' ' ')" wait_for 15 window_is_open Library
 sleep 2
