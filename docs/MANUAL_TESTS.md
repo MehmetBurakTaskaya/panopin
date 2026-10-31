@@ -588,6 +588,9 @@ folder totals). The items below need the real app.
       `clipboard-readers.ps1`, `clipboard-readers-deny.ps1`)
 - [x] The real app with the fix, with `msrdc` running: `live-queue.ps1` passed 7/7.
       (2026-10-31, release build of the fix)
+- [x] The v1.5.1 draft's update installer (`/S /UPDATE /R`) took the owner's running 1.5.0 to
+      1.5.1. Panopin started again after 3 s with the same 40 items and a search row for each,
+      and no set-aside program was left. (2026-10-31)
 - [ ] With Windows' clipboard history on (Win+V), the queue's items are not listed there.
 - [ ] Quitting Panopin from the tray mid-queue leaves the item waiting on the clipboard.
 - [x] On a Mac: Shift+Enter, then ⌘V three times in TextEdit gives the two items in order and the
