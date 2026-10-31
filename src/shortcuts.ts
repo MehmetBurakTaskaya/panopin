@@ -39,6 +39,10 @@ export const DRAG_OUT = detectPlatform() !== 'mac';
 /** Moving to Trash: Delete, or ⌘⌫ on a Mac, as in Finder (the Delete key needs fn there). */
 export const TRASH_SHORTCUT = detectPlatform() === 'mac' ? 'Super+Backspace' : 'Delete';
 
+/** The note with every key: F1, the help key, on Windows; ? on a Mac, where F1 needs fn. Both
+ * work everywhere. */
+export const KEYS_SHORTCUT = detectPlatform() === 'mac' ? '?' : 'F1';
+
 // macOS writes modifiers in one order: Control, Option, Shift, Command.
 const MAC_ORDER = ['⌃', '⌥', '⇧', '⌘'];
 

@@ -820,6 +820,18 @@ The owner chose on 2026-10-31 that each paste gives the next item ("Ctrl+V sıra
   says which item comes next.
 - When Panopin quits, the item waiting is written in full, so the clipboard keeps it. An update does
   not install while a queue is running.
-- Limits: an app that reads the clipboard without pasting moves the queue on. A paste that reads a
-  second format more than 300 ms after the first gets the next item's. Two pastes within 300 ms give
-  the same item twice.
+- Only the app in front pastes (1.5.1). On the owner's PC, the remote desktop client `msrdc`
+  read every item as soon as it was offered, without any paste. That client hands the clipboard
+  on to WSL's Linux apps. The queue then ran to its last item within a second.
+  - On Windows, `WM_RENDERFORMAT` now counts only when the window that opened the clipboard
+    (`GetOpenClipboardWindow`) belongs to the app in front, or to a process with a window inside
+    it (Store apps).
+  - Anything else gets no data. The format stays held back, so Windows asks again when the real
+    paste comes. `msrdc` asks once and does not retry.
+  - A reader that opens the clipboard without a window cannot be told apart, so it still counts.
+  - macOS does not say who asks for the data, so a Mac still counts every request.
+- Limits: an app in front that reads the clipboard without pasting moves the queue on. A paste that
+  reads a second format more than 300 ms after the first gets the next item's. Two pastes within
+  300 ms give the same item twice.
+- The line of keys along the board ends with "Keys F1" on Windows, where F1 is the help key, and
+  with "Keys ?" on a Mac, where F1 needs fn. Both keys work on both systems.

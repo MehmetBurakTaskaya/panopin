@@ -503,6 +503,11 @@ headless Chrome. Nothing ran in the real app.
 - [x] ? and F1 pin the key note over the screen in three columns. Other keys do nothing while it is
       up (P pinned nothing). Esc takes it down and the board stays open. (preview 2026-10-31: ?
       sent from script, because the test browser does not type it as a key)
+- [x] In the real app, the board's line of keys ends with "TUŞLAR F1" (Windows, Turkish). F1
+      pins the key note, Esc takes it down with the board staying, ? typed as a character pins it
+      too, and Esc again closes the shelf. (2026-10-31, release build of the 1.5.1 fix, scratchpad
+      `live-keys.ps1`. Its first check compared case-sensitively against the capitalised line, so
+      it was read off the line's text instead.)
 - [ ] ? opens the note on a Turkish Q keyboard (Shift+*) and on a German one (Shift+ß).
 - [x] Settings → Shortcuts lists the shelf's and the Library's keys under the global shortcuts.
       (preview 2026-10-31)
@@ -575,6 +580,14 @@ folder totals). The items below need the real app.
 - [x] Shift+Enter in the Library, with a picture and a text chosen: the Library says they are
       ready, and Ctrl+V in a rich text box pastes the picture, then the text, adding no cards.
       (2026-10-31, `live-150.ps1`)
+- [x] A program that reads the clipboard at once does not move the queue (1.5.1). On the owner's
+      PC, the remote desktop client `msrdc` (WSL's clipboard bridge) asked for the data 0.02 s
+      after it was offered, with no paste. A probe that holds the data back saw it ask once and
+      stop. The `queue_win` test, with `msrdc` running, has a background window ask first: it gets
+      nothing, the queue stays, and the pastes then come in turn. (2026-10-31, scratchpad
+      `clipboard-readers.ps1`, `clipboard-readers-deny.ps1`)
+- [x] The real app with the fix, with `msrdc` running: `live-queue.ps1` passed 7/7.
+      (2026-10-31, release build of the fix)
 - [ ] With Windows' clipboard history on (Win+V), the queue's items are not listed there.
 - [ ] Quitting Panopin from the tray mid-queue leaves the item waiting on the clipboard.
 - [x] On a Mac: Shift+Enter, then ⌘V three times in TextEdit gives the two items in order and the

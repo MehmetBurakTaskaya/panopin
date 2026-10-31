@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Полка Panopin",
-  "shelf.hints": "Просмотр Space · Копировать Enter · Вставить Ctrl+Enter · Закрепить P · Снять S · Библиотека L · Закрыть Esc · Клавиши ?",
+  "shelf.hints": "Просмотр Space · Копировать Enter · Вставить Ctrl+Enter · Закрепить P · Снять S · Библиотека L · Закрыть Esc · Клавиши F1",
   "shelf.hints.mac": "Просмотр Space · Копировать Enter · Вставить ⌘Enter · Закрепить P · Снять S · Библиотека L · Закрыть Esc · Клавиши ?",
   "shelf.empty.title": "Доска пока пуста",
   "shelf.empty.body": "Всё, что вы копируете, и ваши снимки экрана приклеиваются сюда скотчем. Закрепите то, что хотите сохранить.",

@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Tableau Panopin",
-  "shelf.hints": "Aperçu Espace · Copier Entrée · Coller Ctrl+Entrée · Épingler P · Décrocher S · Bibliothèque L · Fermer Échap · Touches ?",
+  "shelf.hints": "Aperçu Espace · Copier Entrée · Coller Ctrl+Entrée · Épingler P · Décrocher S · Bibliothèque L · Fermer Échap · Touches F1",
   "shelf.hints.mac": "Aperçu Space · Copier Enter · Coller ⌘Enter · Épingler P · Décrocher S · Bibliothèque L · Fermer Esc · Touches ?",
   "shelf.empty.title": "Le tableau est vide",
   "shelf.empty.body": "Ce que vous copiez et vos captures d'écran sont scotchés ici. Épinglez ce que vous voulez garder.",

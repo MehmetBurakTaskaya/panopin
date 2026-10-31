@@ -50,7 +50,7 @@ import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type Shelf
 import { displayTitle } from '../../library/query';
 import { reducedMotion as reducedMotionSetting } from '../../look';
 import { queryTerms } from '../../search/highlight';
-import { DRAG_OUT, TRASH_SHORTCUT } from '../../shortcuts';
+import { DRAG_OUT, KEYS_SHORTCUT, TRASH_SHORTCUT } from '../../shortcuts';
 import { configure, play, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
 import { cardDomId, type Effect } from './Card';
@@ -637,7 +637,7 @@ export function ShelfApp() {
       { label: 'palette.rowTexts', shortcut: 'Shift+T', run: () => toggleRow('text') },
       { label: 'palette.rowLinks', shortcut: 'Shift+L', run: () => toggleRow('link') },
       { label: 'tray.library', shortcut: 'L', run: () => void openLibrary().catch(fail) },
-      { label: 'keys.list', shortcut: '?', run: () => setKeysOpen(true) },
+      { label: 'keys.list', shortcut: KEYS_SHORTCUT, run: () => setKeysOpen(true) },
       { label: 'palette.settings', shortcut: '', run: () => void openSettings().catch(fail) },
       { label: 'palette.closeShelf', shortcut: 'Esc', run: () => void closeShelf() },
     ];

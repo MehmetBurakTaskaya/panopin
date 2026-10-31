@@ -3,7 +3,7 @@
 // ("←", "1–9"), so `formatShortcut` names them for the platform; the tests check every shelf key
 // against the key model.
 import type { MessageKey } from '../i18n';
-import { TRASH_SHORTCUT } from '../shortcuts';
+import { KEYS_SHORTCUT, TRASH_SHORTCUT } from '../shortcuts';
 
 export interface KeyEntry {
   label: MessageKey;
@@ -68,7 +68,7 @@ export const SHELF_KEYS: KeyGroup[] = [
       { label: 'keys.palette', keys: ['CommandOrControl+K'] },
       { label: 'keys.menu', keys: ['Shift+F10'] },
       { label: 'tray.library', keys: ['L'] },
-      { label: 'keys.list', keys: ['?', 'F1'] },
+      { label: 'keys.list', keys: KEYS_SHORTCUT === 'F1' ? ['F1', '?'] : ['?', 'F1'] },
       { label: 'keys.close', keys: ['Esc'] },
     ],
   },

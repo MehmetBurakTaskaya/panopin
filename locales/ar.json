@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "رف Panopin",
-  "shelf.hints": "معاينة Space · نسخ Enter · لصق Ctrl+Enter · تثبيت P · إنزال S · المكتبة L · إغلاق Esc · المفاتيح ?",
+  "shelf.hints": "معاينة Space · نسخ Enter · لصق Ctrl+Enter · تثبيت P · إنزال S · المكتبة L · إغلاق Esc · المفاتيح F1",
   "shelf.hints.mac": "معاينة Space · نسخ Enter · لصق ⌘Enter · تثبيت P · إنزال S · المكتبة L · إغلاق Esc · المفاتيح ?",
   "shelf.empty.title": "اللوحة فارغة",
   "shelf.empty.body": "يُلصق هنا بشريط لاصق كل ما تنسخه وكل لقطة شاشة تلتقطها. ثبّت ما تريد الاحتفاظ به.",

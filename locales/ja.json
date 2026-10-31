@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Panopinボード",
-  "shelf.hints": "プレビュー Space · コピー Enter · 貼り付け Ctrl+Enter · ピン留め P · ボードから外す S · ライブラリ L · 閉じる Esc · キー一覧 ?",
+  "shelf.hints": "プレビュー Space · コピー Enter · 貼り付け Ctrl+Enter · ピン留め P · ボードから外す S · ライブラリ L · 閉じる Esc · キー一覧 F1",
   "shelf.hints.mac": "プレビュー Space · コピー Enter · 貼り付け ⌘Enter · ピン留め P · ボードから外す S · ライブラリ L · 閉じる Esc · キー一覧 ?",
   "shelf.empty.title": "ボードは空です",
   "shelf.empty.body": "コピーしたものや撮ったスクリーンショットは、ここにテープで貼られます。残しておきたいものはピン留めしてください。",

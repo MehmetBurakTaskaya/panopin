@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Panopin 软木板",
-  "shelf.hints": "预览 Space · 复制 Enter · 粘贴 Ctrl+Enter · 固定 P · 取下 S · 资料库 L · 关闭 Esc · 按键 ?",
+  "shelf.hints": "预览 Space · 复制 Enter · 粘贴 Ctrl+Enter · 固定 P · 取下 S · 资料库 L · 关闭 Esc · 按键 F1",
   "shelf.hints.mac": "预览 Space · 复制 Enter · 粘贴 ⌘Enter · 固定 P · 取下 S · 资料库 L · 关闭 Esc · 按键 ?",
   "shelf.empty.title": "软木板还是空的",
   "shelf.empty.body": "你复制的内容和截取的屏幕截图都会用胶带贴在这里。想保留的，就用图钉固定。",

@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Tablero de Panopin",
-  "shelf.hints": "Vista previa Espacio · Copiar Intro · Pegar Ctrl+Intro · Fijar P · Retirar S · Biblioteca L · Cerrar Esc · Teclas ?",
+  "shelf.hints": "Vista previa Espacio · Copiar Intro · Pegar Ctrl+Intro · Fijar P · Retirar S · Biblioteca L · Cerrar Esc · Teclas F1",
   "shelf.hints.mac": "Vista previa Space · Copiar Enter · Pegar ⌘Enter · Fijar P · Retirar S · Biblioteca L · Cerrar Esc · Teclas ?",
   "shelf.empty.title": "El tablero está vacío",
   "shelf.empty.body": "Lo que copias y las capturas de pantalla que haces quedan aquí sujetos con cinta. Fija lo que quieras conservar.",

@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Bacheca di Panopin",
-  "shelf.hints": "Anteprima Spazio · Copia Invio · Incolla Ctrl+Invio · Fissa P · Stacca S · Libreria L · Chiudi Esc · Tasti ?",
+  "shelf.hints": "Anteprima Spazio · Copia Invio · Incolla Ctrl+Invio · Fissa P · Stacca S · Libreria L · Chiudi Esc · Tasti F1",
   "shelf.hints.mac": "Anteprima Space · Copia Enter · Incolla ⌘Enter · Fissa P · Stacca S · Libreria L · Chiudi Esc · Tasti ?",
   "shelf.empty.title": "La bacheca è vuota",
   "shelf.empty.body": "Quello che copi e gli screenshot che fai vengono attaccati qui con il nastro adesivo. Fissa quelli che vuoi tenere.",

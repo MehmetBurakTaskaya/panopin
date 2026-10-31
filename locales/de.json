@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Panopin-Pinnwand",
-  "shelf.hints": "Vorschau Leertaste · Kopieren Eingabe · Einfügen Strg+Eingabe · Anheften P · Abnehmen S · Bibliothek L · Schließen Esc · Tasten ?",
+  "shelf.hints": "Vorschau Leertaste · Kopieren Eingabe · Einfügen Strg+Eingabe · Anheften P · Abnehmen S · Bibliothek L · Schließen Esc · Tasten F1",
   "shelf.hints.mac": "Vorschau Space · Kopieren Enter · Einfügen ⌘Enter · Anheften P · Abnehmen S · Bibliothek L · Schließen Esc · Tasten ?",
   "shelf.empty.title": "Die Pinnwand ist leer",
   "shelf.empty.body": "Deine Kopien und Screenshots werden hier angeklebt. Was du behalten willst, heftest du an.",

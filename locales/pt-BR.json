@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Mural do Panopin",
-  "shelf.hints": "Pré-visualizar Space · Copiar Enter · Colar Ctrl+Enter · Fixar P · Tirar do mural S · Biblioteca L · Fechar Esc · Teclas ?",
+  "shelf.hints": "Pré-visualizar Space · Copiar Enter · Colar Ctrl+Enter · Fixar P · Tirar do mural S · Biblioteca L · Fechar Esc · Teclas F1",
   "shelf.hints.mac": "Pré-visualizar Space · Copiar Enter · Colar ⌘Enter · Fixar P · Tirar do mural S · Biblioteca L · Fechar Esc · Teclas ?",
   "shelf.empty.title": "O mural está vazio",
   "shelf.empty.body": "Suas cópias e capturas de tela ficam presas aqui com fita. Fixe as que quiser guardar.",

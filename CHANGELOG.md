@@ -6,6 +6,16 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **Paste one by one works when another program reads the clipboard as soon as it changes**, as
+  the bridge to WSL's Linux apps does. Until now the queue then ran to its last item at once, and
+  every paste gave that one. Now only a paste in the app in front takes the next item.
+
+### Changed
+
+- On Windows the line of keys along the board ends with "Keys F1"; ? still shows them too.
+
 ## [1.5.0] - 2026-10-31
 
 ### Added

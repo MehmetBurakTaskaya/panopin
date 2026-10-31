@@ -11,21 +11,21 @@ use std::{
 
 use tauri::AppHandle;
 use windows::{
-    core::w,
+    core::{w, BOOL},
     Win32::{
         Foundation::{SetLastError, HWND, LPARAM, LRESULT, WIN32_ERROR, WPARAM},
         System::{
             DataExchange::{
-                CloseClipboard, EmptyClipboard, GetClipboardOwner, OpenClipboard,
-                RegisterClipboardFormatW, SetClipboardData,
+                CloseClipboard, EmptyClipboard, GetClipboardOwner, GetOpenClipboardWindow,
+                OpenClipboard, RegisterClipboardFormatW, SetClipboardData,
             },
             LibraryLoader::GetModuleHandleW,
         },
         UI::WindowsAndMessaging::{
-            CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW, KillTimer,
-            RegisterClassW, SendMessageW, SetTimer, HWND_MESSAGE, MSG, WINDOW_EX_STYLE,
-            WINDOW_STYLE, WM_APP, WM_DESTROYCLIPBOARD, WM_RENDERALLFORMATS, WM_RENDERFORMAT,
-            WM_TIMER, WNDCLASSW,
+            CreateWindowExW, DefWindowProcW, DispatchMessageW, EnumChildWindows,
+            GetForegroundWindow, GetMessageW, GetWindowThreadProcessId, KillTimer, RegisterClassW,
+            SendMessageW, SetTimer, HWND_MESSAGE, MSG, WINDOW_EX_STYLE, WINDOW_STYLE, WM_APP,
+            WM_DESTROYCLIPBOARD, WM_RENDERALLFORMATS, WM_RENDERFORMAT, WM_TIMER, WNDCLASSW,
         },
     },
 };
@@ -200,6 +200,10 @@ fn begin(hwnd: HWND) -> bool {
 /// An app pastes: it gets the current item's data in this format, and the next item follows
 /// once the paste has settled.
 fn render(hwnd: HWND, format: u32) {
+    if !asked_from_the_front() {
+        log::debug!("a queued item was asked for from the background and held back");
+        return;
+    }
     let rendered = TURNS.with(|slot| {
         let mut slot = slot.borrow_mut();
         let turns = slot.as_mut()?;
@@ -216,6 +220,48 @@ fn render(hwnd: HWND, format: u32) {
         // SAFETY: a timer on this thread's own window; a new paste starts it again.
         unsafe { SetTimer(Some(hwnd), ADVANCE, SETTLE.as_millis() as u32, None) };
     }
+}
+
+/// A paste comes from the app in front. Anything else that asks, such as the remote desktop client
+/// that hands the clipboard on to WSL's Linux apps as soon as it changes, gets nothing yet: the
+/// data stays held back, so Windows asks Panopin again when the paste comes.
+fn asked_from_the_front() -> bool {
+    // SAFETY: window and process queries with no preconditions.
+    unsafe {
+        // Opened without a window, the reader cannot be told apart, so it counts as a paste.
+        let Ok(reader) = GetOpenClipboardWindow() else {
+            return true;
+        };
+        // With no window in front, nobody is pasting.
+        let front = GetForegroundWindow();
+        if front.is_invalid() {
+            return false;
+        }
+        let reader = process_of(reader);
+        if reader == 0 || reader == process_of(front) {
+            return true;
+        }
+        // A Store app draws inside a frame window that another process owns.
+        let mut found = (reader, false);
+        let _ = EnumChildWindows(
+            Some(front),
+            Some(child_of),
+            LPARAM(&mut found as *mut (u32, bool) as isize),
+        );
+        found.1
+    }
+}
+
+unsafe fn process_of(window: HWND) -> u32 {
+    let mut pid = 0u32;
+    GetWindowThreadProcessId(window, Some(&mut pid));
+    pid
+}
+
+unsafe extern "system" fn child_of(child: HWND, lparam: LPARAM) -> BOOL {
+    let found = &mut *(lparam.0 as *mut (u32, bool));
+    found.1 = process_of(child) == found.0;
+    BOOL::from(!found.1)
 }
 
 fn advance(hwnd: HWND) {
@@ -382,29 +428,9 @@ mod tests {
     #[ignore = "takes over the clipboard; CI runs it on its own"]
     fn each_paste_takes_the_next_item() {
         let settled = SETTLE + Duration::from_millis(300);
-        start_items(vec![text("one"), text("two"), text("three")]).unwrap();
-        assert_eq!(queue::status(), Some(QueueStatus { next: 1, total: 3 }));
-        assert!(marked(OWN_FORMAT), "Panopin's own copy");
-        assert!(
-            marked(w!("ExcludeClipboardContentFromMonitorProcessing")),
-            "not for clipboard history and other tools"
-        );
-        assert_eq!(paste(), "one");
-        assert_eq!(paste(), "one", "a paste may read the text twice");
-        thread::sleep(settled);
-        assert_eq!(queue::status(), Some(QueueStatus { next: 2, total: 3 }));
-        assert_eq!(paste(), "two");
-        thread::sleep(settled);
-        assert_eq!(paste(), "three");
-        thread::sleep(settled);
-        assert_eq!(queue::status(), None, "the queue is done");
-        assert_eq!(paste(), "three", "the last item stays");
-
-        // A copy made elsewhere ends a queue at once.
-        start_items(vec![text("a"), text("b")]).unwrap();
-        assert!(queue::is_running());
-        // SAFETY: a message-only window of a system class, used only as the clipboard's owner.
-        let owner = unsafe {
+        // SAFETY: a message-only window of a system class, never in front: it reads the clipboard
+        // the way a program in the background does, and later copies something else.
+        let window = unsafe {
             CreateWindowExW(
                 WINDOW_EX_STYLE::default(),
                 w!("STATIC"),
@@ -421,7 +447,42 @@ mod tests {
             )
         }
         .unwrap();
-        clipboard_win::write(owner.0 as isize, &text("elsewhere")).unwrap();
+
+        start_items(vec![text("one"), text("two"), text("three")]).unwrap();
+        assert_eq!(queue::status(), Some(QueueStatus { next: 1, total: 3 }));
+        assert!(marked(OWN_FORMAT), "Panopin's own copy");
+        assert!(
+            marked(w!("ExcludeClipboardContentFromMonitorProcessing")),
+            "not for clipboard history and other tools"
+        );
+        // A program in the background asking at once, as the bridge to WSL's apps does, gets
+        // nothing and moves nothing.
+        // SAFETY: the clipboard is opened and closed here.
+        let held = unsafe {
+            OpenClipboard(Some(window)).unwrap();
+            let data = GetClipboardData(CF_UNICODETEXT);
+            let _ = CloseClipboard();
+            data
+        };
+        assert!(held.is_err(), "held back from the background");
+        thread::sleep(settled);
+        assert_eq!(queue::status(), Some(QueueStatus { next: 1, total: 3 }));
+
+        assert_eq!(paste(), "one");
+        assert_eq!(paste(), "one", "a paste may read the text twice");
+        thread::sleep(settled);
+        assert_eq!(queue::status(), Some(QueueStatus { next: 2, total: 3 }));
+        assert_eq!(paste(), "two");
+        thread::sleep(settled);
+        assert_eq!(paste(), "three");
+        thread::sleep(settled);
+        assert_eq!(queue::status(), None, "the queue is done");
+        assert_eq!(paste(), "three", "the last item stays");
+
+        // A copy made elsewhere ends a queue at once.
+        start_items(vec![text("a"), text("b")]).unwrap();
+        assert!(queue::is_running());
+        clipboard_win::write(window.0 as isize, &text("elsewhere")).unwrap();
         assert_eq!(queue::status(), None);
         assert_eq!(paste(), "elsewhere");
     }

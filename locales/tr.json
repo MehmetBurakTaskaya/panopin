@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Panopin rafı",
-  "shelf.hints": "Önizle Space · Kopyala Enter · Yapıştır Ctrl+Enter · Sabitle P · İndir S · Kütüphane L · Kapat Esc · Tuşlar ?",
+  "shelf.hints": "Önizle Space · Kopyala Enter · Yapıştır Ctrl+Enter · Sabitle P · İndir S · Kütüphane L · Kapat Esc · Tuşlar F1",
   "shelf.hints.mac": "Önizle Space · Kopyala Enter · Yapıştır ⌘Enter · Sabitle P · İndir S · Kütüphane L · Kapat Esc · Tuşlar ?",
   "shelf.empty.title": "Pano şimdilik boş",
   "shelf.empty.body": "Kopyaladıkların ve ekran görüntülerin buraya bantlanır. Saklamak istediklerine raptiye saplarsın.",

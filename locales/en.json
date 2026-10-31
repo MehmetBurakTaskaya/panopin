@@ -3,7 +3,7 @@
   "@status": "source",
   "app.name": "Panopin",
   "shelf.label": "Panopin shelf",
-  "shelf.hints": "Preview Space · Copy Enter · Paste Ctrl+Enter · Pin P · Take down S · Library L · Close Esc · Keys ?",
+  "shelf.hints": "Preview Space · Copy Enter · Paste Ctrl+Enter · Pin P · Take down S · Library L · Close Esc · Keys F1",
   "shelf.hints.mac": "Preview Space · Copy Enter · Paste ⌘Enter · Pin P · Take down S · Library L · Close Esc · Keys ?",
   "shelf.empty.title": "The board is empty",
   "shelf.empty.body": "Things you copy and screenshots you take get taped here. Pin the ones you want to keep.",

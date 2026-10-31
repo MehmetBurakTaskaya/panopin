@@ -3,7 +3,7 @@
   "@status": "needs review",
   "app.name": "Panopin",
   "shelf.label": "Panopin 보드",
-  "shelf.hints": "미리 보기 Space · 복사 Enter · 붙여넣기 Ctrl+Enter · 고정 P · 내리기 S · 라이브러리 L · 닫기 Esc · 키 ?",
+  "shelf.hints": "미리 보기 Space · 복사 Enter · 붙여넣기 Ctrl+Enter · 고정 P · 내리기 S · 라이브러리 L · 닫기 Esc · 키 F1",
   "shelf.hints.mac": "미리 보기 Space · 복사 Enter · 붙여넣기 ⌘Enter · 고정 P · 내리기 S · 라이브러리 L · 닫기 Esc · 키 ?",
   "shelf.empty.title": "보드가 비어 있습니다",
   "shelf.empty.body": "복사한 내용과 찍은 스크린샷이 여기에 테이프로 붙습니다. 보관하고 싶은 것은 핀으로 고정하세요.",
