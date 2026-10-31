@@ -551,17 +551,23 @@ folder totals). The items below need the real app.
 - [x] The shelf in the preview: Shift+Enter with two texts chosen sends them in the order chosen,
       the card menu offers "Paste one by one", the key note lists Shift+Enter, and while a queue
       runs the shelf says which item comes next (English and Turkish). (2026-10-31)
-- [ ] In the real app: three texts, Shift+Enter, then Ctrl+V three times in Notepad, with Tab or
-      Enter between them, gives the three in order. A fourth Ctrl+V gives the third again.
-- [ ] Shift+Insert and the right-click Paste in a browser count as pastes too. Word, which reads
-      several formats, gets one item per paste.
+- [x] In the real app: three texts, Shift+Enter, then Ctrl+V, Shift+Insert and Ctrl+V in a text
+      box, with Enter between them, give the three in order. A fourth Ctrl+V gives the third again.
+      The shelf, opened between two pastes, names the next one and leaves the queue alone. The
+      pastes add no cards. (2026-10-31, this PC, release build of 3657af8, scratchpad
+      `live-queue.ps1`: 7/7)
+- [x] Copying something else in the middle ends the queue, and the shelf then shows no note.
+      (same run)
+- [ ] The right-click Paste in a browser counts too. Word, which reads several formats, gets one
+      item per paste.
 - [ ] An image and a text in one queue: the image pastes into Paint, the text into Notepad.
 - [ ] With Windows' clipboard history on (Win+V), the queue's items are not listed there and the
       queue does not move on by itself.
-- [ ] Copying something else in the middle ends the queue; reopening the shelf then shows no note.
 - [ ] Shift+Enter in the Library, with the window kept open, then pasting in another app.
 - [ ] Quitting Panopin from the tray mid-queue leaves the item waiting on the clipboard.
-- [ ] On a Mac: Shift+Enter, then ⌘V twice in TextEdit gives the two items in order.
+- [x] On a Mac: Shift+Enter, then ⌘V three times in TextEdit gives the two items in order and the
+      last one again, and the items are not kept a second time. (Mac live test run 41166739231:
+      51/51 on macOS 14, 15, 15 Intel and 26)
 
 ## Full round for v1.0.0
 
