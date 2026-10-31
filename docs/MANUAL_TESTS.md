@@ -493,8 +493,8 @@ sent no keys and opened no windows; the release 1.2.0 was installed again afterw
 
 Checked on 2026-10-31 in the browser preview (`preview/shelf.html`, `preview/settings.html`, mocked
 IPC, Turkish, light theme). The browser pane was hidden for part of the check, which stalls the
-preview's timers. Dark theme, Arabic and the Mac's key names were therefore not looked at, and
-nothing ran in the real app.
+preview's timers, so dark theme, Arabic and the Mac's key names were looked at later that day in
+headless Chrome. Nothing ran in the real app.
 
 - [x] Shift+S pins the search note under the board, with a gap. Typing shows the matches in the
       rows, the count in red and the labels per row. Rows with no match fade. (preview 2026-10-31)
@@ -506,8 +506,8 @@ nothing ran in the real app.
 - [ ] ? opens the note on a Turkish Q keyboard (Shift+*) and on a German one (Shift+ß).
 - [x] Settings → Shortcuts lists the shelf's and the Library's keys under the global shortcuts.
       (preview 2026-10-31)
-- [ ] The key note and the search note in dark mode, in Arabic (right to left), and on a Mac with
-      ⌘ and ⌥.
+- [x] The key note and the search note in dark mode, in Arabic (right to left), and with the Mac's
+      key names (⇧S, ⌥P, ⇧⌘T, ⌘⌫). (preview 2026-10-31, headless Chrome; not yet on a real Mac)
 
 ## Installing over a copy that antivirus holds (D-081)
 
