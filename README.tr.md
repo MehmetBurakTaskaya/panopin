@@ -49,7 +49,8 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
 - **On iki dil.** İngilizce, Almanca, İspanyolca, Fransızca, İtalyanca, Brezilya Portekizcesi,
   Türkçe, Rusça, Arapça (sağdan sola), Japonca, Korece ve Basitleştirilmiş Çince. Panopin
   sistemin dilini izler; Ayarlar'dan değiştirilebilir.
-- **Önce klavye.** Her işin bir tuşu var; Ctrl+K hepsini listeleyen komut paletini açar.
+- **Önce klavye.** Her işin bir tuşu var. Rafta ? hepsini gösterir; Ayarlar → Kısayollar
+  listeler, Ctrl+K komut paletini açar.
 - **Kolay kurulum.** Yönetici izni istemeyen, yalnızca senin kullanıcın için kurulan bir
   kurulum dosyası ve taşınabilir ZIP.
 
@@ -122,6 +123,7 @@ Rafta:
 | Ctrl+K | Komut paleti |
 | Ctrl+O · Ctrl+Shift+C | Bağlantıyı aç · görseldeki yazıyı kopyala |
 | L | Kütüphane'yi aç |
+| ? · F1 | Bütün tuşları bir notta göster |
 | Esc | Önce önizlemeyi, sonra rafı kapat |
 
 ## Gizlilik

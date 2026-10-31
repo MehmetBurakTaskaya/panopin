@@ -27,6 +27,14 @@ describe('shelf keys', () => {
     expect(commandFor(press('Tab', { shiftKey: true }))).toEqual({ type: 'model', action: { type: 'tab', back: true } });
   });
 
+  it('lists every key on ? and F1, however the layout types ?', () => {
+    expect(commandFor(press('?', { shiftKey: true, code: 'Slash' }))).toEqual({ type: 'keys' });
+    expect(commandFor(press('?', { shiftKey: true, code: 'Minus' }))).toEqual({ type: 'keys' });
+    expect(commandFor(press('?', { ctrlKey: true, altKey: true }))).toEqual({ type: 'keys' });
+    expect(commandFor(press('F1'))).toEqual({ type: 'keys' });
+    expect(commandFor(press('F1', { ctrlKey: true }))).toBeNull();
+  });
+
   it('separates copy, copy-and-return and paste', () => {
     expect(commandFor(press('Enter'))).toEqual({ type: 'copyAndReturn' });
     expect(commandFor(press('Enter', { ctrlKey: true }))).toEqual({ type: 'paste' });

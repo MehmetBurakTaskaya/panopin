@@ -724,3 +724,25 @@ the Dockerfile at that commit, whose base image is pinned by digest; it runs onl
 no secrets. Nothing updates the pins by itself: for a new release, look up its tag's commit (`gh api
 repos/<owner>/<repo>/git/ref/tags/<tag>`, then `git/tags/<sha>` when the tag is annotated) and
 change the SHA and the comment together.
+
+## D-080 Search on a pinned note; every key listed — Accepted
+The owner asked on 2026-10-31 for a nicer search and for a place that shows keys such as Shift+I,
+which nobody could guess. Three looks were compared in the preview: the glass box, a pinned note
+and a taped index card. The owner chose the note.
+- Shift+S (and Win+Alt+C) open a note in the empty board's style under the board. The query sits on
+  a ruled line and the count is in red handwriting. The matches per row are on labels like the row
+  labels, followed by the accents box and "Enter to the results · Esc to close".
+- The box is placed from the board's own height and follows it with a `ResizeObserver`. Before, it
+  was placed from the board's box on screen. While the board still slid in (Win+Alt+C), that box
+  was too high, so the search could land on the board.
+- `src/keyboard/keyList.ts` lists the keys of the shelf and of the Library once.
+- Settings → Shortcuts shows both lists under the global shortcuts. Those stay the only shortcuts
+  that can be changed.
+- ? or F1 on the shelf pins the shelf's list on a note. Esc, ? or F1 takes it down, and the
+  shelf's own keys wait meanwhile.
+- The palette offers the list as "Show every key", and the engraved line along the board ends with
+  "Keys ?".
+- A test presses every listed shelf key against the key model, so the list cannot name a key the
+  shelf does not answer.
+- ? is matched by the character it types. It works on every layout that types it, with whatever
+  modifiers the layout needs. F1 works on all of them.

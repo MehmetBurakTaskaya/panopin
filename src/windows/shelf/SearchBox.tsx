@@ -1,9 +1,11 @@
 import type { Ref } from 'react';
+import { KeyText } from '../../components/Keys';
+import { PinIcon } from '../../components/PinIcon';
 import { t, type MessageKey } from '../../i18n';
 import { KINDS, type Kind } from '../../keyboard/shelfModel';
-import styles from './Shelf.module.css';
+import styles from './SearchBox.module.css';
 
-const CHIP: Record<Kind, MessageKey> = { image: 'shelf.row.image', text: 'shelf.row.text', link: 'shelf.row.link' };
+const LABEL: Record<Kind, MessageKey> = { image: 'shelf.row.image', text: 'shelf.row.text', link: 'shelf.row.link' };
 
 export interface SearchBoxProps {
   inputRef: Ref<HTMLInputElement>;
@@ -22,13 +24,17 @@ export interface SearchBoxProps {
   onClose: () => void;
 }
 
-/** Shift+S on the shelf: one box in the middle of the screen; the rows show the matches. */
+/**
+ * Shift+S on the shelf: a note pinned under the board, with the rows showing the matches. It
+ * counts them per row and names the keys that leave it.
+ */
 export function SearchBox(props: SearchBoxProps) {
   const { counts, hidden } = props;
   const total = counts ? KINDS.reduce((sum, kind) => sum + (hidden[kind] ? 0 : counts[kind]), 0) : 0;
   return (
-    <div className={styles.search} style={{ top: props.top }} role="search">
-      <label className={styles.searchField}>
+    <div className={styles.note} style={{ top: props.top }} role="search">
+      <PinIcon className={styles.pin} />
+      <label className={styles.field}>
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
           <path d="M15.5 15.5 21 21" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -58,22 +64,26 @@ export function SearchBox(props: SearchBoxProps) {
             }
           }}
         />
-        <span id="shelf-search-count" className={styles.searchCount} aria-live="polite">
+        <span id="shelf-search-count" className={styles.count} aria-live="polite">
           {counts ? (total === 1 ? t('shelf.search.countOne') : t('shelf.search.count', { count: total })) : ''}
         </span>
       </label>
-      <div className={styles.chips}>
+      <div className={styles.foot}>
         {counts &&
           KINDS.filter((kind) => !hidden[kind]).map((kind) => (
-            <span key={kind} className={`${styles.chip} ${counts[kind] === 0 ? styles.zero : ''}`} data-kind={kind}>
-              <i />
-              {t(CHIP[kind])} {counts[kind]}
+            <span key={kind} className={`${styles.tag} ${counts[kind] === 0 ? styles.zero : ''}`} data-kind={kind}>
+              {t(LABEL[kind])}
+              <b>{counts[kind]}</b>
             </span>
           ))}
-        <button type="button" className={styles.chip} aria-pressed={props.withoutAccents} onClick={props.onAccents}>
+        <button type="button" className={styles.accents} aria-pressed={props.withoutAccents} onClick={props.onAccents}>
+          <i aria-hidden="true" />
           {t('shelf.search.accents')}
         </button>
       </div>
+      <span className={styles.hint}>
+        <KeyText text={t('shelf.search.hint')} keys={{ enter: 'Enter', esc: 'Esc' }} />
+      </span>
     </div>
   );
 }

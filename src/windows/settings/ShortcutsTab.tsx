@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import { Keys } from '../../components/Keys';
 import { t, type MessageKey } from '../../i18n';
 import { setShortcut, suspendShortcuts, unavailableShortcuts, type Settings, type ShortcutAction, type Shortcuts } from '../../ipc';
+import { LIBRARY_KEYS, SHELF_KEYS, type KeyGroup } from '../../keyboard/keyList';
 import { acceleratorFrom, clashesWithAltGr, formatShortcut } from '../../shortcuts';
 import { useSettings } from '../../state/settings';
 import { Section } from './controls';
@@ -133,6 +135,34 @@ export function ShortcutsTab({ settings }: { settings: Settings }) {
       <button type="button" className={styles.button} disabled={recording !== null} onClick={() => void update({ shortcuts: DEFAULTS })}>
         {t('settings.shortcut.defaults')}
       </button>
+      <div className={styles.keyLists}>
+        <p className={styles.help}>{t('keys.fixed')}</p>
+        <KeyTable title={t('keys.title')} groups={SHELF_KEYS} />
+        <KeyTable title={t('keys.libraryTitle')} groups={LIBRARY_KEYS} />
+      </div>
     </>
+  );
+}
+
+/** Keys that work inside one window: fixed, so a list rather than a recorder. */
+function KeyTable({ title, groups }: { title: string; groups: KeyGroup[] }) {
+  return (
+    <Section title={title}>
+      {groups.map((group) => (
+        <div key={group.title} className={styles.keyGroup}>
+          <h3>{t(group.title)}</h3>
+          <dl>
+            {group.entries.map((entry) => (
+              <div key={`${entry.label} ${entry.keys.join(' ')}`}>
+                <dt>{t(entry.label)}</dt>
+                <dd>
+                  <Keys keys={entry.keys} className={styles.keys} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ))}
+    </Section>
   );
 }

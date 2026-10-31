@@ -42,6 +42,7 @@ import {
   type ShelfOpenEvent,
   type Tag,
 } from '../../ipc';
+import { SHELF_KEYS } from '../../keyboard/keyList';
 import { commandFor, type Command } from '../../keyboard/shelfKeys';
 import { KINDS, openModel, reduce, type Action, type Kind, type Rows, type ShelfModel } from '../../keyboard/shelfModel';
 import { displayTitle } from '../../library/query';
@@ -55,6 +56,7 @@ import cardStyles from './Card.module.css';
 import { ConfirmTrash } from './ConfirmTrash';
 import { ContextMenu, type MenuEntry, type MenuPlacement } from './ContextMenu';
 import { EmptyState } from './EmptyState';
+import { KeyNote } from './KeyNote';
 import { SearchBox } from './SearchBox';
 import { Preview, type PreviewMode } from './preview/Preview';
 import { trackSave, whenSaved } from './preview/saves';
@@ -143,6 +145,8 @@ export function ShelfApp() {
   const [picker, setPicker] = useState<Picker | null>(null);
   // Ctrl+K: built when it opens, so its commands act on that moment's selection.
   const [palette, setPalette] = useState<PaletteCommand[] | null>(null);
+  // ? or F1: every key, on a note over the board.
+  const [keysOpen, setKeysOpen] = useState(false);
   // Space opens the preview of the card under the cursor; E, M and C open its editors.
   const [preview, setPreview] = useState<PreviewMode | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -163,20 +167,29 @@ export function ShelfApp() {
 
   useLayoutEffect(() => {
     if (!searchOpen) return;
+    const el = board.current;
     const place = () => {
-      const rect = board.current?.getBoundingClientRect();
       const height = window.innerHeight;
-      if (!rect) return setSearchTop(height / 2);
+      if (!el) return setSearchTop(height / 2);
+      // The board's own height, not its box on screen: while the board slides in, its transform
+      // still moves it, and a box placed then would cover it once it settles.
+      const size = el.offsetHeight;
       setSearchTop(
         edge === 'top'
-          ? Math.min(height - 64, Math.max(height / 2, rect.bottom + 72))
-          : Math.max(64, Math.min(height / 2, rect.top - 72)),
+          ? Math.min(height - 64, Math.max(height / 2, size + 72))
+          : Math.max(64, Math.min(height / 2, height - size - 72)),
       );
     };
     place();
     window.addEventListener('resize', place);
-    return () => window.removeEventListener('resize', place);
-  }, [searchOpen, edge, rows]);
+    // Matches, thumbnails and card sizes change the board's height while the box is open.
+    const observer = el ? new ResizeObserver(place) : null;
+    if (el) observer?.observe(el);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', place);
+    };
+  }, [searchOpen, edge]);
 
   /** Starts a short card animation; `idleOnly` leaves cards that are already animating alone. */
   const flash = useCallback((ids: number[], effect: Effect, ms: number, idleOnly = false) => {
@@ -197,9 +210,9 @@ export function ShelfApp() {
   }, []);
 
   // Event handlers read the newest state through this ref, so they can stay stable for memoised cards.
-  const latest = useRef({ model, shown, rows, hidden, pinnedOnly, phase, menu, confirm, picker, palette, preview, searchOpen });
+  const latest = useRef({ model, shown, rows, hidden, pinnedOnly, phase, menu, confirm, picker, palette, keysOpen, preview, searchOpen });
   useLayoutEffect(() => {
-    latest.current = { model, shown, rows, hidden, pinnedOnly, phase, menu, confirm, picker, palette, preview, searchOpen };
+    latest.current = { model, shown, rows, hidden, pinnedOnly, phase, menu, confirm, picker, palette, keysOpen, preview, searchOpen };
   });
 
   const current = useMemo(() => {
@@ -519,6 +532,9 @@ export function ShelfApp() {
       case 'palette':
         setPalette(paletteCommands());
         return;
+      case 'keys':
+        setKeysOpen(true);
+        return;
       case 'name':
       case 'folder':
       case 'tag':
@@ -597,6 +613,7 @@ export function ShelfApp() {
       { label: 'palette.rowTexts', shortcut: 'Shift+T', run: () => toggleRow('text') },
       { label: 'palette.rowLinks', shortcut: 'Shift+L', run: () => toggleRow('link') },
       { label: 'tray.library', shortcut: 'L', run: () => void openLibrary().catch(fail) },
+      { label: 'keys.list', shortcut: '?', run: () => setKeysOpen(true) },
       { label: 'palette.settings', shortcut: '', run: () => void openSettings().catch(fail) },
       { label: 'palette.closeShelf', shortcut: 'Esc', run: () => void closeShelf() },
     ];
@@ -607,6 +624,11 @@ export function ShelfApp() {
       run: entry.run,
     }));
   };
+
+  const closeKeys = useCallback(() => {
+    setKeysOpen(false);
+    grid.current?.focus({ preventScroll: true });
+  }, []);
 
   const handlers = useRef({ run, copy });
   useLayoutEffect(() => {
@@ -624,6 +646,7 @@ export function ShelfApp() {
       setConfirm(null);
       setPicker(null);
       setPalette(null);
+      setKeysOpen(false);
       setPreview(null);
       setNotice(payload.notice ? t(payload.notice) : null);
       setQuery('');
@@ -660,6 +683,7 @@ export function ShelfApp() {
       setConfirm(null);
       setPicker(null);
       setPalette(null);
+      setKeysOpen(false);
       setPreview(null);
       setSearchOpen(false);
       setQuery('');
@@ -677,9 +701,17 @@ export function ShelfApp() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const state = latest.current;
-      // Closed boards, the menu, the confirmation, the pickers and the palette handle their own
-      // keys; typing in an IME too.
-      if (state.phase === 'hidden' || state.phase === 'closing' || state.menu || state.confirm || state.picker || state.palette) {
+      // Closed boards, the menu, the confirmation, the pickers, the palette and the key note handle
+      // their own keys; typing in an IME too.
+      if (
+        state.phase === 'hidden' ||
+        state.phase === 'closing' ||
+        state.menu ||
+        state.confirm ||
+        state.picker ||
+        state.palette ||
+        state.keysOpen
+      ) {
         return;
       }
       // The text, markup and crop editors handle their own keys; typing never reaches the shelf.
@@ -868,6 +900,7 @@ export function ShelfApp() {
           }}
         />
       )}
+      {keysOpen && isOpen && <KeyNote groups={SHELF_KEYS} onClose={closeKeys} />}
       {picker?.type === 'name' && (
         <NamePrompt
           items={itemsOf(picker.ids).map((item) => ({ id: item.id, title: item.title, label: displayTitle(item) }))}

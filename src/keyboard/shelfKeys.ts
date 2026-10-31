@@ -26,6 +26,7 @@ export type Command =
   | { type: 'palette' }
   | { type: 'openLink' }
   | { type: 'copyText' }
+  | { type: 'keys' }
   | { type: 'escape' };
 
 export interface KeyInput {
@@ -92,6 +93,11 @@ export function commandFor(event: KeyInput): Command | null {
       return shift && !ctrl && !alt ? { type: 'menu' } : null;
     case ' ':
       return ctrl || alt || shift ? null : { type: 'preview' };
+    // Every key, listed on a note. ? takes whatever modifiers the layout needs to type it.
+    case '?':
+      return { type: 'keys' };
+    case 'F1':
+      return ctrl || alt || shift ? null : { type: 'keys' };
   }
 
   const digit = digitOf(event);

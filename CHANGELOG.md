@@ -6,12 +6,24 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Every key in one place.** Settings → Shortcuts lists the keys of the shelf and of the Library.
+  On the shelf, ? or F1 pins the shelf's keys on a note, and the line of keys along the board ends
+  with "Keys ?".
+
 ### Changed
 
+- **Search is a note pinned under the board.** Shift+S and Win+Alt+C write the search on a note.
+  It counts the matches in each row and shows the keys that leave it.
 - **On a Mac, updates keep the permissions you gave Panopin.** Every version is now signed with the
   same certificate, so macOS knows each update as the same app. After this one update, allow
   Panopin under Privacy & Security → Accessibility once more; macOS may also ask once more before
   Panopin reads the Desktop. From then on ⌘Enter keeps pasting after every update.
+
+### Fixed
+
+- When the shelf opened with the search (Win+Alt+C), the search box could land on top of the board.
 
 ## [1.3.0] - 2026-10-30
 

@@ -1,0 +1,72 @@
+/* Every key on the shelf (? or F1): a lined note pinned over the screen, like the search note. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px 20px;
+  background: rgba(8, 10, 14, 0.38);
+  animation: fade 0.18s ease-out both;
+}
+
+.note {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(940px, 100%);
+  max-height: 100%;
+  padding: 24px 30px 14px;
+  border-radius: 2px;
+  rotate: -0.5deg;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow-lift);
+  animation: pin-drop 0.32s var(--ease-out) both;
+}
+
+.pin {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 26px;
+  height: 26px;
+  margin-left: -13px;
+  filter: drop-shadow(2px 3px 1.2px rgba(25, 8, 0, 0.45));
+}
+
+.note h2 { margin: 0 0 14px; font: 400 22px/1.25 var(--hand); text-align: center; }
+
+/* The groups flow into as many columns as the width allows; a long list scrolls inside. */
+.groups { min-height: 0; overflow: auto; columns: 250px; column-gap: 32px; }
+.group { break-inside: avoid; margin-bottom: 16px; }
+.group h3 {
+  margin: 0 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid rgb(70 130 190 / 0.4);
+  font: 700 10.5px/1.2 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.group dl { margin: 0; }
+.entry { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 3px 0; }
+.entry dt { font: 12.5px/1.35 var(--font); }
+.entry dd { flex: none; margin: 0; }
+.keys { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+
+.foot { margin: 4px 0 0; font: 11.5px/1.6 var(--font); text-align: end; color: var(--ink-2); }
+.foot kbd { margin: 0 2px; }
+
+@keyframes pin-drop { from { opacity: 0; translate: 0 -14px; rotate: -2.5deg; } }
+@keyframes fade { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim, .note { animation: none; }
+}
+
+@media (forced-colors: active) {
+  .note { border: 1px solid CanvasText; }
+}

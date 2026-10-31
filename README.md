@@ -48,7 +48,8 @@ window holds everything, with folders, tags, notes and search.
 - **Twelve languages.** English, German, Spanish, French, Italian, Brazilian Portuguese, Turkish,
   Russian, Arabic (right to left), Japanese, Korean and Simplified Chinese. Panopin follows the
   system language; Settings can change it.
-- **Keyboard first.** Every action has a key, and Ctrl+K opens a command palette that lists them.
+- **Keyboard first.** Every action has a key. On the shelf, ? shows them all; Settings →
+  Shortcuts lists them, and Ctrl+K opens a command palette.
 - **Easy to install.** A per-user installer that needs no administrator rights, and a portable
   ZIP.
 
@@ -119,6 +120,7 @@ On the shelf:
 | Ctrl+K | Command palette |
 | Ctrl+O · Ctrl+Shift+C | Open a link · copy the text in an image |
 | L | Open the Library |
+| ? · F1 | Show every key on a note |
 | Esc | Close the preview, then the shelf |
 
 ## Privacy

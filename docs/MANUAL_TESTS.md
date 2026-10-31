@@ -489,6 +489,26 @@ sent no keys and opened no windows; the release 1.2.0 was installed again afterw
       the workflow runs with the next release)
 - [x] `npm run stats` prints the downloads per release and file. (2026-10-30)
 
+## Search note and key list (D-080)
+
+Checked on 2026-10-31 in the browser preview (`preview/shelf.html`, `preview/settings.html`, mocked
+IPC, Turkish, light theme). The browser pane was hidden for part of the check, which stalls the
+preview's timers. Dark theme, Arabic and the Mac's key names were therefore not looked at, and
+nothing ran in the real app.
+
+- [x] Shift+S pins the search note under the board, with a gap. Typing shows the matches in the
+      rows, the count in red and the labels per row. Rows with no match fade. (preview 2026-10-31)
+- [ ] Win+Alt+C opens the shelf with the search note under the board, not on it, also on a monitor
+      where the board is tall.
+- [x] ? and F1 pin the key note over the screen in three columns. Other keys do nothing while it is
+      up (P pinned nothing). Esc takes it down and the board stays open. (preview 2026-10-31: ?
+      sent from script, because the test browser does not type it as a key)
+- [ ] ? opens the note on a Turkish Q keyboard (Shift+*) and on a German one (Shift+ß).
+- [x] Settings → Shortcuts lists the shelf's and the Library's keys under the global shortcuts.
+      (preview 2026-10-31)
+- [ ] The key note and the search note in dark mode, in Arabic (right to left), and on a Mac with
+      ⌘ and ⌥.
+
 ## Full round for v1.0.0
 
 Run every unchecked item in this file on the installed v1.0.0 build, in this order: capture,
