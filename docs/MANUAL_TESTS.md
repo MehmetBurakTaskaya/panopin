@@ -534,12 +534,18 @@ Panopin is closed.
 Covered by unit tests on 2026-10-31 (Rust index and folding, TypeScript highlighting, code check,
 folder totals). The items below need the real app.
 
-- [ ] With "Search without accents" on, "cafe" finds "Café crème" on the shelf and in the Library,
-      and "елка" finds "Ёлка"; with it off, neither does.
+- [x] On the shelf, with "Search without accents" switched on by a click on the search note,
+      "cafe cr" finds "Café crème" and "елка" finds "Ёлка". With it off, neither does, and the
+      setting follows the switch. (2026-10-31, this PC, release build of 3657af8 in Turkish,
+      scratchpad `live-150.ps1` and `live-150b.ps1`. The switch pressed through UI Automation did
+      nothing in the WebView, so it is clicked with the mouse.)
+- [ ] The same in the Library's search.
 - [ ] After the update, the index rebuilds once in the background, and search keeps working.
-- [ ] A copied piece of code shows in the monospace font with its indentation, on its card and in
-      the Library. A sentence with a semicolon does not.
-- [ ] A Library search marks its words in the tiles and in the list.
+- [x] A copied piece of code shows in the monospace font with its indentation, on its card and in
+      the Library, and pastes with its line breaks. (same runs, by eye on screen captures)
+- [ ] A sentence with a semicolon stays in the normal font.
+- [x] A Library search marks its words in the tiles. (same runs, by eye)
+- [ ] The same in the list view.
 - [ ] A folded folder with subfolders counts their items too; unfolded, it shows its own count.
 
 ## Paste one by one (D-084)
@@ -558,12 +564,15 @@ folder totals). The items below need the real app.
       `live-queue.ps1`: 7/7)
 - [x] Copying something else in the middle ends the queue, and the shelf then shows no note.
       (same run)
+- [x] A text box's own Paste command (`WM_PASTE`, which its menu sends) counts as a paste.
+      Nobody pasting for three seconds leaves the queue at its first item. (2026-10-31, this PC,
+      `live-150b.ps1` and `live-150.ps1`)
 - [ ] The right-click Paste in a browser counts too. Word, which reads several formats, gets one
       item per paste.
-- [ ] An image and a text in one queue: the image pastes into Paint, the text into Notepad.
-- [ ] With Windows' clipboard history on (Win+V), the queue's items are not listed there and the
-      queue does not move on by itself.
-- [ ] Shift+Enter in the Library, with the window kept open, then pasting in another app.
+- [x] Shift+Enter in the Library, with a picture and a text chosen: the Library says they are
+      ready, and Ctrl+V in a rich text box pastes the picture, then the text, adding no cards.
+      (2026-10-31, `live-150.ps1`)
+- [ ] With Windows' clipboard history on (Win+V), the queue's items are not listed there.
 - [ ] Quitting Panopin from the tray mid-queue leaves the item waiting on the clipboard.
 - [x] On a Mac: Shift+Enter, then ⌘V three times in TextEdit gives the two items in order and the
       last one again, and the items are not kept a second time. (Mac live test run 41166739231:
