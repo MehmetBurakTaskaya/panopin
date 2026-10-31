@@ -6,6 +6,8 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-10-31
+
 ### Fixed
 
 - **Paste one by one works when another program reads the clipboard as soon as it changes**, as
@@ -149,7 +151,8 @@ The first release, for Windows 10 22H2 and Windows 11 (x64).
 - **Installer and portable ZIP.** A per-user installer that needs no administrator rights and no
   clicks: opened, it installs and starts Panopin, in English or Turkish. And a portable ZIP.
 
-[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.3.0...v1.4.1
 [1.3.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.2.0...v1.3.0
