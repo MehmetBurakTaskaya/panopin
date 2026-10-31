@@ -15,7 +15,7 @@
   <a href="CHANGELOG.md">Değişiklikler</a>
 </p>
 
-![Panopin iş başında: bir e-posta taslağının üzerinde Görseller, Metinler ve Bağlantılar satırlarıyla mantar pano. "room" araması bir ekran görüntüsünü içindeki yazıdan ve kopyalanmış bir metni buluyor, Ctrl+Enter metni taslağa yapıştırıyor. Ardından pano 12 dilinde görünüyor.](site/assets/demo.gif)
+![Panopin'i kısaca tanıtan bir tur. Kopyalanan metinler, bağlantılar ve ekran görüntüleri kendiliğinden mantar panoya düşüyor, Win+Alt+V panoyu bir e-posta taslağının üzerine getiriyor. "room" araması bir ekran görüntüsünü içindeki sözcüklerden buluyor, Ctrl+Enter bir metni taslağa yapıştırıyor, Shift+Enter'dan sonra her Ctrl+V iki bağlantıdan sıradakini yapıştırıyor. Ardından pano 12 dilinde görünüyor. Sonunda: ücretsiz ve açık kaynak, tamamen yerel, Windows ve macOS için.](site/assets/demo.gif)
 
 Bir metin, bağlantı ya da görsel kopyala veya ekran görüntüsü al: Panopin onu sessizce saklar.
 **Win+Alt+V**'ye bastığında Görseller, Metinler ve Bağlantılar satırlarıyla bir mantar pano
