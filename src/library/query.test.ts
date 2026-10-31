@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LibraryItem } from '../ipc';
-import { NO_FILTERS, displayTitle, inSection, matches, sectionCounts, sortItems } from './query';
+import { NO_FILTERS, displayTitle, folderTotals, inSection, matches, sectionCounts, sortItems } from './query';
 import { emptyModel, reduceLibrary, targets } from '../keyboard/libraryModel';
 
 const DAY = 86_400_000;
@@ -62,6 +62,28 @@ describe('library sections and filters', () => {
     const counts = sectionCounts(all);
     expect([counts.all, counts.recent, counts.pinned, counts.unsorted, counts.trash]).toEqual([3, 1, 1, 1, 1]);
     expect(counts.tags.get(2)).toBe(1);
+  });
+
+  it('counts a folder with everything under it, each item once', () => {
+    // 1 › 2 › 3, and 4 at the top.
+    const folders = [
+      { id: 1, parentId: null, name: 'İş' },
+      { id: 2, parentId: 1, name: 'Fatura' },
+      { id: 3, parentId: 2, name: '2026' },
+      { id: 4, parentId: null, name: 'Ev' },
+    ];
+    const items = [
+      item({ saved: true, folders: [1] }),
+      item({ saved: true, folders: [3] }),
+      // In a folder and in its parent: counted once there.
+      item({ saved: true, folders: [2, 1] }),
+      item({ saved: true, folders: [4] }),
+      item({ saved: true, folders: [3], trashedAt: NOW }),
+    ];
+    const totals = folderTotals(items, folders);
+    expect([1, 2, 3, 4].map((id) => totals.get(id))).toEqual([3, 2, 1, 1]);
+    // A loop in broken data ends.
+    expect(folderTotals([item({ folders: [5] })], [{ id: 5, parentId: 6, name: 'a' }, { id: 6, parentId: 5, name: 'b' }]).get(6)).toBe(1);
   });
 
   it('needs every chosen tag and honours kind, pin, domain and date', () => {

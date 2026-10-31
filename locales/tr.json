@@ -135,7 +135,7 @@
   "settings.edgeOpenHelp": "İmleci o ekran kenarında kısa bir süre beklet. Ekranı bir oyun, video ya da sunum kaplarken çalışmaz.",
   "settings.edgeOpenHelp.mac": "macOS'ta henüz yok.",
   "settings.searchWithoutAccents": "Aksansız ara",
-  "settings.searchWithoutAccentsHelp": "\"cicek\" yazınca \"çiçek\" de bulunur.",
+  "settings.searchWithoutAccentsHelp": "\"cicek\" yazınca \"çiçek\", \"cafe\" yazınca \"café\" de bulunur.",
   "settings.soundsOn": "Ses efektleri",
   "settings.sounds": "Sesler",
   "settings.soundsVolume": "Ses seviyesi",

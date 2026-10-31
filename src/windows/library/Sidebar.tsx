@@ -26,6 +26,8 @@ export interface SidebarProps {
   section: Section;
   onSection: (section: Section) => void;
   counts: Counts;
+  /** Items in a folder and its subfolders, shown while the folder is folded. */
+  folderTotals: Map<number, number>;
   folders: Folder[];
   tags: Tag[];
   renaming: Group | null;
@@ -47,7 +49,7 @@ const FIXED: [Section, MessageKey, keyof Counts][] = [
 /** Sections, the folder tree and tags. ↑/↓ move and select, ←/→ fold folders, F2 renames,
  * Delete removes a folder or tag (after asking). Cards dropped on a folder join it. */
 export function Sidebar(props: SidebarProps) {
-  const { section, counts, folders, tags, renaming, paneRef } = props;
+  const { section, counts, folderTotals, folders, tags, renaming, paneRef } = props;
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [dropping, setDropping] = useState<number | null>(null);
   const pane = useRef<HTMLDivElement | null>(null);
@@ -82,11 +84,12 @@ export function Sidebar(props: SidebarProps) {
     const walk = (parent: number | null, depth: number) => {
       for (const folder of children.get(parent) ?? []) {
         const hasChildren = (children.get(folder.id) ?? []).length > 0;
+        const folded = hasChildren && collapsed.has(folder.id);
         list.push({
           key: `f${folder.id}`,
           section: { type: 'folder', id: folder.id },
           label: folder.name,
-          count: counts.folders.get(folder.id) ?? 0,
+          count: (folded ? folderTotals : counts.folders).get(folder.id) ?? 0,
           depth,
           folder,
           hasChildren,
@@ -100,7 +103,7 @@ export function Sidebar(props: SidebarProps) {
     }
     list.push({ key: 'trash', section: { type: 'trash' }, label: t('library.section.trash'), count: counts.trash, depth: 0 });
     return list;
-  }, [counts, folders, tags, collapsed]);
+  }, [counts, folderTotals, folders, tags, collapsed]);
 
   const current = Math.max(0, entries.findIndex((entry) => sameSection(entry.section, section)));
   const groupOf = (entry: Entry | undefined): Group | null =>

@@ -91,6 +91,10 @@
 .thumb .duration { position: absolute; inset-inline-end: 8px; bottom: 8px; padding: 1px 5px; border-radius: 3px; background: rgba(0, 0, 0, 0.66); color: #fff; font: 700 10px/14px var(--font); }
 img.letter { object-fit: contain; background: #fff; box-shadow: 0 0 0 1px var(--ui-line); }
 .thumbText { align-self: stretch; justify-self: stretch; padding: 8px 10px; overflow: hidden; font: 11.5px/1.45 var(--font); white-space: pre-line; word-break: break-word; color: var(--ui-ink); }
+/* Code keeps its indentation and reads in a monospace font (D-083). */
+.thumbText[data-code] { font: 10.5px/1.45 var(--mono); white-space: pre-wrap; }
+/* Searched words, marked as on the shelf (D-083). */
+.tile mark, .row mark { color: inherit; background: linear-gradient(transparent 18%, var(--mark) 18% 90%, transparent 90%); border-radius: 2px; padding: 0 1px; margin: 0 -1px; }
 .thumbLink { display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--ui-muted); }
 .tile .letter, .row .letter { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: #fff; font: 700 17px var(--font); }
 .caption { display: flex; align-items: center; gap: 6px; padding: 6px 9px; border-top: 1px solid var(--ui-line); }

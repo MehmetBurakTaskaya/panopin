@@ -6,6 +6,19 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Code looks like code.** A copied text that looks like code shows in a monospace font, with its
+  indentation, on the shelf and in the Library.
+- A Library search marks the words it found in titles and texts, as the shelf does.
+- A folded folder in the Library counts the items in its subfolders too.
+
+### Changed
+
+- **Search without accents works in every language.** "cafe" finds "café", "senor" finds "señor",
+  and Greek, Russian and Arabic lose their accents the same way. Turn it on in Settings or with the
+  box under the search. The search index is rebuilt once after the update.
+
 ## [1.4.1] - 2026-10-31
 
 ### Added

@@ -1,6 +1,6 @@
 // What the Library shows: sidebar sections, filters and sorting. Pure, so the rules are tested;
 // Rust owns the data and sends every item once (Trash included).
-import type { LibraryItem, SortKey } from '../ipc';
+import type { Folder, LibraryItem, SortKey } from '../ipc';
 
 export type Section =
   | { type: 'all' }
@@ -152,6 +152,25 @@ export function sectionCounts(items: LibraryItem[]): Counts {
     for (const id of item.tags) counts.tags.set(id, (counts.tags.get(id) ?? 0) + 1);
   }
   return counts;
+}
+
+/**
+ * Items in each folder or in any folder under it, each item once (D-083). A folded folder shows
+ * this count, since its subfolders are out of sight; an open one shows its own.
+ */
+export function folderTotals(items: LibraryItem[], folders: Folder[]): Map<number, number> {
+  const parent = new Map(folders.map((folder) => [folder.id, folder.parentId]));
+  const totals = new Map<number, number>();
+  for (const item of items) {
+    if (item.trashedAt !== null) continue;
+    const reached = new Set<number>();
+    for (const id of item.folders) {
+      // Up to the top; a folder reached before ends the climb, so a broken loop cannot hang.
+      for (let at: number | null | undefined = id; at != null && !reached.has(at); at = parent.get(at)) reached.add(at);
+    }
+    for (const id of reached) totals.set(id, (totals.get(id) ?? 0) + 1);
+  }
+  return totals;
 }
 
 /** Domains of the links in view, for the domain filter. */

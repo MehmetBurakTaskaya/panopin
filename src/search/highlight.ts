@@ -1,17 +1,32 @@
 // Marks the words a search matched, folded the way Rust folds the index (D-017): the four
-// Turkish i forms are one letter, case does not count, and optionally Turkish accents neither.
+// Turkish i forms are one letter, case does not count, and optionally accents neither (D-082).
 
-const ACCENTS: Record<string, string> = { ç: 'c', ş: 's', ğ: 'g', ö: 'o', ü: 'u', â: 'a', î: 'i', û: 'u' };
+// Letters with a stroke or a ring that no decomposition takes apart.
+const PLAIN: Record<string, string> = { ø: 'o', ł: 'l', đ: 'd', ð: 'd', ħ: 'h', ё: 'е' };
+// Accents come off in Latin, Greek and Arabic only; й, kana with dakuten and Hangul stay.
+const BARE_SCRIPTS = /[À-ɏḀ-ỿͰ-Ͽἀ-῿ؠ-ۿ]/u;
+// Latin and Greek accents and Arabic vowel marks written after their letter.
+const LOOSE_MARK = /[̀-ًͯ-ٰٟ]/u;
 
-/** One character in, one out, so positions in the folded text are positions in the original. */
+function bareChar(c: string): string {
+  const plain = PLAIN[c];
+  if (plain) return plain;
+  if (LOOSE_MARK.test(c)) return '';
+  if (!BARE_SCRIPTS.test(c)) return c;
+  const [base, ...marks] = [...c.normalize('NFD')];
+  return base && marks.every((mark) => /\p{M}/u.test(mark)) ? base : c;
+}
+
+/** One character in, at most one out, so positions in the folded text follow the original's. */
 export function foldChar(c: string, withoutAccents: boolean): string {
   if (c === 'İ' || c === 'I' || c === 'ı') return 'i';
   const lower = c.toLowerCase();
   const one = [...lower].length === 1 ? lower : c;
-  return withoutAccents ? (ACCENTS[one] ?? one) : one;
+  return withoutAccents ? bareChar(one) : one;
 }
 
-const isWordChar = (c: string) => /[\p{L}\p{N}]/u.test(c);
+// Marks belong to their word: an Arabic vowel mark does not start a new one.
+const isWordChar = (c: string) => /[\p{L}\p{N}\p{M}]/u.test(c);
 
 /** The words of a query, folded; every one matches as the start of a word. */
 export function queryTerms(query: string, withoutAccents: boolean): string[] {
@@ -36,8 +51,14 @@ export function highlight(text: string, terms: string[], withoutAccents: boolean
   for (let i = 0; i < chars.length; i++) {
     if (!isWordChar(chars[i]!) || (i > 0 && isWordChar(chars[i - 1]!))) continue;
     for (const term of terms) {
-      const length = [...term].length;
-      if (folded.slice(i, i + length).join('') === term) hit.fill(true, i, i + length);
+      // A dropped vowel mark folds to nothing, so the match may span more characters.
+      let found = '';
+      let end = i;
+      while (end < chars.length && found.length < term.length) found += folded[end++];
+      if (found !== term) continue;
+      // The marks on the last letter belong to the match too.
+      while (end < chars.length && folded[end] === '') end++;
+      hit.fill(true, i, end);
     }
   }
   const segments: Segment[] = [];

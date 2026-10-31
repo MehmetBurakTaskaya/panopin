@@ -1,8 +1,9 @@
 import { memo, type CSSProperties, type MouseEvent, type PointerEvent } from 'react';
+import { Marked } from '../../components/Marked';
 import { PinIcon } from '../../components/PinIcon';
 import { formatLocale, ltr, t } from '../../i18n';
 import { mediaUrl, type ShelfItem } from '../../ipc';
-import { highlight } from '../../search/highlight';
+import { looksLikeCode } from '../../text/code';
 import styles from './Card.module.css';
 import { age, aspectRatio, duration, isVideoLink, letterTile, linkDetail, linkHeading, tilt } from './paper';
 
@@ -49,16 +50,6 @@ function charCount(count: number): string {
   return count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: formatted });
 }
 
-/** Text with the searched words marked, the way the concept shows them. */
-function Marked({ text, terms, withoutAccents }: { text: string; terms: string[] | null; withoutAccents: boolean }) {
-  if (!terms) return <>{text}</>;
-  return (
-    <>
-      {highlight(text, terms, withoutAccents).map((part, i) => (part.hit ? <mark key={i}>{part.text}</mark> : part.text))}
-    </>
-  );
-}
-
 interface BodyProps {
   item: ShelfItem;
   now: number;
@@ -85,7 +76,7 @@ function Body({ item, now, terms, withoutAccents }: BodyProps) {
   if (item.kind === 'text') {
     return (
       <>
-        <div className={styles.txt} dir="auto">
+        <div className={styles.txt} dir="auto" data-code={looksLikeCode(item.preview ?? '') || undefined}>
           <Marked text={item.preview ?? ''} terms={terms} withoutAccents={withoutAccents} />
         </div>
         <div className={styles.meta}>

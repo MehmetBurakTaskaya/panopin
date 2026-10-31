@@ -82,6 +82,8 @@ img.fav { object-fit: contain; background: #fff; }
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--lines);
 }
+/* Code keeps its indentation and reads in a monospace font (D-083). */
+.txt[data-code] { font: 11px/16px var(--mono); white-space: pre-wrap; }
 .meta {
   position: absolute;
   left: 10px;

@@ -5,12 +5,14 @@
 //! trigger. The index is rebuilt once when [`INDEX_VERSION`] changes.
 
 use rusqlite::{params, Connection, OptionalExtension};
+use unicode_normalization::char::is_combining_mark;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::error::Result;
 
 /// Bumped when folding or the indexed fields change; the index is then rebuilt once.
-pub const INDEX_VERSION: i64 = 1;
+/// 2: accents of every language, not only the Turkish ones (D-082).
+pub const INDEX_VERSION: i64 = 2;
 const VERSION_KEY: &str = "search_index";
 /// Characters of a text body that go into the index; longer texts are found by their start.
 const BODY_CHARS: usize = 200_000;
@@ -29,22 +31,40 @@ pub fn fold(text: &str) -> String {
     out
 }
 
-/// A folded text without Turkish accents (and the circumflex): "çiçek" becomes "cicek".
+/// A folded text without accents, for searching in any language (D-082): "çiçek", "café" and
+/// "ångström" become "cicek", "cafe" and "angstrom", Greek loses its tonos, Russian ё becomes е,
+/// and Arabic loses its vowel marks and hamza seats. Marks that make a letter of their own stay:
+/// й, kana with dakuten, Hangul.
 pub fn bare(folded: &str) -> String {
-    folded
-        .chars()
-        .map(|c| match c {
-            'ç' => 'c',
-            'ş' => 's',
-            'ğ' => 'g',
-            'ö' => 'o',
-            'ü' => 'u',
-            'â' => 'a',
-            'î' => 'i',
-            'û' => 'u',
-            c => c,
-        })
-        .collect()
+    folded.chars().filter_map(bare_char).collect()
+}
+
+/// One character without its accent; `None` drops a vowel mark written on its own.
+fn bare_char(c: char) -> Option<char> {
+    match c {
+        // Letters with a stroke or a ring that no decomposition takes apart.
+        'ø' => return Some('o'),
+        'ł' => return Some('l'),
+        'đ' | 'ð' => return Some('d'),
+        'ħ' => return Some('h'),
+        'ё' => return Some('е'),
+        // Latin and Greek accents and Arabic vowel marks written after their letter.
+        '\u{0300}'..='\u{036F}' | '\u{064B}'..='\u{065F}' | '\u{0670}' => return None,
+        // Accents come off in Latin, Greek and Arabic only.
+        '\u{00C0}'..='\u{024F}'
+        | '\u{1E00}'..='\u{1EFF}'
+        | '\u{0370}'..='\u{03FF}'
+        | '\u{1F00}'..='\u{1FFF}'
+        | '\u{0620}'..='\u{06FF}' => {}
+        _ => return Some(c),
+    }
+    let mut parts = std::iter::once(c).nfd();
+    let base = parts.next().unwrap_or(c);
+    Some(if parts.all(is_combining_mark) {
+        base
+    } else {
+        c
+    })
 }
 
 struct Document {
@@ -251,6 +271,24 @@ mod tests {
     }
 
     #[test]
+    fn bare_drops_the_accents_of_every_language() {
+        let bare_of = |text: &str| bare(&fold(text));
+        assert_eq!(
+            bare_of("Über Café Naïve Señor Ångström Øre Łódź Việt"),
+            "uber cafe naive senor angstrom ore lodz viet"
+        );
+        assert_eq!(bare_of("Ελλάδα"), "ελλαδα");
+        assert_eq!(bare_of("Ёлка йод"), "елка йод", "й is a letter of its own");
+        assert_eq!(bare_of("أحمد إسلام آمن"), "احمد اسلام امن");
+        assert_eq!(bare_of("كَتَبَ"), "كتب", "vowel marks go");
+        assert_eq!(
+            bare_of("がっこう 한국 中文"),
+            "がっこう 한국 中文",
+            "no change outside them"
+        );
+    }
+
+    #[test]
     fn expressions_use_prefixes_and_never_pass_operators() {
         assert_eq!(
             expression("İst  ank", false).as_deref(),
@@ -285,6 +323,9 @@ mod tests {
         assert_eq!(ids("isik", true), vec![light]);
         assert_eq!(ids("cicek", true), vec![flower]);
         assert_eq!(ids("çiçek bahç", false), vec![flower]);
+        let cafe = add_text(&conn, "Café crème à Paris");
+        assert_eq!(ids("cafe creme", true), vec![cafe]);
+        assert_eq!(ids("cafe", false), Vec::<i64>::new());
         assert_eq!(
             ids("çiçek ofis", false),
             Vec::<i64>::new(),

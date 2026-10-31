@@ -23,7 +23,6 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 - Native speakers' reviews of the machine translations (CONTRIBUTING.md)
 - Text in images read in the UI language too: Windows OCR reads Turkish or English today
-- Accent-free search beyond Turkish letters (é, ü, ñ, ç …)
 
 ## Not on macOS yet (D-073)
 
@@ -44,7 +43,6 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 - A thumbnail under the pointer while dragging a card (the drag now shows the system cursor only).
 - Neighbouring cards sliding over when a card is taken down, instead of closing the gap at once.
-- Code-looking text in a monospace font on text cards.
 
 ## Ideas from Phase 4
 
@@ -55,7 +53,6 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 ## Ideas from Phase 5
 
-- Folder counts that include their subfolders.
 - Remembering which folders are folded in the sidebar.
 - Ordering folders by hand.
 
@@ -63,7 +60,6 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 - Trimming screen recordings (out of scope for v1).
 - A small "text" tag on image cards found by their OCR text, as in the concept.
-- Marking matched words in the Library's tiles and list.
 - Choosing the OCR language per image.
 - The command palette inside the markup, crop and text editors.
 
@@ -71,6 +67,5 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 
 - winget and Scoop manifests (planned after v1.0.0).
 - The SignPath Foundation application once v1.0.0 is published (docs/SIGNING.md).
-- A portable build that can replace itself in its own folder.
 - An ARM64 build.
 - A short demo GIF for the README and the website (the placeholders are in place).

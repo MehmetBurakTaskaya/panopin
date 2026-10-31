@@ -52,6 +52,7 @@ import {
   NO_FILTERS,
   displayTitle,
   domainsOf,
+  folderTotals,
   inSection,
   matches,
   sectionCounts,
@@ -61,6 +62,7 @@ import {
   type KindFilter,
   type Section,
 } from '../../library/query';
+import { queryTerms } from '../../search/highlight';
 import { DRAG_OUT, TRASH_SHORTCUT, formatShortcut } from '../../shortcuts';
 import { useSettings } from '../../state/settings';
 import { Preview, type PreviewMode } from '../shelf/preview/Preview';
@@ -182,6 +184,7 @@ export function LibraryApp() {
   const tags = useMemo(() => new Map(data.tags.map((tag) => [tag.id, tag])), [data.tags]);
   const byId = useMemo(() => new Map(data.items.map((item) => [item.id, item])), [data.items]);
   const counts = useMemo(() => sectionCounts(data.items), [data.items]);
+  const totals = useMemo(() => folderTotals(data.items, data.folders), [data.items, data.folders]);
   const inSectionItems = useMemo(() => data.items.filter((item) => inSection(item, section)), [data.items, section]);
   // Ctrl+F: Rust finds the matches (best first); the section and filters still apply (D-059).
   const [query, setQuery] = useState('');
@@ -211,6 +214,9 @@ export function LibraryApp() {
     if (rank && byRelevance) return kept.sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
     return sortItems(kept, layout.sort, layout.descending, (id) => tags.get(id)?.name ?? '', getLanguage());
   }, [inSectionItems, filters, now, layout.sort, layout.descending, tags, found, byRelevance]);
+  // The searched words, marked in the tiles and the list as on the shelf (D-083).
+  const withoutAccents = settings?.searchWithoutAccents ?? false;
+  const terms = useMemo(() => (found ? queryTerms(query, withoutAccents) : null), [found, query, withoutAccents]);
   // The grid reports how many tiles fit in a row; the list is one column.
   const setColumns = useCallback((columns: number) => dispatch({ type: 'setColumns', columns }), []);
   useEffect(() => {
@@ -602,6 +608,8 @@ export function LibraryApp() {
     model,
     tags,
     emptyText,
+    terms,
+    withoutAccents,
     onKeyDown: onItemsKey,
     onClick: onItemClick,
     onDoubleClick: (id: number) => {
@@ -621,6 +629,7 @@ export function LibraryApp() {
           setPreview(null);
         }}
         counts={counts}
+        folderTotals={totals}
         folders={data.folders}
         tags={data.tags}
         renaming={renaming}

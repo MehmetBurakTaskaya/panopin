@@ -769,3 +769,28 @@ stopped with "Panopin could not be closed", even after Panopin had been closed.
 - Checked on the owner's PC with McAfee running: a build of the hook closed a running Panopin in
   250 ms and renamed the program, Tauri's check listed no process, and the restore path put the
   program back.
+
+## D-082 Accent-free search in every language — Accepted
+The owner asked on 2026-10-31 for the accent-free search to cover every language, not only
+Turkish. With "Search without accents" on, the index's bare columns now drop accents of any kind.
+- Latin and Greek letters lose the marks their decomposition gives (é, ñ, å, ệ, ά). ø, ł, đ, ð and
+  ħ, which do not decompose, become o, l, d and h.
+- Arabic loses its vowel marks and the hamza on its alef, waw and ya (أ إ آ become ا). Russian ё
+  becomes е.
+- Marks that make a letter of their own stay: й, kana with dakuten and Hangul are untouched.
+- The shelf's highlighting folds the same way. A vowel mark there folds to nothing, so a match may
+  span more characters than the query.
+- `INDEX_VERSION` 2 rebuilds the index once after the update, in the background as before (D-059).
+  The setting's labels now say "accents", with an example in each language.
+
+## D-083 Code font, marks in the Library, totals of folded folders — Accepted
+Three backlog items the owner approved on 2026-10-31.
+- A text that looks like code (`src/text/code.ts`) shows in the monospace font and keeps its
+  indentation, on shelf cards and Library tiles. The check leans towards prose: one line needs a
+  command or a keyword with code punctuation; longer texts need code on half their lines, at least
+  one of them by its punctuation.
+- A Library search marks its words in the tiles' titles and texts and in the list's titles, as the
+  shelf does (`Marked` is shared).
+- A folded folder's count includes its subfolders, each item once; an open folder shows its own.
+  Choosing a folder still shows only its own items, as before, so an open folder's number always
+  matches its list.

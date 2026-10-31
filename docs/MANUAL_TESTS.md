@@ -520,11 +520,27 @@ Panopin is closed.
 - [x] A build of the new hook closed a running Panopin in 250 ms and set the program aside.
       Tauri's check then listed no process, and the restore path put the program back.
       (2026-10-31)
-- [ ] The 1.4.1 installer, opened by a double-click, installs over a running 1.3.0. Panopin
-      starts again and the items stay.
-- [ ] An update (`/S /UPDATE /R`) installs over a running copy and starts Panopin again.
+- [x] An update (`/S /UPDATE /R`) installs over a running copy and starts Panopin again.
+      (2026-10-31, the 1.4.1 draft over a running 1.3.0: done in 3 s. Panopin 1.4.1 started at
+      once; the items, the Run entry and the folder were as before, with no set-aside file left)
+- [x] The 1.4.1 installer opened by hand, which restarts itself with `/P /R`, installs over a
+      running copy. Panopin starts again and the items stay. (2026-10-31, over a running 1.4.1)
 - [ ] Uninstalling with Panopin running works, and nothing is left in the folder but what the
-      antivirus still holds.
+      antivirus still holds. (not run: it would remove the owner's copy; the hook it uses is the
+      one tested above)
+
+## Accents, code font, Library marks and folder totals (D-082, D-083)
+
+Covered by unit tests on 2026-10-31 (Rust index and folding, TypeScript highlighting, code check,
+folder totals). The items below need the real app.
+
+- [ ] With "Search without accents" on, "cafe" finds "Café crème" on the shelf and in the Library,
+      and "елка" finds "Ёлка"; with it off, neither does.
+- [ ] After the update, the index rebuilds once in the background, and search keeps working.
+- [ ] A copied piece of code shows in the monospace font with its indentation, on its card and in
+      the Library. A sentence with a semicolon does not.
+- [ ] A Library search marks its words in the tiles and in the list.
+- [ ] A folded folder with subfolders counts their items too; unfolded, it shows its own count.
 
 ## Full round for v1.0.0
 

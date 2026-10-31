@@ -290,7 +290,7 @@ pub struct Settings {
     pub shelf_edge: ShelfEdge,
     pub sounds: Sounds,
     pub library: LibraryLayout,
-    /// Search also ignores the Turkish accents: "cicek" finds "çiçek".
+    /// Search also ignores accents (D-082): "cicek" finds "çiçek", "cafe" finds "café".
     pub search_without_accents: bool,
     /// Text in images is read in the background (Windows OCR).
     pub ocr: bool,

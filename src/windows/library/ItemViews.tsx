@@ -10,11 +10,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type Ref,
 } from 'react';
+import { Marked } from '../../components/Marked';
 import { PinIcon } from '../../components/PinIcon';
 import { formatLocale, isRtl, t, type MessageKey } from '../../i18n';
 import { mediaUrl, type LibraryItem, type LibraryLayout, type SortKey, type Tag } from '../../ipc';
 import type { LibraryModel } from '../../keyboard/libraryModel';
 import { displayTitle } from '../../library/query';
+import { looksLikeCode } from '../../text/code';
 import { duration, letterTile } from '../shelf/paper';
 import styles from './Library.module.css';
 
@@ -29,6 +31,9 @@ export interface ItemViewProps {
   model: LibraryModel;
   tags: Map<number, Tag>;
   emptyText: string;
+  /** The words of a search, marked in titles and texts; `null` without one (D-083). */
+  terms: string[] | null;
+  withoutAccents: boolean;
   onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
   onClick: (id: number, e: MouseEvent) => void;
   onDoubleClick: (id: number) => void;
@@ -59,7 +64,7 @@ function setRefs<T>(own: { current: T | null }, outer: Ref<T>) {
   };
 }
 
-function Visual({ item }: { item: LibraryItem }) {
+function Visual({ item, terms, withoutAccents }: { item: LibraryItem; terms: string[] | null; withoutAccents: boolean }) {
   if ((item.kind === 'image' || item.kind === 'video') && item.hasThumb) {
     return (
       <>
@@ -68,7 +73,14 @@ function Visual({ item }: { item: LibraryItem }) {
       </>
     );
   }
-  if (item.kind === 'text') return <div className={styles.thumbText} dir="auto">{(item.preview ?? '').slice(0, 260)}</div>;
+  if (item.kind === 'text') {
+    const text = (item.preview ?? '').slice(0, 260);
+    return (
+      <div className={styles.thumbText} dir="auto" data-code={looksLikeCode(text) || undefined}>
+        <Marked text={text} terms={terms} withoutAccents={withoutAccents} />
+      </div>
+    );
+  }
   if (item.kind === 'link' && item.linkImage) {
     return <img className={styles.cover} src={mediaUrl('link-image', item.id, item.linkVersion)} alt="" loading="lazy" draggable={false} />;
   }
@@ -147,10 +159,12 @@ export function ItemGrid(props: ItemViewProps & { onColumns: (columns: number) =
               onDragStart={(e) => props.onDragStart(item.id, e)}
             >
               <div className={styles.thumb}>
-                <Visual item={item} />
+                <Visual item={item} terms={props.terms} withoutAccents={props.withoutAccents} />
               </div>
               <div className={styles.caption}>
-                <span dir="auto">{displayTitle(item) || '—'}</span>
+                <span dir="auto">
+                  <Marked text={displayTitle(item) || '—'} terms={props.terms} withoutAccents={props.withoutAccents} />
+                </span>
                 {item.pinned && <PinIcon className={styles.pin} />}
               </div>
             </div>
@@ -271,7 +285,7 @@ export function ItemList(
               <span className={styles.col} role="gridcell" style={{ width: widths.title }}>
                 {item.pinned && <PinIcon className={styles.pin} />}
                 <span className={styles.colText} dir="auto">
-                  {displayTitle(item) || '—'}
+                  <Marked text={displayTitle(item) || '—'} terms={props.terms} withoutAccents={props.withoutAccents} />
                 </span>
               </span>
               <span className={styles.col} role="gridcell" style={{ width: widths.kind }}>
