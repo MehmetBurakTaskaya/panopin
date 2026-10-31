@@ -99,8 +99,10 @@ pub fn start(app: &AppHandle) {
 fn schedule(app: &AppHandle) {
     std::thread::sleep(FIRST_DELAY);
     #[cfg(windows)]
-    if kind() == Kind::Portable {
-        portable::tidy();
+    match kind() {
+        Kind::Portable => portable::tidy(),
+        Kind::Installer => installed::tidy(),
+        Kind::Fixed => {}
     }
     loop {
         let ok = tauri::async_runtime::block_on(check(app));
@@ -597,6 +599,65 @@ mod portable {
                 fs::read_to_string(dir.join("Panopin.old")).unwrap(),
                 "new program"
             );
+        }
+    }
+}
+
+/// The installer sets the old program aside as `panopin.<n>.old` when antivirus software holds it,
+/// and deletes it when it is done (D-081); one the antivirus still held then goes at this start.
+#[cfg(windows)]
+mod installed {
+    use std::{fs, path::Path};
+
+    pub fn tidy() {
+        let Ok(exe) = std::env::current_exe() else {
+            return;
+        };
+        if let (Some(dir), Some(stem)) = (exe.parent(), exe.file_stem().and_then(|s| s.to_str())) {
+            tidy_in(dir, stem);
+        }
+    }
+
+    fn tidy_in(dir: &Path, stem: &str) {
+        let Ok(entries) = fs::read_dir(dir) else {
+            return;
+        };
+        let prefix = format!("{}.", stem.to_ascii_lowercase());
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_ascii_lowercase();
+            if name.starts_with(&prefix) && name.ends_with(".old") && name.len() > prefix.len() + 4
+            {
+                if let Err(err) = fs::remove_file(entry.path()) {
+                    log::warn!("a program the installer set aside could not be removed: {err}");
+                }
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn removes_only_what_the_installer_set_aside() {
+            let dir = tempfile::tempdir().unwrap();
+            for name in [
+                "panopin.exe",
+                "panopin.204321625.old",
+                "Panopin.7.OLD",
+                "uninstall.exe",
+                "notes.old",
+            ] {
+                fs::write(dir.path().join(name), "x").unwrap();
+            }
+            tidy_in(dir.path(), "panopin");
+            let mut left: Vec<String> = fs::read_dir(dir.path())
+                .unwrap()
+                .flatten()
+                .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                .collect();
+            left.sort();
+            assert_eq!(left, ["notes.old", "panopin.exe", "uninstall.exe"]);
         }
     }
 }

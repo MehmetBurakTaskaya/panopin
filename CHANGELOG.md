@@ -26,6 +26,9 @@ All notable changes to Panopin are recorded here. The format follows
 ### Fixed
 
 - When the shelf opened with the search (Win+Alt+C), the search box could land on top of the board.
+- **Installing over Panopin works with antivirus software that keeps the program open**, as
+  McAfee does. The installer, the one updates run included, stopped with "Panopin could not be
+  closed", even with Panopin closed. Uninstalling works there too.
 
 ## [1.3.0] - 2026-10-30
 

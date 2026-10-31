@@ -746,3 +746,26 @@ and a taped index card. The owner chose the note.
   shelf does not answer.
 - ? is matched by the character it types. It works on every layout that types it, with whatever
   modifiers the layout needs. F1 works on all of them.
+
+## D-081 Installing over a copy that antivirus holds — Accepted
+Found on 2026-10-31 while checking the 1.4.0 draft on the owner's PC: installing over 1.3.0
+stopped with "Panopin could not be closed", even after Panopin had been closed.
+- Since Tauri CLI 2.12 (2.12.4 is the newest), the installer and the uninstaller ask Restart
+  Manager for every process that holds `$INSTDIR\panopin.exe` and close them with `RmShutdown`.
+- McAfee's framework host (`mc-fw-host`, a protected service that Restart Manager lists as
+  critical) keeps the program open even while Panopin is closed. `RmGetList` then gives the reboot
+  reason "permission denied", and `RmShutdown` returns 350 (`ERROR_FAIL_NOACTION_REBOOT`) without
+  closing anything, Panopin included.
+- On such a PC every install and update over an existing copy would fail. An update would also
+  leave Panopin closed, since Panopin closes itself before its installer runs.
+- `installer-hooks.nsh` now runs first (`NSIS_HOOK_PREINSTALL`, `NSIS_HOOK_PREUNINSTALL`). It asks
+  Restart Manager who holds the program and closes only the applications among them, in a session
+  of their own, by process. Services and critical processes are left alone, and Panopin ends at
+  once on `WM_ENDSESSION`. A Panopin that is still running is killed.
+- The program is then renamed to `panopin.<ticks>.old`, which Windows allows while the antivirus
+  holds it. Tauri's check finds nobody holding the program.
+- The renamed file is deleted when the work is done. `.onInstFailed` and `un.onUninstFailed` put it
+  back if the work fails, and Panopin removes a leftover at its next start.
+- Checked on the owner's PC with McAfee running: a build of the hook closed a running Panopin in
+  250 ms and renamed the program, Tauri's check listed no process, and the restore path put the
+  program back.
