@@ -794,3 +794,32 @@ Three backlog items the owner approved on 2026-10-31.
 - A folded folder's count includes its subfolders, each item once; an open folder shows its own.
   Choosing a folder still shows only its own items, as before, so an open folder's number always
   matches its list.
+
+## D-084 Paste one by one — Accepted
+The owner chose on 2026-10-31 that each paste gives the next item ("Ctrl+V sıradakini").
+- Shift+Enter, on the shelf and in the Library, puts the chosen cards on the clipboard one after
+  another, in the order they were chosen. The shelf then closes as it does after Enter. With one
+  card Shift+Enter is Enter. The card menu and the palette offer "Paste one by one". The key is a
+  default; the owner may want another.
+- Windows: a hidden window of Panopin owns the clipboard and puts the item there with delayed
+  rendering. The formats are named but the data is held back, and Windows asks for it
+  (`WM_RENDERFORMAT`) only when an app pastes. 300 ms after an item went out, the next one takes
+  its place.
+- No keys are watched, so every way of pasting counts: Ctrl+V, Shift+Insert, a menu or a right
+  click. A paste that reads several formats gets them all from the same item.
+- The items carry `Panopin.OwnCopy`, `ExcludeClipboardContentFromMonitorProcessing`,
+  `CanIncludeInClipboardHistory` = 0 and `CanUploadToCloudClipboard` = 0. Windows' clipboard
+  history, the cloud clipboard and well-behaved clipboard tools therefore leave them alone instead
+  of reading them ahead of a paste. Panopin's own listener skips them before reading anything.
+- macOS does the same with an `NSPasteboardItem` whose data comes from a provider
+  (`pasteboard:item:provideDataForType:`). `pasteboardFinishedWithDataProvider:` says another copy
+  took its place. The item is marked `org.nspasteboard.TransientType` and stays on this Mac
+  (`CurrentHostOnly`), so Universal Clipboard does not fetch it.
+- The queue ends after its last item, which stays on the clipboard, or as soon as anything else is
+  copied (`WM_DESTROYCLIPBOARD`, or the provider is finished with). Opening the shelf meanwhile
+  says which item comes next.
+- When Panopin quits, the item waiting is written in full, so the clipboard keeps it. An update does
+  not install while a queue is running.
+- Limits: an app that reads the clipboard without pasting moves the queue on. A paste that reads a
+  second format more than 300 ms after the first gets the next item's. Two pastes within 300 ms give
+  the same item twice.

@@ -108,6 +108,7 @@ Rafta:
 | Ok tuşları, 1–9 | Kartlar ve satırlar arasında gez, satırdaki kartı seç |
 | Enter | Kopyala, rafı kapat ve uygulamana dön |
 | Ctrl+Enter | Geldiğin uygulamaya yapıştır |
+| Shift+Enter | Birkaç kartı sırayla yapıştır: her yapıştırma sıradakini alır |
 | Ctrl+C | Kopyala, raf açık kalsın |
 | Boşluk | Önizleme |
 | P · Alt+P · Shift+P · Ctrl+Shift+T | Sabitle · isim ver · klasör · etiketler |

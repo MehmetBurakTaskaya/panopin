@@ -63,6 +63,11 @@ jobs:
       - name: Rust tests
         run: cargo test --manifest-path src-tauri/Cargo.toml
 
+      # Takes over the clipboard, so it does not run with the other tests on a developer's PC.
+      - name: Paste one by one on the real clipboard
+        if: runner.os == 'Windows'
+        run: cargo test --manifest-path src-tauri/Cargo.toml queue_win -- --ignored
+
       - name: Build app (no installer)
         run: npm run tauri build -- --no-bundle
 

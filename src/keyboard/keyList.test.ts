@@ -41,6 +41,7 @@ describe('key list', () => {
     expect(commandsOf('palette.rowLinks')).toEqual([{ type: 'toggleRow', kind: 'link' }]);
     expect(commandsOf('keys.copyAndReturn')).toEqual([{ type: 'copyAndReturn' }]);
     expect(commandsOf('shelf.menu.paste')).toEqual([{ type: 'paste' }]);
+    expect(commandsOf('shelf.menu.pasteInTurn')).toEqual([{ type: 'pasteInTurn' }]);
     expect(commandsOf('keys.list')).toEqual([{ type: 'keys' }, { type: 'keys' }]);
     expect(commandsOf('shelf.search.label')).toEqual([{ type: 'search' }]);
     expect(commandsOf('shelf.menu.trash')).toEqual([{ type: 'trash' }]);

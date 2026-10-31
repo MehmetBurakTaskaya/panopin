@@ -522,6 +522,20 @@ pub async fn copy_items(app: AppHandle, ids: Vec<i64>) -> Result<()> {
         .map_err(|_| AppError::Interrupted)?
 }
 
+/// Shift+Enter: the items go on the clipboard one by one, the next after each paste (D-084).
+#[tauri::command]
+pub async fn paste_in_turn(app: AppHandle, ids: Vec<i64>) -> Result<()> {
+    tauri::async_runtime::spawn_blocking(move || transfer::paste_in_turn(&app, &ids))
+        .await
+        .map_err(|_| AppError::Interrupted)?
+}
+
+/// Which item the next paste gives, while a queue runs.
+#[tauri::command]
+pub fn paste_queue_status() -> Option<transfer::queue::QueueStatus> {
+    transfer::queue::status()
+}
+
 /// Dragging cards out: text as text, images as files. Resolves when the drag ends, with whether
 /// something was dropped.
 #[tauri::command]

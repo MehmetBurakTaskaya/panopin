@@ -542,6 +542,27 @@ folder totals). The items below need the real app.
 - [ ] A Library search marks its words in the tiles and in the list.
 - [ ] A folded folder with subfolders counts their items too; unfolded, it shows its own count.
 
+## Paste one by one (D-084)
+
+- [x] On the real clipboard: the first item is offered, two reads of one paste get the same text,
+      300 ms later the next item takes its place, the last one stays, and a copy made elsewhere
+      ends the queue at once. The marks for Panopin's own copies and for clipboard tools are
+      there. (2026-10-31, this PC, `queue_win` test; CI runs it on Windows)
+- [x] The shelf in the preview: Shift+Enter with two texts chosen sends them in the order chosen,
+      the card menu offers "Paste one by one", the key note lists Shift+Enter, and while a queue
+      runs the shelf says which item comes next (English and Turkish). (2026-10-31)
+- [ ] In the real app: three texts, Shift+Enter, then Ctrl+V three times in Notepad, with Tab or
+      Enter between them, gives the three in order. A fourth Ctrl+V gives the third again.
+- [ ] Shift+Insert and the right-click Paste in a browser count as pastes too. Word, which reads
+      several formats, gets one item per paste.
+- [ ] An image and a text in one queue: the image pastes into Paint, the text into Notepad.
+- [ ] With Windows' clipboard history on (Win+V), the queue's items are not listed there and the
+      queue does not move on by itself.
+- [ ] Copying something else in the middle ends the queue; reopening the shelf then shows no note.
+- [ ] Shift+Enter in the Library, with the window kept open, then pasting in another app.
+- [ ] Quitting Panopin from the tray mid-queue leaves the item waiting on the clipboard.
+- [ ] On a Mac: Shift+Enter, then ⌘V twice in TextEdit gives the two items in order.
+
 ## Full round for v1.0.0
 
 Run every unchecked item in this file on the installed v1.0.0 build, in this order: capture,

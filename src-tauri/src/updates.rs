@@ -219,9 +219,11 @@ fn install_when_idle(app: &AppHandle) {
     }
 }
 
-/// Panopin is in use while the shelf is open or one of its windows has the keyboard.
+/// Panopin is in use while the shelf is open, one of its windows has the keyboard or items wait
+/// to be pasted one by one.
 fn in_use(app: &AppHandle) -> bool {
     shelf::is_open(app)
+        || crate::transfer::queue::is_running()
         || app
             .webview_windows()
             .values()
@@ -324,6 +326,7 @@ fn announce(app: &AppHandle) {
 }
 
 fn before_exit(app: &AppHandle) {
+    crate::transfer::finish_queue();
     if let Some(staging) = app.try_state::<crate::transfer::Staging>() {
         staging.clean();
     }

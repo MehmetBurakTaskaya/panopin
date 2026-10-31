@@ -268,6 +268,14 @@ export const copyItems = (ids: number[]) => invoke<void>('copy_items', { ids });
 /** Ctrl+Enter. `pasted`: the shelf closed and Ctrl+V was sent; otherwise the shelf stays open. */
 export type PasteOutcome = 'pasted' | 'windowGone' | 'elevated' | 'refused' | 'noPermission';
 export const pasteItems = (ids: number[]) => invoke<PasteOutcome>('paste_items', { ids });
+/** Shift+Enter: the items go on the clipboard one by one, the next after each paste (D-084). */
+export const pasteInTurn = (ids: number[]) => invoke<void>('paste_in_turn', { ids });
+/** What the next paste gives while a queue runs: item `next` of `total`, from 1. */
+export interface QueueStatus {
+  next: number;
+  total: number;
+}
+export const pasteQueueStatus = () => invoke<QueueStatus | null>('paste_queue_status');
 export interface BoardRect {
   left: number;
   top: number;

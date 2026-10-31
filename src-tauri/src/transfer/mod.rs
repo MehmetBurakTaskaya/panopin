@@ -6,6 +6,7 @@
 //! - Several images become a file list (`CF_HDROP`) of neutrally named copies in the staging
 //!   folder; the first one is also put on as PNG and DIB.
 //! - A drag carries the text and the images as files the same way.
+//! - Pasting one by one puts each item on the clipboard alone, in turn (D-084).
 #![cfg_attr(not(windows), allow(dead_code))]
 
 #[cfg(target_os = "macos")]
@@ -22,6 +23,11 @@ mod folder_win;
 mod paste_mac;
 #[cfg(windows)]
 mod paste_win;
+pub mod queue;
+#[cfg(target_os = "macos")]
+mod queue_mac;
+#[cfg(windows)]
+mod queue_win;
 pub mod staging;
 
 use std::{
@@ -554,6 +560,55 @@ fn write(_app: &AppHandle, formats: &Formats) -> Result<()> {
 #[cfg(not(any(windows, target_os = "macos")))]
 fn write(_app: &AppHandle, _formats: &Formats) -> Result<()> {
     Err(AppError::Unsupported)
+}
+
+/// Shift+Enter (D-084): each item alone, in the order chosen; every paste takes the next one.
+pub fn paste_in_turn(app: &AppHandle, ids: &[i64]) -> Result<()> {
+    let media = crate::capture::media(app).ok_or(AppError::NotReady)?;
+    let items = app
+        .state::<crate::AppState>()
+        .with_db(|db| gather_items(db, &media, ids))?;
+    let staging = app.state::<Staging>();
+    let formats = items
+        .into_iter()
+        .map(|item| prepare(&Selection::from(item), &staging))
+        .collect::<Result<Vec<_>>>()?;
+    start_queue(app, formats)
+}
+
+impl From<Outgoing> for Selection {
+    fn from(item: Outgoing) -> Self {
+        let mut selection = Selection::default();
+        match item {
+            Outgoing::Text(text) | Outgoing::Link(text) => selection.texts.push(text),
+            Outgoing::Image(image) => selection.images.push(image),
+            Outgoing::File(path) => selection.files.push(path),
+        }
+        selection
+    }
+}
+
+#[cfg(windows)]
+fn start_queue(app: &AppHandle, formats: Vec<Formats>) -> Result<()> {
+    queue_win::start(app, formats)
+}
+
+#[cfg(target_os = "macos")]
+fn start_queue(app: &AppHandle, formats: Vec<Formats>) -> Result<()> {
+    queue_mac::start(app, formats)
+}
+
+#[cfg(not(any(windows, target_os = "macos")))]
+fn start_queue(_app: &AppHandle, _formats: Vec<Formats>) -> Result<()> {
+    Err(AppError::Unsupported)
+}
+
+/// Panopin quits: an item still waiting in a queue goes on the clipboard in full.
+pub fn finish_queue() {
+    #[cfg(windows)]
+    queue_win::finish();
+    #[cfg(target_os = "macos")]
+    queue_mac::finish();
 }
 
 /// Ctrl+Enter: copies, goes back to the previous window and sends Ctrl+V there.

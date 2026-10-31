@@ -23,9 +23,9 @@ use crate::{
     error::{AppError, Result},
 };
 
-const CF_DIB: u32 = 8;
-const CF_UNICODETEXT: u32 = 13;
-const CF_HDROP: u32 = 15;
+pub(super) const CF_DIB: u32 = 8;
+pub(super) const CF_UNICODETEXT: u32 = 13;
+pub(super) const CF_HDROP: u32 = 15;
 
 /// `owner` must be a window of ours: with no owner, Windows rejects the data after emptying.
 pub fn write(owner: isize, formats: &Formats) -> Result<()> {
@@ -40,7 +40,7 @@ pub fn write(owner: isize, formats: &Formats) -> Result<()> {
 }
 
 /// Another process may hold the clipboard for a moment; retry a few times, briefly.
-unsafe fn open(owner: HWND) -> Result<()> {
+pub(super) unsafe fn open(owner: HWND) -> Result<()> {
     for attempt in 1..=5 {
         if OpenClipboard(Some(owner)).is_ok() {
             return Ok(());
@@ -68,7 +68,7 @@ unsafe fn fill(formats: &Formats) -> Result<()> {
     put(RegisterClipboardFormatW(OWN_FORMAT), &1u32.to_le_bytes())
 }
 
-unsafe fn put(format: u32, bytes: &[u8]) -> Result<()> {
+pub(super) unsafe fn put(format: u32, bytes: &[u8]) -> Result<()> {
     let global = GlobalAlloc(GMEM_MOVEABLE, bytes.len())?;
     let target = GlobalLock(global).cast::<u8>();
     if target.is_null() {

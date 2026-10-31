@@ -82,6 +82,9 @@ src-tauri/src
     folder_mac.rs        NSOpenPanel for the same (D-073)
     clipboard_mac.rs     pasteboard writer with the own-copy type (D-073)
     paste_mac.rs         Accessibility permission, password-field check, CGEvent Cmd+V
+    queue.rs             paste one by one: the order and its state (D-084)
+    queue_win.rs         clipboard owner window with delayed rendering
+    queue_mac.rs         pasteboard item with a data provider
   focus.rs               remember/restore the previous foreground window, Alt mask key
   system_state.rs        full-screen / presentation / focus-session detection (D-021)
   hotkeys.rs             global shortcut registry, recorder suspend/restore

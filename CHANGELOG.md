@@ -8,6 +8,10 @@ All notable changes to Panopin are recorded here. The format follows
 
 ### Added
 
+- **Paste one by one.** Choose several cards and press Shift+Enter: each paste, in any app, takes
+  the next one, in the order you chose them. Ctrl+V, Shift+Insert and the Paste menu all count.
+  When the last one is pasted it stays on the clipboard; copying anything else ends the queue
+  sooner. Shift+Enter works in the Library too.
 - **Code looks like code.** A copied text that looks like code shows in a monospace font, with its
   indentation, on the shelf and in the Library.
 - A Library search marks the words it found in titles and texts, as the shelf does.

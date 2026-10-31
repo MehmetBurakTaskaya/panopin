@@ -6,6 +6,7 @@ export type Command =
   | { type: 'copy' }
   | { type: 'copyAndReturn' }
   | { type: 'paste' }
+  | { type: 'pasteInTurn' }
   | { type: 'pin' }
   | { type: 'takeDown' }
   | { type: 'undo' }
@@ -80,7 +81,9 @@ export function commandFor(event: KeyInput): Command | null {
       return ctrl || alt ? null : model({ type: 'tab', back: shift });
     case 'Enter':
       if (alt) return null;
-      return ctrl ? { type: 'paste' } : { type: 'copyAndReturn' };
+      if (ctrl) return { type: 'paste' };
+      // Shift+Enter: several cards go on the clipboard one by one (D-084).
+      return shift ? { type: 'pasteInTurn' } : { type: 'copyAndReturn' };
     case 'Backspace':
       // ⌘⌫ moves to Trash, as in Finder: a Mac's Delete key needs fn.
       if (event.metaKey && !event.ctrlKey && !alt) return { type: 'trash' };

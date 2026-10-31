@@ -24,7 +24,9 @@ import {
   openLibrary,
   openLink,
   openSettings,
+  pasteInTurn,
   pasteItems,
+  pasteQueueStatus,
   refreshLink,
   rowOf,
   revertEdit,
@@ -293,6 +295,22 @@ export function ShelfApp() {
     }
   };
 
+  /** Shift+Enter (D-084): every paste takes the next card, in the order they were chosen. */
+  const pasteOneByOne = async (ids: number[]) => {
+    if (ids.length < 2) return copyAndReturn(ids);
+    try {
+      await whenSaved();
+      await pasteInTurn(ids);
+    } catch (err) {
+      fail(err);
+      return;
+    }
+    play('copy');
+    flash(ids, 'copied', 450);
+    await wait(260);
+    void closeShelf();
+  };
+
   const paste = async (ids: number[]) => {
     if (ids.length === 0) return;
     play('copy');
@@ -508,6 +526,9 @@ export function ShelfApp() {
       case 'paste':
         void paste(ids);
         return;
+      case 'pasteInTurn':
+        void pasteOneByOne(ids);
+        return;
       case 'pin':
         void togglePin(ids);
         return;
@@ -589,6 +610,9 @@ export function ShelfApp() {
     return [
       { label: 'shelf.menu.copy', shortcut: 'CommandOrControl+C', run: () => void copy(ids, ids[0] ?? null) },
       { label: 'shelf.menu.paste', shortcut: 'CommandOrControl+Enter', run: () => void paste(ids) },
+      ...(ids.length > 1
+        ? [{ label: 'shelf.menu.pasteInTurn', shortcut: 'Shift+Enter', run: () => void pasteOneByOne(ids) } as const]
+        : []),
       { label: 'shelf.menu.preview', shortcut: 'Space', run: () => setPreview('view') },
       ...kindEntries,
       { label: allPinned ? 'shelf.menu.unpin' : 'shelf.menu.pin', shortcut: 'P', run: () => void togglePin(ids) },
@@ -649,6 +673,12 @@ export function ShelfApp() {
       setKeysOpen(false);
       setPreview(null);
       setNotice(payload.notice ? t(payload.notice) : null);
+      // Pasting one by one goes on while the shelf is open; it says what comes next.
+      if (!payload.notice) {
+        pasteQueueStatus()
+          .then((queue) => queue && setNotice(t('shelf.queue.next', { next: queue.next, total: queue.total })))
+          .catch(() => {});
+      }
       setQuery('');
       setSearchOpen(payload.search);
       dispatch({ type: 'reset', rows: latest.current.rows });

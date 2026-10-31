@@ -30,6 +30,7 @@ import {
   newNote,
   openLink,
   openSettings,
+  pasteInTurn,
   refreshLink,
   renameFolder,
   renameTag,
@@ -254,6 +255,17 @@ export function LibraryApp() {
       fail(err);
     }
   };
+  /** Shift+Enter (D-084): every paste, in any app, takes the next item. */
+  const pasteOneByOne = async (list: number[]) => {
+    if (list.length < 2) return copy(list);
+    try {
+      await whenSaved();
+      await pasteInTurn(list);
+      say(t('library.queue.ready', { count: list.length }));
+    } catch (err) {
+      fail(err);
+    }
+  };
   const openLinkOf = (id: number) => {
     if (byId.get(id)?.kind === 'link') openLink(id).catch(fail);
   };
@@ -380,6 +392,7 @@ export function LibraryApp() {
     const allPinned = selected.length > 0 && selected.every((item) => item.pinned);
     const entries: [MessageKey, string, () => void, boolean][] = [
       ['shelf.menu.copy', 'CommandOrControl+C', () => void copy(list), list.length > 0],
+      ['shelf.menu.pasteInTurn', 'Shift+Enter', () => void pasteOneByOne(list), list.length > 1],
       ['shelf.menu.preview', 'Space', () => setPreview('view'), one !== undefined],
       ['shelf.menu.edit', 'E', () => openEditor('text'), one?.kind === 'text'],
       ['shelf.menu.markup', 'M', () => openEditor('markup'), one?.kind === 'image'],
@@ -447,7 +460,8 @@ export function LibraryApp() {
         break;
       case 'Enter':
         // Copying from the Library keeps the window open.
-        void copy(ids);
+        if (shift && !ctrl && !alt) void pasteOneByOne(ids);
+        else void copy(ids);
         break;
       case ' ':
         setPreview((open) => (open ? null : 'view'));

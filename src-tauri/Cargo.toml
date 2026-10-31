@@ -47,7 +47,7 @@ objc2 = "0.6.5"
 libc = "0.2"
 image = { version = "0.25.10", default-features = false, features = ["tiff"] }
 objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSData", "NSDictionary", "NSEnumerator", "NSError", "NSString", "NSURL"] }
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "objc2-core-foundation", "objc2-uniform-type-identifiers", "NSApplication", "NSColor", "NSColorSpace", "NSOpenPanel", "NSPanel", "NSPasteboard", "NSResponder", "NSRunningApplication", "NSSavePanel", "NSWindow", "NSWorkspace"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "libc", "objc2-core-foundation", "objc2-uniform-type-identifiers", "NSApplication", "NSColor", "NSColorSpace", "NSOpenPanel", "NSPanel", "NSPasteboard", "NSPasteboardItem", "NSResponder", "NSRunningApplication", "NSSavePanel", "NSWindow", "NSWorkspace"] }
 objc2-uniform-type-identifiers = { version = "0.3.2", default-features = false, features = ["std", "UTType"] }
 objc2-core-foundation = { version = "0.3.2", default-features = false, features = ["std", "CFString", "CFDictionary", "CFNumber", "CFPreferences"] }
 objc2-core-graphics = { version = "0.3.2", default-features = false, features = ["std", "libc", "CGEvent", "CGEventTypes", "CGEventSource", "CGRemoteOperation"] }

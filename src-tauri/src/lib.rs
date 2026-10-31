@@ -358,6 +358,8 @@ pub fn run() {
             commands::trash_items,
             commands::copy_items,
             commands::paste_items,
+            commands::paste_in_turn,
+            commands::paste_queue_status,
             commands::start_drag,
             commands::get_text,
             commands::update_text,
@@ -402,6 +404,7 @@ pub fn run() {
             app.run(|app, event| {
                 // Staged files are only for the session that handed them out.
                 if let tauri::RunEvent::Exit = event {
+                    transfer::finish_queue();
                     if let Some(staging) = app.try_state::<transfer::Staging>() {
                         staging.clean();
                     }

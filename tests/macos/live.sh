@@ -1,8 +1,9 @@
 #!/bin/bash
 # Drives the macOS app on a GitHub macOS runner as a user would (D-073): the first start, copies,
-# screenshots, the global shortcuts, the shelf, paste into TextEdit, text recognition, Settings,
-# the Library and the login item. The runner allows System Events, keystrokes and screen captures
-# from the shell; Panopin gets Accessibility and Desktop access through the same privacy database,
+# screenshots, the global shortcuts, the shelf, paste into TextEdit, paste one by one, text
+# recognition, Settings, the Library and the login item. The runner allows System Events,
+# keystrokes and screen captures from the shell; Panopin gets Accessibility and Desktop access
+# through the same privacy database,
 # bound to its designated requirement as System Settings would store them (tcc.sh).
 # Usage: bash tests/macos/live.sh <Panopin.app> <output folder>
 # Results, screenshots, window texts and the app log go to the output folder. Exits with 1 when a
@@ -238,6 +239,36 @@ if [ "$ax" = 1 ]; then
 else
   skip "⌘Enter pastes into TextEdit" "Accessibility could not be granted on this runner"
 fi
+
+section "paste one by one"
+Q1="PANOPIN-LIVE first $RUN"
+Q2="PANOPIN-LIVE second $RUN"
+printf '%s' "$Q1" | pbcopy
+wait_for 6 has_text "$Q1"
+printf '%s' "$Q2" | pbcopy
+wait_for 6 has_text "$Q2"
+"$PB" marked org.nspasteboard.ConcealedType "elsewhere"
+printf '' > "$OUT/queue.txt"
+open -a TextEdit "$OUT/queue.txt"
+wait_for 15 front_is com.apple.TextEdit
+sleep 1
+open_shelf
+# The newest text and the one after it, chosen in that order.
+key 125
+key 124 shift
+key 36 shift
+check "Shift+Enter closes the shelf" "" wait_for 5 shelf_hidden
+wait_for 5 front_is com.apple.TextEdit
+for round in 1 2 3; do
+  key 9 command
+  sleep 1
+  [ "$round" -lt 3 ] && key 36
+done
+UI textedit > "$OUT/texts/queue.txt"
+in_turn() { [ "$(grep -E "PANOPIN-LIVE (first|second) $RUN" "$OUT/texts/queue.txt" | tr '\n' '|')" = "$Q2|$Q1|$Q1|" ]; }
+check "each ⌘V pastes the next card, and the last one stays" "TextEdit: $(tr '\n' '|' < "$OUT/texts/queue.txt" | head -c 160)" in_turn
+check "the queued items are not kept a second time" "" has_text "$Q2"
+
 textedit
 key 8 "option command"
 wait_for 6 shelf_shown

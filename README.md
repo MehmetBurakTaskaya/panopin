@@ -105,6 +105,7 @@ On the shelf:
 | Arrow keys, 1–9 | Move between cards and rows, pick a card in the row |
 | Enter | Copy, close the shelf and go back to your app |
 | Ctrl+Enter | Paste into the app you came from |
+| Shift+Enter | Paste several cards one by one: each paste takes the next |
 | Ctrl+C | Copy and keep the shelf open |
 | Space | Preview |
 | P · Alt+P · Shift+P · Ctrl+Shift+T | Pin · name · folder · tags |

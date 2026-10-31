@@ -35,9 +35,11 @@ describe('shelf keys', () => {
     expect(commandFor(press('F1', { ctrlKey: true }))).toBeNull();
   });
 
-  it('separates copy, copy-and-return and paste', () => {
+  it('separates copy, copy-and-return, paste and paste one by one', () => {
     expect(commandFor(press('Enter'))).toEqual({ type: 'copyAndReturn' });
     expect(commandFor(press('Enter', { ctrlKey: true }))).toEqual({ type: 'paste' });
+    expect(commandFor(press('Enter', { shiftKey: true }))).toEqual({ type: 'pasteInTurn' });
+    expect(commandFor(press('Enter', { ctrlKey: true, shiftKey: true }))).toEqual({ type: 'paste' });
     expect(commandFor(press('c', { ctrlKey: true, code: 'KeyC' }))).toEqual({ type: 'copy' });
     expect(commandFor(press('a', { ctrlKey: true, code: 'KeyA' }))).toEqual({
       type: 'model',

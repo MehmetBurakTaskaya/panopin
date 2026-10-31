@@ -34,6 +34,7 @@ export const SHELF_KEYS: KeyGroup[] = [
     entries: [
       { label: 'keys.copyAndReturn', keys: ['Enter'] },
       { label: 'shelf.menu.paste', keys: ['CommandOrControl+Enter'] },
+      { label: 'shelf.menu.pasteInTurn', keys: ['Shift+Enter'] },
       { label: 'keys.copyStay', keys: ['CommandOrControl+C'] },
       { label: 'shelf.menu.copyText', keys: ['CommandOrControl+Shift+C'] },
       { label: 'shelf.menu.openLink', keys: ['CommandOrControl+O'] },
@@ -89,6 +90,7 @@ export const LIBRARY_KEYS: KeyGroup[] = [
     title: 'keys.group.copy',
     entries: [
       { label: 'shelf.menu.copy', keys: ['Enter', 'CommandOrControl+C'] },
+      { label: 'shelf.menu.pasteInTurn', keys: ['Shift+Enter'] },
       { label: 'shelf.menu.copyText', keys: ['CommandOrControl+Shift+C'] },
       { label: 'shelf.menu.openLink', keys: ['CommandOrControl+O'] },
     ],

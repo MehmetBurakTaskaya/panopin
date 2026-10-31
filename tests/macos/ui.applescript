@@ -2,7 +2,7 @@
 -- reaches into Panopin's web views.
 --   front                        bundle identifier of the app in front
 --   key <code> [modifiers]       presses a key; modifiers: command, option command,
---                                control command, shift command
+--                                control command, shift command, shift
 --   type <text>                  types the text
 --   close <window>               presses the close button of that Panopin window
 --   dock                         names of the Dock's items
@@ -48,6 +48,8 @@ on pressKey(keyNumber, mods)
 			key code keyNumber using {control down, command down}
 		else if mods is "shift command" then
 			key code keyNumber using {shift down, command down}
+		else if mods is "shift" then
+			key code keyNumber using {shift down}
 		else
 			key code keyNumber
 		end if
