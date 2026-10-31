@@ -15,10 +15,7 @@
   <a href="CHANGELOG.md">Değişiklikler</a>
 </p>
 
-![Görseller, Metinler ve Bağlantılar satırlarıyla Panopin rafı](site/assets/shelf-light-tr.webp)
-
-<!-- GIF yeri: bir şey kopyala, Win+Alt+V'ye bas, bir kart seç, Enter ile geri yapıştır
-     (site/assets/demo.gif). -->
+![Panopin iş başında: bir e-posta taslağının üzerinde Görseller, Metinler ve Bağlantılar satırlarıyla mantar pano. "room" araması bir ekran görüntüsünü içindeki yazıdan ve kopyalanmış bir metni buluyor, Ctrl+Enter metni taslağa yapıştırıyor. Ardından pano 12 dilinde görünüyor.](site/assets/demo.gif)
 
 Bir metin, bağlantı ya da görsel kopyala veya ekran görüntüsü al: Panopin onu sessizce saklar.
 **Win+Alt+V**'ye bastığında Görseller, Metinler ve Bağlantılar satırlarıyla bir mantar pano

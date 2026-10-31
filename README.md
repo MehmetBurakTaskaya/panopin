@@ -15,10 +15,7 @@
   <a href="CHANGELOG.md">Changelog</a>
 </p>
 
-![The Panopin shelf with its Images, Texts and Links rows](site/assets/shelf-light.webp)
-
-<!-- GIF placeholder: copy something, press Win+Alt+V, choose a card, press Enter to paste it back
-     (site/assets/demo.gif). -->
+![Panopin at work: the cork board with its Images, Texts and Links rows over a mail draft. A search for "room" finds a screenshot by the text in it and a copied text, and Ctrl+Enter pastes the text into the draft. Then the board goes through its 12 languages.](site/assets/demo.gif)
 
 Copy a text, a link or an image, or take a screenshot: Panopin keeps it, quietly. Press
 **Win+Alt+V** and a cork board slides down with three rows — Images, Texts and Links. Choose with

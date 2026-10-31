@@ -68,4 +68,4 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - winget and Scoop manifests (planned after v1.0.0).
 - The SignPath Foundation application once v1.0.0 is published (docs/SIGNING.md).
 - An ARM64 build.
-- A short demo GIF for the README and the website (the placeholders are in place).
+- The README's demo GIF (`site/assets/demo.gif`) in the website's Panopin section too.
