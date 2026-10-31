@@ -540,7 +540,10 @@ folder totals). The items below need the real app.
       scratchpad `live-150.ps1` and `live-150b.ps1`. The switch pressed through UI Automation did
       nothing in the WebView, so it is clicked with the mouse.)
 - [ ] The same in the Library's search.
-- [ ] After the update, the index rebuilds once in the background, and search keeps working.
+- [x] After the update, the index rebuilds once in the background. On the owner's PC, the v1.5.0
+      draft's update installer (`/S /UPDATE /R`) went over a running 1.4.1. Panopin started again
+      within 10 s, with the same 39 items. The index was at version 2 with a row for each item,
+      and no set-aside program was left. (2026-10-31)
 - [x] A copied piece of code shows in the monospace font with its indentation, on its card and in
       the Library, and pastes with its line breaks. (same runs, by eye on screen captures)
 - [ ] A sentence with a semicolon stays in the normal font.
