@@ -520,7 +520,7 @@ Panopin is closed.
 - [x] A build of the new hook closed a running Panopin in 250 ms and set the program aside.
       Tauri's check then listed no process, and the restore path put the program back.
       (2026-10-31)
-- [ ] The rebuilt 1.4.0 installer, opened by a double-click, installs over a running 1.3.0. Panopin
+- [ ] The 1.4.1 installer, opened by a double-click, installs over a running 1.3.0. Panopin
       starts again and the items stay.
 - [ ] An update (`/S /UPDATE /R`) installs over a running copy and starts Panopin again.
 - [ ] Uninstalling with Panopin running works, and nothing is left in the folder but what the
