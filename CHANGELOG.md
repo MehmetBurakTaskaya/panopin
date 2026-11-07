@@ -6,6 +6,30 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-07
+
+### Changed
+
+- **Faster all round.** After Enter or Ctrl+Enter the keyboard is back in your app at once, and
+  the board slides in faster. Panopin uses no CPU while it waits, opening the shelf does less
+  work, the Library scrolls and refreshes more smoothly, and screenshots are stored with less CPU.
+- Each window loads only its own code and the language it speaks, so the Library and Settings open
+  sooner.
+
+### Fixed
+
+- A copy could be lost when another program kept the clipboard open, as Windows' clipboard history
+  and the bridge to WSL's Linux apps do. Panopin now reads it again a moment later.
+- A new picture could be marked as having no readable text when it was read too early.
+- Holding a key repeated its action: S took down one card after another, and Ctrl+Enter could
+  paste twice. Only the arrow keys repeat now.
+- A row scrolled with the mouse jumped back when a new item arrived.
+- The Library's section names stayed in the old language after a language change.
+- Pasting into a Store app waited longer than needed and missed its password fields.
+- Copying the same recording or pictures again filled the staging folder with copies.
+- If the shelf's page ever stops answering, the overlay is hidden anyway, so it never blocks the
+  screen.
+
 ## [1.5.1] - 2026-10-31
 
 ### Fixed
