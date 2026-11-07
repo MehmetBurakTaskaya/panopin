@@ -6,6 +6,13 @@ All notable changes to Panopin are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-11-08
+
+### Fixed
+
+- The Library, Settings and the first-run window lost their look in 1.6.0 and showed up as plain,
+  unstyled pages. They look as before again.
+
 ## [1.6.0] - 2026-11-07
 
 ### Changed
@@ -176,7 +183,9 @@ The first release, for Windows 10 22H2 and Windows 11 (x64).
 - **Installer and portable ZIP.** A per-user installer that needs no administrator rights and no
   clicks: opened, it installs and starts Panopin, in English or Turkish. And a portable ZIP.
 
-[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.6.1...HEAD
+[1.6.1]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.6.0...v1.6.1
+[1.6.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.4.1...v1.5.0
 [1.4.1]: https://github.com/MehmetBurakTaskaya/panopin/compare/v1.3.0...v1.4.1
