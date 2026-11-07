@@ -142,15 +142,15 @@ On the shelf:
 
 ## Resource use
 
-Measured with the v1.0.0 release build on a Windows 11 25H2 laptop (AMD Ryzen 9 7940HS,
-16 GB), one minute after start, with the shelf closed. Memory is the private working set,
-as Task Manager shows it.
+Measured with the v1.6.0 release build on a Windows 11 25H2 laptop (AMD Ryzen 9 7940HS,
+16 GB) in the second and third minutes after start, with the shelf closed. Memory is the
+private working set, as Task Manager shows it.
 
 | | |
 | --- | --- |
-| Installer | 3.3 MB |
-| CPU while idle | 0.2 s of CPU time per minute, about 0.02 % of the processor |
-| Memory while idle | about 120 MB: 10 MB for Panopin and 110 MB for its six WebView2 processes |
+| Installer | 3.8 MB |
+| CPU while idle | less than 0.1 s of CPU time per minute, about 0.01 % of the processor |
+| Memory while idle | about 113 MB: 12 MB for Panopin and 101 MB for its seven WebView2 processes |
 
 ## Build from source
 

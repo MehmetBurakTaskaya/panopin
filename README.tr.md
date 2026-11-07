@@ -145,15 +145,15 @@ Rafta:
 
 ## Kaynak kullanımı
 
-v1.0.0 sürüm derlemesiyle, Windows 11 25H2 çalışan bir dizüstünde (AMD Ryzen 9 7940HS, 16 GB),
-açılıştan bir dakika sonra ve raf kapalıyken ölçüldü. Bellek, Görev Yöneticisi'nin gösterdiği
-özel çalışma kümesidir.
+v1.6.0 sürüm derlemesiyle, Windows 11 25H2 çalışan bir dizüstünde (AMD Ryzen 9 7940HS, 16 GB),
+açılıştan sonraki ikinci ve üçüncü dakikada, raf kapalıyken ölçüldü. Bellek, Görev Yöneticisi'nin
+gösterdiği özel çalışma kümesidir.
 
 | | |
 | --- | --- |
-| Kurulum dosyası | 3,3 MB |
-| Boştayken işlemci | dakikada 0,2 sn işlemci zamanı, işlemcinin yaklaşık %0,02'si |
-| Boştayken bellek | yaklaşık 120 MB: Panopin için 10 MB, altı WebView2 işlemi için 110 MB |
+| Kurulum dosyası | 3,8 MB |
+| Boştayken işlemci | dakikada 0,1 sn'den az işlemci zamanı, işlemcinin yaklaşık %0,01'i |
+| Boştayken bellek | yaklaşık 113 MB: Panopin için 12 MB, yedi WebView2 işlemi için 101 MB |
 
 ## Kaynaktan derleme
 

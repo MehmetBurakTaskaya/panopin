@@ -654,6 +654,14 @@ Ctrl+Enter, 3 for L, 6 and 3 starts for the first opening, 20 texts), scratchpad
 - [x] The final draft's update installer (`/S /UPDATE /R`) took the owner's 1.5.1 to 1.6.0:
       Panopin was running again after 2 s with the same 98 items and a search row for each, no
       set-aside program was left, and its log shows 1.6.0 starting. (2026-11-07)
+- [x] The README's resource use, measured again with the installed 1.6.0 on 2026-11-08: Panopin
+      restarted and left alone with the shelf closed, nothing copied. In the second and third
+      minutes after start Panopin and WebView2 used 0.031 and 0.016 s of CPU; a reading started
+      a second earlier also caught about 0.14 s once, near 60 s after start. From the sixth to the
+      eighth minute: 0.016, 0.016 and 0 s, all in WebView2's browser process. Private working set
+      112–114 MB: 12 MB for Panopin, the rest in seven WebView2 processes, one more than in
+      v1.0.0, because the audio service (3.5 MB) now starts with the shelf.
+      (scratchpad `owner-idle.ps1`, `steady-idle.ps1`)
 
 ## Full round for v1.0.0
 

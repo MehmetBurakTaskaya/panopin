@@ -233,11 +233,11 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 
 | Metric | Target |
 | --- | --- |
-| Installer (NSIS, x64) | < 15 MB (v1.0.0: 3.3 MB) |
-| Idle CPU | ≈ 0 % (no polling; v1.0.0: 0.2 s of CPU per minute with WebView2) |
+| Installer (NSIS, x64) | < 15 MB (v1.6.0: 3.8 MB) |
+| Idle CPU | ≈ 0 % (no polling; v1.6.0: under 0.1 s of CPU per minute with WebView2) |
 | Shelf open, hotkey → first frame | < 100 ms with the pre-created window |
 | Search, 10 000 items | < 50 ms |
-| Memory | Published in the README (v1.0.0: about 120 MB idle, 110 MB of it WebView2) |
+| Memory | Published in the README (v1.6.0: about 113 MB idle, 101 MB of it WebView2) |
 
 ## 12. Release and website
 

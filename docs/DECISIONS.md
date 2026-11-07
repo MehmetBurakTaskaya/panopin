@@ -857,7 +857,8 @@ and the frontend were reviewed. The figures are in MANUAL_TESTS.
 - **The first opening does not wait for the sound.** Making a page's first AudioContext holds it
   up for about 110 ms while the audio device is set up, and the first opening after a start did
   that before its first frame (1.5.1 as well). The shelf makes the context 1.5 s after it starts
-  and lets it rest at once; a sound that comes while the rest is still on its way wakes it.
+  and lets it rest at once; a sound that comes while the rest is still on its way wakes it. The
+  cost is WebView2's audio service process from the start, about 3.5 MB of memory.
 - **Less work per opening.** Cards render again only when their item changed: refreshes keep
   unchanged items as the same objects, ages are counted in minutes, and the language is a prop.
   The pin is drawn only on pinned cards. The first page of each row loads its pictures at once,
