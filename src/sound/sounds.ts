@@ -14,6 +14,9 @@ const VOICE_WINDOW_MS = 160;
 // A running AudioContext keeps rendering silence about every 10 ms, so it rests once the last
 // sound has died away; the next sound wakes it.
 const REST_AFTER_MS = 2000;
+// Making the first AudioContext holds the page up for about 110 ms while the audio device is set
+// up, so the shelf makes it this long after it starts, while it waits, not on its first opening.
+const PREPARE_AFTER_MS = 1500;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -24,11 +27,15 @@ let volume = 0.3;
 const lastPlayed: Partial<Record<SoundName, number>> = {};
 let recent: number[] = [];
 let restTimer = 0;
+// suspend() takes effect later, so a sound right after it must still wake the context.
+let resting = false;
 
 function restLater(afterMs: number): void {
   window.clearTimeout(restTimer);
   restTimer = window.setTimeout(() => {
-    if (ctx?.state === 'running') void ctx.suspend();
+    if (ctx?.state !== 'running') return;
+    resting = true;
+    void ctx.suspend();
   }, afterMs);
 }
 
@@ -49,7 +56,10 @@ function audio(): Out | null {
     const data = noise.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
   }
-  if (ctx.state === 'suspended') void ctx.resume();
+  if (resting || ctx.state === 'suspended') {
+    resting = false;
+    void ctx.resume();
+  }
   return master && noise ? { ctx, out: master, noise } : null;
 }
 
@@ -159,6 +169,16 @@ export function play(name: SoundName, delay = 0): void {
   SOUNDS[name]({ ...a, out }, delay);
   window.setTimeout(() => out.disconnect(), (delay + 1) * 1000);
   restLater((delay + 1) * 1000 + REST_AFTER_MS);
+}
+
+/** Makes the audio context a moment after the shelf starts and lets it rest at once, so the first
+ * opening does not wait for the audio device. Returns a cancel. */
+export function prepareLater(): () => void {
+  const timer = window.setTimeout(() => {
+    if (!enabled || volume <= 0 || ctx) return;
+    if (audio()) restLater(0);
+  }, PREPARE_AFTER_MS);
+  return () => window.clearTimeout(timer);
 }
 
 /** Settings → General: sounds on or off, level 0–100. */

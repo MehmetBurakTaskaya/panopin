@@ -51,6 +51,11 @@ pub const OWN_FORMAT: PCWSTR = w!("Panopin.OwnCopy");
 const RETRY_AFTER_MS: [u32; 3] = [100, 300, 1000];
 const RETRY_TIMER: usize = 1;
 
+/// Pauses between attempts to open a clipboard that another process holds, when reading a change
+/// and when writing a copy. Some programs open it for well under a millisecond right after every
+/// copy, so the first pause is short; all of them add up to about 120 ms.
+pub const OPEN_PAUSES_MS: [u64; 7] = [1, 2, 4, 8, 15, 30, 60];
+
 /// The change waiting to be read again: its sequence number, the next pause, and the app that
 /// was in front when it happened (exclusions follow that one, not the app in front later).
 struct Retry {
@@ -210,11 +215,14 @@ unsafe fn read_snapshot(hwnd: HWND, sequence: u32) -> Reading {
 
 /// Another process may hold the clipboard for a moment; retry a few times, briefly.
 unsafe fn open(hwnd: HWND) -> bool {
-    for attempt in 1..=5 {
+    if OpenClipboard(Some(hwnd)).is_ok() {
+        return true;
+    }
+    for pause in OPEN_PAUSES_MS {
+        thread::sleep(Duration::from_millis(pause));
         if OpenClipboard(Some(hwnd)).is_ok() {
             return true;
         }
-        thread::sleep(Duration::from_millis(10 * attempt));
     }
     false
 }

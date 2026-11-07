@@ -853,6 +853,10 @@ and the frontend were reviewed. The figures are in MANUAL_TESTS.
   about 150 ms.
 - **Nothing runs while idle.** The Web Audio context kept rendering silence after the first sound;
   it now rests 2 s after the last one. Idle CPU was about 1 % of a core, all of it there.
+- **The first opening does not wait for the sound.** Making a page's first AudioContext holds it
+  up for about 110 ms while the audio device is set up, and the first opening after a start did
+  that before its first frame (1.5.1 as well). The shelf makes the context 1.5 s after it starts
+  and lets it rest at once; a sound that comes while the rest is still on its way wakes it.
 - **Less work per opening.** Cards render again only when their item changed: refreshes keep
   unchanged items as the same objects, ages are counted in minutes, and the language is a prop.
   The pin is drawn only on pinned cards. The first page of each row loads its pictures at once,
@@ -868,7 +872,10 @@ and the frontend were reviewed. The figures are in MANUAL_TESTS.
 - **Captures cost less.** A picture copied again comes forward without being encoded again, and
   thumbnails shrink by averaging boxes of pixels. The picture, PNG, JPEG, hashing, markup and
   SQLite code is built for speed (`opt-level = 3`), the rest for size. Lists take a text's first
-  400 characters and its length from SQLite instead of the whole text.
+  400 characters and its length from SQLite instead of the whole text. A clipboard another
+  program holds is tried again after 1, 2, 4, 8, 15, 30 and 60 ms instead of 10 to 50 ms: on the
+  dev PC a graphics driver's helper opens it for under a millisecond after every copy, and when it
+  came first a text took 12 ms instead of 3 ms to be kept.
 - **Bugs.** A clipboard another program keeps open (Windows' clipboard history, the WSL bridge) is
   read again after 100, 300 and 1000 ms instead of the copy being lost; the app in front at the
   copy still decides the exclusions. OCR no longer marks a new picture unreadable when it reads it

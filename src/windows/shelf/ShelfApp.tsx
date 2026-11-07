@@ -52,7 +52,7 @@ import { displayTitle } from '../../library/query';
 import { reducedMotion as reducedMotionSetting } from '../../look';
 import { queryTerms } from '../../search/highlight';
 import { DRAG_OUT, KEYS_SHORTCUT, TRASH_SHORTCUT } from '../../shortcuts';
-import { configure, play, setMuted } from '../../sound/sounds';
+import { configure, play, prepareLater, setMuted } from '../../sound/sounds';
 import { useSettings } from '../../state/settings';
 import { cardDomId, type Effect } from './Card';
 import cardStyles from './Card.module.css';
@@ -163,7 +163,9 @@ export function ShelfApp() {
   }, [settings?.cardSize]);
 
   useEffect(() => {
-    if (settings) configure(settings.sounds.enabled, settings.sounds.volume);
+    if (!settings) return;
+    configure(settings.sounds.enabled, settings.sounds.volume);
+    return prepareLater();
   }, [settings]);
 
   // Before paint, so no frame shows the cursor on rows that are already gone.

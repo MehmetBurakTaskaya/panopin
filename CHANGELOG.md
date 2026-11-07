@@ -11,8 +11,9 @@ All notable changes to Panopin are recorded here. The format follows
 ### Changed
 
 - **Faster all round.** After Enter or Ctrl+Enter the keyboard is back in your app at once, and
-  the board slides in faster. Panopin uses no CPU while it waits, opening the shelf does less
-  work, the Library scrolls and refreshes more smoothly, and screenshots are stored with less CPU.
+  the board slides in faster, even the first time after Panopin starts. Panopin uses almost no
+  CPU while it waits, opening the shelf does less work, the Library scrolls and refreshes more
+  smoothly, and screenshots are stored with less CPU.
 - Each window loads only its own code and the language it speaks, so the Library and Settings open
   sooner.
 

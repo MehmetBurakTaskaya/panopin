@@ -19,7 +19,7 @@ use windows::{
 
 use super::Formats;
 use crate::{
-    capture::clipboard_win::OWN_FORMAT,
+    capture::clipboard_win::{OPEN_PAUSES_MS, OWN_FORMAT},
     error::{AppError, Result},
 };
 
@@ -41,11 +41,14 @@ pub fn write(owner: isize, formats: &Formats) -> Result<()> {
 
 /// Another process may hold the clipboard for a moment; retry a few times, briefly.
 pub(super) unsafe fn open(owner: HWND) -> Result<()> {
-    for attempt in 1..=5 {
+    if OpenClipboard(Some(owner)).is_ok() {
+        return Ok(());
+    }
+    for pause in OPEN_PAUSES_MS {
+        thread::sleep(Duration::from_millis(pause));
         if OpenClipboard(Some(owner)).is_ok() {
             return Ok(());
         }
-        thread::sleep(Duration::from_millis(10 * attempt));
     }
     Err(AppError::ClipboardBusy)
 }
