@@ -24,9 +24,10 @@ use windows::{
         },
         UI::WindowsAndMessaging::{
             CreateWindowExW, DefWindowProcW, DispatchMessageW, GetForegroundWindow, GetMessageW,
-            GetWindowThreadProcessId, RegisterClassW, DEVICE_NOTIFY_WINDOW_HANDLE, HWND_MESSAGE,
-            MSG, PBT_APMRESUMEAUTOMATIC, WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLIPBOARDUPDATE,
-            WM_POWERBROADCAST, WNDCLASSW,
+            GetWindowThreadProcessId, KillTimer, RegisterClassW, SetTimer,
+            DEVICE_NOTIFY_WINDOW_HANDLE, HWND_MESSAGE, MSG, PBT_APMRESUMEAUTOMATIC,
+            WINDOW_EX_STYLE, WINDOW_STYLE, WM_CLIPBOARDUPDATE, WM_POWERBROADCAST, WM_TIMER,
+            WNDCLASSW,
         },
     },
 };
@@ -45,8 +46,28 @@ const CF_DIBV5: u32 = 17;
 /// Added to every copy Panopin makes, so its own copies are never captured again.
 pub const OWN_FORMAT: PCWSTR = w!("Panopin.OwnCopy");
 
+/// A change whose clipboard another program keeps open (Windows' clipboard history, the WSL
+/// bridge) is read again after these pauses, instead of being lost.
+const RETRY_AFTER_MS: [u32; 3] = [100, 300, 1000];
+const RETRY_TIMER: usize = 1;
+
+/// The change waiting to be read again: its sequence number, the next pause, and the app that
+/// was in front when it happened (exclusions follow that one, not the app in front later).
+struct Retry {
+    sequence: u32,
+    attempt: usize,
+    foreground_exe: Option<String>,
+}
+
+enum Reading {
+    Read(Snapshot),
+    Skipped,
+    Busy,
+}
+
 thread_local! {
     static SINK: RefCell<Option<Sender<Event>>> = const { RefCell::new(None) };
+    static RETRY: RefCell<Option<Retry>> = const { RefCell::new(None) };
 }
 
 pub fn spawn(tx: Sender<Event>) -> Result<()> {
@@ -105,12 +126,23 @@ fn run(tx: Sender<Event>) -> windows::core::Result<()> {
 extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     match msg {
         WM_CLIPBOARDUPDATE => {
-            if let Some(snapshot) = unsafe { read_snapshot(hwnd) } {
-                SINK.with(|sink| {
-                    if let Some(tx) = sink.borrow().as_ref() {
-                        let _ = tx.send(Event::Clipboard(snapshot));
-                    }
-                });
+            // A newer change replaces one still waiting to be read again.
+            unsafe {
+                let _ = KillTimer(Some(hwnd), RETRY_TIMER);
+            }
+            RETRY.with(|retry| retry.borrow_mut().take());
+            let foreground_exe = unsafe { exe_of(GetForegroundWindow()) };
+            read_change(hwnd, foreground_exe, 0);
+            LRESULT(0)
+        }
+        WM_TIMER if wparam.0 == RETRY_TIMER => {
+            unsafe {
+                let _ = KillTimer(Some(hwnd), RETRY_TIMER);
+            }
+            if let Some(retry) = RETRY.with(|retry| retry.borrow_mut().take()) {
+                if unsafe { GetClipboardSequenceNumber() } == retry.sequence {
+                    read_change(hwnd, retry.foreground_exe, retry.attempt);
+                }
             }
             LRESULT(0)
         }
@@ -127,26 +159,53 @@ extern "system" fn window_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam: LPA
     }
 }
 
+/// Reads the current change and hands it to the capture worker; a clipboard kept busy is read
+/// again a little later.
+fn read_change(hwnd: HWND, foreground_exe: Option<String>, attempt: usize) {
+    let sequence = unsafe { GetClipboardSequenceNumber() };
+    match unsafe { read_snapshot(hwnd, sequence) } {
+        Reading::Read(mut snapshot) => {
+            snapshot.foreground_exe = foreground_exe;
+            SINK.with(|sink| {
+                if let Some(tx) = sink.borrow().as_ref() {
+                    let _ = tx.send(Event::Clipboard(snapshot));
+                }
+            });
+        }
+        Reading::Skipped => {}
+        Reading::Busy => match RETRY_AFTER_MS.get(attempt) {
+            Some(&pause) => {
+                RETRY.with(|retry| {
+                    *retry.borrow_mut() = Some(Retry {
+                        sequence,
+                        attempt: attempt + 1,
+                        foreground_exe,
+                    });
+                });
+                unsafe { SetTimer(Some(hwnd), RETRY_TIMER, pause, None) };
+            }
+            None => log::info!("another program kept the clipboard open; one copy was not kept"),
+        },
+    }
+}
+
 /// Reads one clipboard change. The sequence number is checked before and after reading; if it
 /// moved (or is 0) the change is dropped, as is anything marked private (content is not read).
-unsafe fn read_snapshot(hwnd: HWND) -> Option<Snapshot> {
-    let sequence = GetClipboardSequenceNumber();
+unsafe fn read_snapshot(hwnd: HWND, sequence: u32) -> Reading {
     if sequence == 0 {
-        return None;
+        return Reading::Skipped;
     }
     let owner_exe = GetClipboardOwner().ok().and_then(|window| exe_of(window));
-    let foreground_exe = exe_of(GetForegroundWindow());
     if !open(hwnd) {
-        return None;
+        return Reading::Busy;
     }
     let mut snapshot = read_formats();
     let _ = CloseClipboard();
     if GetClipboardSequenceNumber() != sequence {
-        return None;
+        return Reading::Skipped;
     }
     snapshot.owner_exe = owner_exe;
-    snapshot.foreground_exe = foreground_exe;
-    Some(snapshot)
+    Reading::Read(snapshot)
 }
 
 /// Another process may hold the clipboard for a moment; retry a few times, briefly.
@@ -157,7 +216,6 @@ unsafe fn open(hwnd: HWND) -> bool {
         }
         thread::sleep(Duration::from_millis(10 * attempt));
     }
-    log::debug!("clipboard stayed busy; change skipped");
     false
 }
 

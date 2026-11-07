@@ -3,14 +3,30 @@
 //! The folder is emptied when Panopin starts and when it quits.
 
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
+    sync::{Mutex, PoisonError},
+    time::SystemTime,
 };
 
 use crate::error::Result;
 
+/// A stored file's staged copy, with the size and time the stored file had then.
+type StagedCopy = (PathBuf, u64, Option<SystemTime>);
+
 pub struct Staging {
     dir: PathBuf,
+    /// Stored files already handed out this session: copied or dragged again, they come back
+    /// under the same name instead of filling the folder with copies (a recording is often
+    /// hundreds of megabytes).
+    copies: Mutex<HashMap<PathBuf, StagedCopy>>,
+}
+
+fn stamp(path: &Path) -> Option<(u64, Option<SystemTime>)> {
+    fs::metadata(path)
+        .ok()
+        .map(|meta| (meta.len(), meta.modified().ok()))
 }
 
 /// One file to hand out.
@@ -24,10 +40,17 @@ pub enum Staged {
 
 impl Staging {
     pub fn new(dir: PathBuf) -> Self {
-        Self { dir }
+        Self {
+            dir,
+            copies: Mutex::new(HashMap::new()),
+        }
     }
 
     pub fn clean(&self) {
+        self.copies
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clear();
         if let Err(err) = fs::remove_dir_all(&self.dir) {
             if err.kind() != std::io::ErrorKind::NotFound {
                 log::warn!("could not empty the staging folder: {err}");
@@ -35,9 +58,41 @@ impl Staging {
         }
     }
 
-    /// Writes each item under a fresh neutral name and returns the paths in the same order.
+    /// Writes each item under a neutral name and returns the paths in the same order. A stored
+    /// file handed out before is reused while both it and its staged copy are unchanged.
     pub fn stage(&self, items: &[Staged]) -> Result<Vec<PathBuf>> {
-        write_neutral(&self.dir, items)
+        let mut copies = self.copies.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut paths: Vec<Option<PathBuf>> = items
+            .iter()
+            .map(|item| match item {
+                Staged::Copy(source) => copies
+                    .get(source)
+                    .filter(|(staged, len, modified)| {
+                        stamp(source).is_some_and(|now| now == (*len, *modified))
+                            && stamp(staged).is_some_and(|(staged_len, _)| staged_len == *len)
+                    })
+                    .map(|(staged, _, _)| staged.clone()),
+                Staged::Bytes(..) => None,
+            })
+            .collect();
+        // The new ones are written in one go, so their numbers follow the order handed out.
+        let fresh: Vec<usize> = (0..items.len()).filter(|&i| paths[i].is_none()).collect();
+        let before: Vec<_> = fresh
+            .iter()
+            .map(|&i| match &items[i] {
+                Staged::Copy(source) => stamp(source),
+                Staged::Bytes(..) => None,
+            })
+            .collect();
+        let to_write: Vec<Staged> = fresh.iter().map(|&i| items[i].clone()).collect();
+        let written = write_neutral(&self.dir, &to_write)?;
+        for ((&i, path), stamp) in fresh.iter().zip(written).zip(before) {
+            if let (Staged::Copy(source), Some((len, modified))) = (&items[i], stamp) {
+                copies.insert(source.clone(), (path.clone(), len, modified));
+            }
+            paths[i] = Some(path);
+        }
+        Ok(paths.into_iter().flatten().collect())
     }
 }
 
@@ -156,5 +211,22 @@ mod tests {
             .all(|n| n.starts_with("Panopin-") && n.len() == "Panopin-2026-10-29-001.png".len()));
         staging.clean();
         assert!(!dir.path().join("staging").exists());
+    }
+
+    #[test]
+    fn a_stored_file_handed_out_again_is_not_copied_again() {
+        let dir = tempfile::tempdir().unwrap();
+        let staging = Staging::new(dir.path().join("staging"));
+        let recording = dir.path().join("original.mp4");
+        fs::write(&recording, b"a long recording").unwrap();
+        let first = staging.stage(&[Staged::Copy(recording.clone())]).unwrap();
+        let again = staging.stage(&[Staged::Copy(recording.clone())]).unwrap();
+        assert_eq!(first, again);
+        assert_eq!(fs::read_dir(dir.path().join("staging")).unwrap().count(), 1);
+
+        // A staged copy that was taken away (or a changed original) is written anew.
+        fs::remove_file(&first[0]).unwrap();
+        let third = staging.stage(&[Staged::Copy(recording)]).unwrap();
+        assert!(third[0].exists());
     }
 }

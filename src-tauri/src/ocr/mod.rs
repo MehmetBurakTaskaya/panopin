@@ -107,16 +107,24 @@ pub fn wake(app: &AppHandle) {
 }
 
 /// The next image waiting to be read, newest first, with the edit time it was read at.
-fn next_job(conn: &Connection) -> Result<Option<(i64, i64)>> {
+fn next_job(conn: &Connection) -> Result<Option<(i64, i64, i64)>> {
     Ok(conn
         .query_row(
-            "SELECT id, COALESCE(edited_at, 0) FROM items
+            "SELECT id, COALESCE(edited_at, 0), created_at FROM items
              WHERE kind = 'image' AND ocr_state = 0 AND trashed_at IS NULL
              ORDER BY last_copied_at DESC LIMIT 1",
             [],
-            |row| Ok((row.get(0)?, row.get(1)?)),
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
         )
         .optional()?)
+}
+
+/// A picture's row is written just before its files are moved into place (capture/mod.rs). A new
+/// one caught in between is not read yet: the wake after its files are in brings it back. A row
+/// still without files a minute later is read and given up on as before.
+fn files_ready(app: &AppHandle, id: i64, created_at: i64) -> bool {
+    let fresh = crate::capture::now_ms() - created_at < 60_000;
+    !fresh || crate::capture::media(app).is_none_or(|media| media.dir(id).exists())
 }
 
 /// Stores the text unless the image was edited meanwhile (it is then read again).
@@ -156,9 +164,12 @@ fn run(app: &AppHandle) {
             if !state.settings().ocr {
                 break;
             }
-            let Ok(Some((id, edited_at))) = state.with_db(|db| next_job(db)) else {
+            let Ok(Some((id, edited_at, created_at))) = state.with_db(|db| next_job(db)) else {
                 break;
             };
+            if !files_ready(app, id, created_at) {
+                break;
+            }
             if engine.is_none() {
                 engine = engine::Engine::new();
             }
@@ -280,16 +291,16 @@ mod tests {
         let conn = store::open_in_memory().unwrap();
         let old = image(&conn, 1);
         let new = image(&conn, 2);
-        assert_eq!(next_job(&conn).unwrap(), Some((new, 0)));
+        assert_eq!(next_job(&conn).unwrap(), Some((new, 0, 2)));
         store(&conn, new, 0, Some("Fiş toplamı")).unwrap();
-        assert_eq!(next_job(&conn).unwrap(), Some((old, 0)));
+        assert_eq!(next_job(&conn).unwrap(), Some((old, 0, 1)));
         assert_eq!(search::find(&conn, "fiş", false).unwrap(), vec![new]);
 
         // An edit while the old image was being read: the stale text is not stored.
         conn.execute("UPDATE items SET edited_at = 5 WHERE id = ?1", [old])
             .unwrap();
         store(&conn, old, 0, Some("stale")).unwrap();
-        assert_eq!(next_job(&conn).unwrap(), Some((old, 5)));
+        assert_eq!(next_job(&conn).unwrap(), Some((old, 5, 1)));
         store(&conn, old, 5, None).unwrap();
         assert_eq!(next_job(&conn).unwrap(), None, "a failure is not retried");
     }
