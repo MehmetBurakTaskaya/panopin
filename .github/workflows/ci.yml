@@ -54,6 +54,10 @@ jobs:
       - name: Build frontend
         run: npm run build
 
+      # Every window must get its styles with the page itself (D-086).
+      - name: One stylesheet for every window
+        run: npm run check:bundle
+
       - name: Rust format
         run: cargo fmt --all --manifest-path src-tauri/Cargo.toml --check
 

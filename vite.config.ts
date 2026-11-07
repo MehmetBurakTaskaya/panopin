@@ -16,6 +16,9 @@ export default defineConfig({
     // WebView2 (Chromium) on Windows, WKWebView on macOS 13+.
     target: ['chrome120', 'safari16'],
     outDir: 'dist',
+    // One stylesheet for every window, linked from the page itself, so a window's look never
+    // depends on code loaded later (D-086). CI checks it with scripts/check-bundle.mjs.
+    cssCodeSplit: false,
   },
   test: {
     environment: 'jsdom',

@@ -885,11 +885,29 @@ and the frontend were reviewed. The figures are in MANUAL_TESTS.
   stays where it is when a new item arrives. The Library's section names follow a language change.
   A Store app's password field is recognised on Ctrl+Enter without a 300 ms wait. A file handed
   out again is staged once, not once per copy.
-- **Startup.** Each window loads its own code and only the language it speaks (English is built
-  in); its settings, look and code arrive together. A panic writes where it happened into the log
-  before Panopin ends, and a quit leaves a line too, so a crash can be told from a quit.
+- **Startup.** Each window loads only the language it speaks (English is built in), and its
+  settings and look arrive together. 1.6.0 also gave each window only its own code, which 1.6.1
+  undid (D-086). A panic writes where it happened into the log before Panopin ends, and a quit
+  leaves a line too, so a crash can be told from a quit.
 - **Left for later (BACKLOG).** Opening and closing still costs about 0.8 s of CPU in WebView2's
   processes, nearly all of it for showing and hiding the full-screen overlay; neither the textures
   nor the animations matter (measured with each part switched off). Copies of large pictures,
   Shift+Enter with many pictures, recordings in watched folders, the preview's full-size decode and
   timers across sleep are noted there too.
+
+## D-086 One bundle and one stylesheet for every window (1.6.1) — Accepted
+
+1.6.0 gave each window only its own code (D-085). In the release build the minifier folded the
+four loaders into one call, and that call carried the shelf's list of files to fetch first. So the
+Library, Settings and first-run windows never loaded their stylesheets and showed up unstyled,
+while the shelf looked right. The dev server and the preview do not bundle, so neither showed it,
+and the 218 ms for opening the Library in D-085 was measured with its styles missing. It showed in
+the installed app on 2026-11-08.
+
+- Every window loads the one bundle again, as up to 1.5.1; only the language still loads on its
+  own. Separate code saved little: the part every window shares (React and Panopin's core) was
+  273 of the 482 kB.
+- `build.cssCodeSplit` is off, so every style is in one stylesheet that the page itself links,
+  whatever code is loaded later.
+- CI checks after each build that the page links exactly one stylesheet and loads one script, and
+  that no other stylesheet is built (`scripts/check-bundle.mjs`).

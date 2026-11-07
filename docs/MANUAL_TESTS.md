@@ -620,7 +620,7 @@ Ctrl+Enter, 3 for L, 6 and 3 starts for the first opening, 20 texts), scratchpad
 | Enter: the keyboard is back in the app | 277 ms | 14 ms |
 | Enter: the board is gone | 653 ms | 241 ms |
 | Ctrl+Enter: the text is in the app's box | 194 ms | 33 ms |
-| L: the Library is painted | 346 ms | 218 ms |
+| L: the Library is painted | 346 ms | 218 ms, without its styles (D-086) |
 | Hidden shelf, CPU | 1.2 % of a core | 0.1 % of a core |
 | CPU of one opening and closing | 0.69 s | 0.68 s |
 | Private memory, Panopin and WebView2, idle | 360 MB | 372 MB |
@@ -662,6 +662,16 @@ Ctrl+Enter, 3 for L, 6 and 3 starts for the first opening, 20 texts), scratchpad
       112–114 MB: 12 MB for Panopin, the rest in seven WebView2 processes, one more than in
       v1.0.0, because the audio service (3.5 MB) now starts with the shelf.
       (scratchpad `owner-idle.ps1`, `steady-idle.ps1`)
+
+## One stylesheet for every window (D-086)
+
+- [x] The cause, read in a release build of 1.6.0's frontend: the page linked only the shared
+      stylesheet, and the one list of files to fetch first, used by all four windows, was the
+      shelf's. The Library's, Settings' and the first-run window's stylesheets were never loaded.
+      (2026-11-08)
+- [ ] CI: `npm run check:bundle` passes on Windows and macOS.
+- [ ] The installed 1.6.1: the Library, Settings and the shelf look as they did in 1.5.1.
+- [ ] Opening the Library timed again with 1.6.1.
 
 ## Full round for v1.0.0
 

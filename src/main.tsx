@@ -1,21 +1,27 @@
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { StrictMode, type ComponentType } from 'react';
+import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { followSettingsChanges, useSettings } from './state/settings';
 import './styles/tokens.css';
 import './styles/global.css';
 import { applyLook, followLook } from './look';
 import { applyTheme, followSystemTheme } from './theme';
+import { LibraryApp } from './windows/library/LibraryApp';
+import { OnboardingApp } from './windows/onboarding/OnboardingApp';
+import { SettingsApp } from './windows/settings/SettingsApp';
+import { ShelfApp } from './windows/shelf/ShelfApp';
 
-// Every window starts here; the window label picks the view, and only that view's code is loaded.
+// Every window loads this one bundle and its one stylesheet; the window label picks the view.
+// Loading each view on its own left the Library, Settings and first-run windows without their
+// styles in the release build (D-086).
 const label = getCurrentWebviewWindow().label;
 document.documentElement.dataset.window = label;
 
-function loadView(): Promise<ComponentType> {
-  if (label === 'settings') return import('./windows/settings/SettingsApp').then((m) => m.SettingsApp);
-  if (label === 'onboarding') return import('./windows/onboarding/OnboardingApp').then((m) => m.OnboardingApp);
-  if (label === 'library') return import('./windows/library/LibraryApp').then((m) => m.LibraryApp);
-  return import('./windows/shelf/ShelfApp').then((m) => m.ShelfApp);
+function View() {
+  if (label === 'settings') return <SettingsApp />;
+  if (label === 'onboarding') return <OnboardingApp />;
+  if (label === 'library') return <LibraryApp />;
+  return <ShelfApp />;
 }
 
 async function start(): Promise<void> {
@@ -24,8 +30,8 @@ async function start(): Promise<void> {
     applyTheme(state.settings?.theme ?? 'system');
     applyLook(state.settings);
   });
-  // The view's code, the settings and the system's look arrive together, not one after another.
-  const [View] = await Promise.all([loadView(), useSettings.getState().load(), followLook(), followSettingsChanges()]);
+  // The settings and the system's look arrive together, not one after another.
+  await Promise.all([useSettings.getState().load(), followLook(), followSettingsChanges()]);
   const root = document.getElementById('root');
   if (!root) return;
   createRoot(root).render(
