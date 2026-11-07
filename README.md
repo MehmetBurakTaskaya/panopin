@@ -27,7 +27,7 @@ window holds everything, with folders, tags, notes and search.
 
 - **A cork board of your own.** Copies are taped to the board, the ones you keep get a pushpin,
   and small paper-and-cork sounds go with it (they can be turned off).
-- **Native and light.** Built with Tauri and Rust. The installer is about 3.4 MB
+- **Native and light.** Built with Tauri and Rust. The installer is about 3.8 MB
   and Panopin uses almost no CPU while idle: the clipboard is followed through Windows events, never
   polled.
 - **Respects privacy.** Copies that password managers and Windows mark as private are never

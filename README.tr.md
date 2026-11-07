@@ -27,7 +27,7 @@ gider. Hepsi klasörler, etiketler, notlar ve aramayla birlikte Kütüphane penc
 
 - **Kendine ait bir mantar pano.** Kopyaladıkların bantla tutturulur, saklamak istediklerine
   raptiye saplanır; kâğıt ve mantar sesleri eşlik eder (kapatılabilir).
-- **Native ve hafif.** Tauri ve Rust ile yazıldı. Kurulum dosyası yaklaşık 3,4 MB;
+- **Native ve hafif.** Tauri ve Rust ile yazıldı. Kurulum dosyası yaklaşık 3,8 MB;
   Panopin boştayken neredeyse hiç işlemci kullanmaz, çünkü pano yoklanmaz, Windows olaylarıyla izlenir.
 - **Gizliliğe saygılı.** Parola yöneticilerinin ve Windows'un gizli olarak işaretlediği kopyalar
   hiç kaydedilmez. Hariç tutulan uygulamalar listesi ve 5 dakika, 1 saat ya da sen açana kadar
