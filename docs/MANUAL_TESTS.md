@@ -597,6 +597,64 @@ folder totals). The items below need the real app.
       last one again, and the items are not kept a second time. (Mac live test run 41166739231:
       51/51 on macOS 14, 15, 15 Intel and 26)
 
+## Faster and lighter (D-085)
+
+Timed on this PC (1920×1080 at 125 %, Windows 11) on 2026-11-07 with the same test data for both
+builds, one after the other: 1.5.1 as installed, 1.6.0 from its draft's portable ZIP (the first
+draft, from 2ac3abd; the first opening after a start and the text copy from the final one,
+32958ef). A one-pixel column down the middle of the screen is read every 7 ms from the moment the
+key goes down; "landed" is when it stops changing. Medians of 12 rounds (5 for Enter and
+Ctrl+Enter, 3 for L, 6 and 3 starts for the first opening, 20 texts), scratchpad
+`perf-shelf.ps1`, `perf-cold.ps1`, `perf-idle.ps1`, `busy-clip.py` and `perf-capture.py`.
+
+| | 1.5.1 | 1.6.0 |
+| --- | ---: | ---: |
+| First opening after a start: first pixels | 206 ms | 166 ms |
+| First opening after a start: the board has landed | 1113 ms | 820 ms |
+| Win+Alt+V: the shelf has the keyboard | 6 ms | 6 ms |
+| Win+Alt+V: first pixels of the board | 34 ms | 43 ms |
+| Win+Alt+V: the board has landed | 953 ms | 750 ms |
+| Esc: the keyboard is back in the app | 1.4 ms | 1.4 ms |
+| Esc: the board is gone | 367 ms | 220 ms |
+| Enter: the item is on the clipboard | 12 ms | 12 ms |
+| Enter: the keyboard is back in the app | 277 ms | 14 ms |
+| Enter: the board is gone | 653 ms | 241 ms |
+| Ctrl+Enter: the text is in the app's box | 194 ms | 33 ms |
+| L: the Library is painted | 346 ms | 218 ms |
+| Hidden shelf, CPU | 1.2 % of a core | 0.1 % of a core |
+| CPU of one opening and closing | 0.69 s | 0.68 s |
+| Private memory, Panopin and WebView2, idle | 360 MB | 372 MB |
+| Text kept | 2.6 ms | 2.7 ms |
+| Picture 1920×1080 stored | 75 ms | 57 ms |
+| Picture 3840×2160 stored | 317 ms | 183 ms |
+| A copy while another program holds the clipboard for 150, 350 or 900 ms | lost, 15 of 15 | kept, 15 of 15 |
+
+- [x] Idle CPU: the shelf's page, Panopin and the sound service used nothing in 60 s; what is left
+      is WebView2's browser and GPU processes, 1 ms a second. In 1.5.1 the page alone used 8.6 ms
+      a second. (`perf-idle.ps1`)
+- [x] Sounds still play: the shelf's page made one AudioContext and started the opening sound on
+      every opening, in 1.5.1 and in 1.6.0. (scratchpad `sound-check.ps1`)
+- [x] The first opening after a start waited about 110 ms for the page's first AudioContext,
+      before its first frame (a browser trace showed it in 1.5.1 too). With the context made
+      beforehand its first pixels came at 146–162 ms instead of 245–310 ms. Fixed in 32958ef: the
+      shelf makes the context 1.5 s after it starts. (scratchpad `trace-cold.ps1`,
+      `warm-check.ps1`)
+- [x] AMD's Radeon Software opens the clipboard for under a millisecond right after every copy.
+      When it came first, Panopin's next try waited 10 ms, so a text took 12 ms instead of 3 ms
+      to be kept (about every second copy). Fixed in 32958ef: the next try comes after 1 ms.
+      (scratchpad `probe-open2.py`, `probe-created.py`)
+- [x] On a Mac, with both fixes: the live test 51/51, the update test 10/10 and the permission
+      test 10/10 on macOS 15, 15 Intel and 26 (Mac live test run 42385241441, 32958ef). GitHub no
+      longer offers macOS 14, so that runner was dropped.
+- [x] The final draft (32958ef): the first opening after a start showed its first pixels after
+      165–188 ms and landed after 807–836 ms; texts were kept after 2.7 ms (2.2–5.6) with Radeon
+      Software running; a copy held up for 150, 350 or 900 ms was kept 9 of 9 times;
+      idle CPU over two minutes was 0.05 and 0.16 % of a core. (`perf-cold.ps1`, `perf-clip.ps1`,
+      `perf-idle.ps1`)
+- [x] The final draft's update installer (`/S /UPDATE /R`) took the owner's 1.5.1 to 1.6.0:
+      Panopin was running again after 2 s with the same 98 items and a search row for each, no
+      set-aside program was left, and its log shows 1.6.0 starting. (2026-11-07)
+
 ## Full round for v1.0.0
 
 Run every unchecked item in this file on the installed v1.0.0 build, in this order: capture,

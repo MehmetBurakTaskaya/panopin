@@ -539,7 +539,8 @@ are on screen stay in memory, and reading a file again from `media/` is cheap.
 ## D-073 macOS (Phase 8) — Accepted
 macOS 13 or later, one universal app for Apple silicon and Intel, built and checked by CI on
 `macos-latest`. `mac-live.yml`, started by hand, installs it from its `.dmg` on GitHub's Mac
-runners (macOS 14, 15 and 26 on Apple silicon, macOS 15 on Intel) and drives it as a user would
+runners (macOS 15 and 26 on Apple silicon, macOS 15 on Intel; macOS 14 too until GitHub stopped
+offering it in November 2026) and drives it as a user would
 with `tests/macos/live.sh`: System Events presses keys, a small Accessibility tool reads and
 presses controls inside the web views, `sqlite3` checks what was kept, and screenshots stay with
 the run. The runners let the shell use Accessibility and screen capture; the script grants Panopin
