@@ -65,6 +65,7 @@ windows = { version = "0.62.2", features = [
     "UI_Shell",
     "UI_ViewManagement",
     "Win32_Foundation",
+    "Win32_Graphics_Dwm",
     "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_Storage_EnhancedStorage",
@@ -108,3 +109,30 @@ lto = true
 opt-level = "s"
 panic = "abort"
 strip = true
+
+# The hot loops are built for speed and the rest for size: picture decoding, resizing and
+# encoding, hashing, the markup renderer, search folding and SQLite.
+[profile.release.package.image]
+opt-level = 3
+[profile.release.package.png]
+opt-level = 3
+[profile.release.package.fdeflate]
+opt-level = 3
+[profile.release.package.zune-jpeg]
+opt-level = 3
+[profile.release.package.miniz_oxide]
+opt-level = 3
+[profile.release.package.crc32fast]
+opt-level = 3
+[profile.release.package.simd-adler32]
+opt-level = 3
+[profile.release.package.sha2]
+opt-level = 3
+[profile.release.package.tiny-skia]
+opt-level = 3
+[profile.release.package.tiny-skia-path]
+opt-level = 3
+[profile.release.package.unicode-normalization]
+opt-level = 3
+[profile.release.package.libsqlite3-sys]
+opt-level = 3

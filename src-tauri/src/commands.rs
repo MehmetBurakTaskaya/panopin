@@ -29,13 +29,13 @@ use crate::{
 #[derive(Default)]
 pub struct ShelfUndo(Mutex<UndoStack>);
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn list_shelf(state: State<'_, AppState>) -> Result<Shelf> {
     state.with_db(|db| shelf_store::list(db))
 }
 
 /// Shift+S on the shelf: the matching cards of each row, newest first (D-059).
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search_shelf(state: State<'_, AppState>, query: String) -> Result<Shelf> {
     let without_accents = state.settings().search_without_accents;
     state.with_db(|db| shelf_store::search(db, &query, without_accents))
@@ -58,9 +58,10 @@ pub fn refresh_link(app: AppHandle, state: State<'_, AppState>, id: i64) -> Resu
 }
 
 /// Ctrl+O: opens a link in the default browser.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn open_link(state: State<'_, AppState>, id: i64) -> Result<()> {
-    state.with_db(|db| links::open(db, id))
+    let url = state.with_db(|db| links::openable(db, id))?;
+    links::open(&url)
 }
 
 /// Installed OCR languages for Settings.
@@ -72,7 +73,7 @@ pub async fn ocr_status() -> Result<ocr::OcrStatus> {
 }
 
 /// Ctrl+F in the Library: ids of the matching items, best match first.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn search_library(state: State<'_, AppState>, query: String) -> Result<Vec<i64>> {
     let without_accents = state.settings().search_without_accents;
     state.with_db(|db| search::find(db, &query, without_accents))
@@ -158,7 +159,7 @@ pub struct Clearable {
 }
 
 /// "Clear history", step 1: how many unsaved items would move to Trash, and the cutoff to confirm with.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn count_clearable(state: State<'_, AppState>, kinds: Vec<Kind>) -> Result<Clearable> {
     let (count, cutoff) = state.with_db(|db| retention::clearable(db, &kinds, now_ms()))?;
     Ok(Clearable { count, cutoff })
@@ -303,7 +304,7 @@ pub fn unavailable_shortcuts(app: AppHandle) -> Vec<hotkeys::Action> {
 
 /// "Clear history", step 2: moves the items that are still unsaved and were copied before the
 /// cutoff to Trash, in one transaction. Copies made while confirming stay.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn clear_history(
     app: AppHandle,
     state: State<'_, AppState>,
@@ -316,13 +317,13 @@ pub fn clear_history(
 }
 
 /// Everything the Library shows: items (Trash included), folders and tags.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn library_data(state: State<'_, AppState>) -> Result<LibraryData> {
     state.with_db(|db| library::load(db))
 }
 
 /// Folders and tags for the shelf's pickers.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn library_groups(state: State<'_, AppState>) -> Result<library::Groups> {
     state.with_db(|db| library::groups(db))
 }
@@ -416,14 +417,14 @@ fn remove_media(app: &AppHandle, ids: &[i64]) {
 }
 
 /// Deletes items in Trash for good (after the window's confirmation), with their media.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn delete_forever(app: AppHandle, ids: Vec<i64>) -> Result<usize> {
     let deleted = organise(&app, |db| library::delete_forever(db, &ids))?;
     remove_media(&app, &deleted);
     Ok(deleted.len())
 }
 
-#[tauri::command]
+#[tauri::command(async)]
 pub fn empty_trash(app: AppHandle) -> Result<usize> {
     let deleted = organise(&app, library::empty_trash)?;
     remove_media(&app, &deleted);
@@ -474,7 +475,7 @@ pub fn open_library(app: AppHandle) -> Result<()> {
 }
 
 /// The whole text behind a text or link card; the shelf itself only holds a preview.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_text(app: AppHandle, id: i64) -> Result<String> {
     editing::full_text(&app, id)
 }
@@ -486,7 +487,7 @@ pub fn update_text(app: AppHandle, id: i64, body: String) -> Result<()> {
 }
 
 /// The crop and marks over an image, if it was edited.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn get_edit(app: AppHandle, id: i64) -> Result<Option<EditLayer>> {
     editing::load_layer(&app, id)
 }
@@ -565,4 +566,10 @@ pub async fn paste_items(app: AppHandle, ids: Vec<i64>) -> Result<PasteOutcome> 
 #[tauri::command]
 pub fn shelf_hidden(app: AppHandle, generation: u64) -> Result<()> {
     shelf::finish_close(&app, generation)
+}
+
+/// The shelf's page listens for openings; one asked for before that is made now.
+#[tauri::command]
+pub fn shelf_ready(app: AppHandle) -> Result<()> {
+    shelf::mark_ready(&app)
 }

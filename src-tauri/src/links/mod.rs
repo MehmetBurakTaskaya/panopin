@@ -287,7 +287,8 @@ fn store(
 }
 
 /// Ctrl+O: opens a link item in the default browser. Only http and https leave Panopin.
-pub fn open(conn: &Connection, id: i64) -> Result<()> {
+/// The address Ctrl+O opens; the browser is started after the database lock is let go.
+pub fn openable(conn: &Connection, id: i64) -> Result<String> {
     let url: Option<String> = conn
         .query_row(
             "SELECT url FROM items WHERE id = ?1 AND kind = 'link'",
@@ -300,7 +301,11 @@ pub fn open(conn: &Connection, id: i64) -> Result<()> {
         .and_then(|u| Url::parse(u.trim()).ok())
         .filter(|u| matches!(u.scheme(), "http" | "https"))
         .ok_or(AppError::NotEditable)?;
-    open_in_browser(url.as_str())
+    Ok(url.into())
+}
+
+pub fn open(url: &str) -> Result<()> {
+    open_in_browser(url)
 }
 
 /// Opens one of Panopin's own pages (Settings → About).

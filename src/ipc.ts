@@ -257,6 +257,8 @@ export const clearHistory = (kinds: HistoryKind[], cutoff: number) => invoke<num
 export const updateSettings = (patch: SettingsPatch) => invoke<Settings>('update_settings', { patch });
 export const closeShelf = () => invoke<void>('close_shelf');
 export const shelfHidden = (generation: number) => invoke<void>('shelf_hidden', { generation });
+/** The shelf listens for openings now; Rust shows it only after this. */
+export const shelfReady = () => invoke<void>('shelf_ready');
 export const listShelf = () => invoke<Shelf>('list_shelf');
 export const setPinned = (ids: number[], pinned: boolean) => invoke<void>('set_pinned', { ids, pinned });
 export const takeDown = (ids: number[]) => invoke<void>('take_down', { ids });

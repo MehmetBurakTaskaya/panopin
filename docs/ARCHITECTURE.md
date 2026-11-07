@@ -113,7 +113,10 @@ Platform traits: `ClipboardBackend`, `WatcherBackend`, `OcrBackend`, `PasteBacke
 - One SQLite connection behind a mutex is shared by all writers (D-035). Decoding, hashing and
   thumbnails run outside the lock; statements and transactions inside it are short.
 - After each change the worker emits `items:changed` with the counts per kind; the tray tooltip
-  shows them and windows refetch only what they display.
+  shows them and windows refetch only what they display. A burst of changes is announced once at
+  once and once more at the end, at most every 120 ms (D-085).
+- Media requests look up their file under the lock and read it after it (D-085). Reads and heavy
+  commands run off the main thread, which also handles the global shortcuts.
 
 ## 5. Capture pipeline (Windows)
 
@@ -208,8 +211,10 @@ modifiers; `SendInput` Ctrl+V. Every refusal shows the reason.
 - Memoised cards so unchanged cards do not re-render; the Library grid is virtualised
   (`@tanstack/react-virtual`), the shelf rows are capped at 300 cards instead (D-044).
 - Sounds: the Web Audio synthesis module proven in `docs/concept/mockup/sound.js`.
-- i18n: `/locales/en.json` and `tr.json` are the only string sources, used by TS and by Rust
-  (tray, notifications). CI fails on missing or unused keys.
+- i18n: `/locales/*.json` are the only string sources, used by TS and by Rust (tray,
+  notifications). CI fails on missing or unused keys. A window loads English with its code and any
+  other language when it is chosen (D-085).
+- Each window loads only its own view's code: `src/main.tsx` imports it by window label.
 
 ## 10. IPC and security
 

@@ -143,7 +143,8 @@ export function ItemGrid(props: ItemViewProps & { onColumns: (columns: number) =
     >
       {items.length === 0 && <div className={styles.empty}>{props.emptyText}</div>}
       <div style={{ position: 'relative', height: virtualizer.getTotalSize() + GAP }}>
-        {virtualizer.getVirtualItems().map((row) =>
+        {/* One flat list keyed by item, so a row scrolling in or out leaves the other tiles alone. */}
+        {virtualizer.getVirtualItems().flatMap((row) =>
           items.slice(row.index * columns, row.index * columns + columns).map((item, column) => (
             <div
               key={item.id}

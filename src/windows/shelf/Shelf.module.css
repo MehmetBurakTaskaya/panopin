@@ -22,7 +22,7 @@
 
 .open {
   transform: none;
-  transition: transform 0.42s var(--ease-out);
+  transition: transform 0.3s var(--ease-out);
 }
 
 .settled {

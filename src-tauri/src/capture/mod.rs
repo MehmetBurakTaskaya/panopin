@@ -33,7 +33,7 @@ use crate::{
     media::{decode, thumbnails, video, MediaStore},
     settings::PAUSED_UNTIL_RESUMED,
     store::{
-        identity,
+        identity::{self, Identity},
         items::{self, Counts, ImageRow, Kind, Source, TextCapture, VideoRow},
         retention,
     },
@@ -183,10 +183,47 @@ pub fn counts(app: &AppHandle) -> Counts {
         .unwrap_or_default()
 }
 
+/// Changes in a burst (an import, link previews arriving, typing in an editor) are announced once
+/// more at the end, at most this often; a single change is announced at once.
+const ANNOUNCE_GAP: Duration = Duration::from_millis(120);
+
+/// Whether a burst of changes is being announced, and whether more came during its gap.
+static ANNOUNCING: std::sync::Mutex<(bool, bool)> = std::sync::Mutex::new((false, false));
+
 pub(crate) fn changed(app: &AppHandle) {
     // New or edited images wait for their text to be read, new links for their preview.
     crate::ocr::wake(app);
     crate::links::wake(app);
+    let lock = || {
+        ANNOUNCING
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    };
+    {
+        let mut state = lock();
+        if state.0 {
+            state.1 = true;
+            return;
+        }
+        *state = (true, false);
+    }
+    announce(app);
+    let app = app.clone();
+    thread::spawn(move || loop {
+        thread::sleep(ANNOUNCE_GAP);
+        let mut state = lock();
+        if !state.1 {
+            state.0 = false;
+            return;
+        }
+        state.1 = false;
+        drop(state);
+        announce(&app);
+    });
+}
+
+/// Every window reads the items again once told; the tray shows the new counts.
+fn announce(app: &AppHandle) {
     let counts = counts(app);
     tray::show_counts(app, counts);
     if let Err(err) = app.emit("items:changed", counts) {
@@ -294,11 +331,24 @@ fn save_text(
 
 struct NewImage<'a> {
     pixels: RgbaImage,
+    identity: Identity,
     original: &'a [u8],
     ext: &'a str,
     source: Source,
     source_app: Option<&'a str>,
     source_path: Option<&'a str>,
+}
+
+/// A picture already kept comes forward instead of being stored again; returns its id.
+fn bring_forward(app: &AppHandle, pixels: &RgbaImage, now: i64) -> Result<(Identity, Option<i64>)> {
+    let (width, height) = pixels.dimensions();
+    let identity = identity::image_identity(width, height, pixels.as_raw());
+    let state = app.state::<AppState>();
+    let found = state.with_db(|db| items::find(db, Kind::Image, &identity))?;
+    if let Some(id) = found {
+        state.with_db(|db| items::bump(db, id, now))?;
+    }
+    Ok((identity, found))
 }
 
 fn save_clipboard_image(
@@ -308,21 +358,23 @@ fn save_clipboard_image(
     source_app: Option<&str>,
     now: i64,
 ) -> Result<i64> {
-    let (pixels, original) = match raw {
-        RawImage::Png(bytes) => (decode::decode(&bytes)?, bytes),
-        RawImage::Dib(bytes) => {
-            let pixels = decode::decode_dib(&bytes)?;
-            let png = decode::encode_png(&pixels)?;
-            (pixels, png)
-        }
-        RawImage::Encoded(bytes) => {
-            let pixels = decode::decode(&bytes)?;
-            let png = decode::encode_png(&pixels)?;
-            (pixels, png)
-        }
+    let (pixels, png) = match raw {
+        RawImage::Png(bytes) => (decode::decode(&bytes)?, Some(bytes)),
+        RawImage::Dib(bytes) => (decode::decode_dib(&bytes)?, None),
+        RawImage::Encoded(bytes) => (decode::decode(&bytes)?, None),
+    };
+    // A picture copied again is not encoded again.
+    let (identity, found) = bring_forward(app, &pixels, now)?;
+    if let Some(id) = found {
+        return Ok(id);
+    }
+    let original = match png {
+        Some(bytes) => bytes,
+        None => decode::encode_png(&pixels)?,
     };
     let image = NewImage {
         pixels,
+        identity,
         original: &original,
         ext: "png",
         source: Source::Clipboard,
@@ -345,8 +397,14 @@ fn save_file_image(
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
         .unwrap_or_else(|| "png".into());
     let path_text = path.to_string_lossy();
+    let pixels = decode::decode(bytes)?;
+    let (identity, found) = bring_forward(app, &pixels, now)?;
+    if found.is_some() {
+        return Ok(());
+    }
     let image = NewImage {
-        pixels: decode::decode(bytes)?,
+        pixels,
+        identity,
         original: bytes,
         ext: &ext,
         source,
@@ -356,18 +414,13 @@ fn save_file_image(
     save_image(app, media, &image, now).map(drop)
 }
 
-/// Stores a picture, or brings the same one forward; returns its id.
+/// Stores a new picture (`bring_forward` found none like it); returns its id.
 fn save_image(app: &AppHandle, media: &MediaStore, image: &NewImage<'_>, now: i64) -> Result<i64> {
     let state = app.state::<AppState>();
     let (width, height) = image.pixels.dimensions();
-    let identity = identity::image_identity(width, height, image.pixels.as_raw());
-    if let Some(id) = state.with_db(|db| items::find(db, Kind::Image, &identity))? {
-        state.with_db(|db| items::bump(db, id, now))?;
-        return Ok(id);
-    }
     let thumb = thumbnails::make(&image.pixels)?;
     let row = ImageRow {
-        identity,
+        identity: image.identity,
         width,
         height,
         byte_size: image.original.len() as u64,
@@ -549,10 +602,11 @@ fn written(
     for _ in 0..steps {
         let meta = fs::metadata(path).ok()?;
         let stamp = (meta.len(), meta.modified().ok()?);
+        // One write brings several events; the ones after the import cost no waiting.
+        if imported.get(path) == Some(&stamp) {
+            return None;
+        }
         if meta.len() > 0 && last_len == Some(meta.len()) && unlocked(path) {
-            if imported.get(path) == Some(&stamp) {
-                return None;
-            }
             if imported.len() > 256 {
                 imported.clear();
             }

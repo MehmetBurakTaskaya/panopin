@@ -33,6 +33,7 @@ import {
   setPinned,
   setTitle,
   shelfHidden,
+  shelfReady,
   startDrag,
   tagItems,
   takeDown,
@@ -66,8 +67,8 @@ import styles from './Shelf.module.css';
 import { ShelfRows } from './ShelfRows';
 import { rowsOf, useShelfData, useShelfSearch } from './useShelfData';
 
-// Matches the CSS transitions: open ~420 ms ease-out, close ~200 ms.
-const SETTLE_MS = 430;
+// Matches the CSS transitions: open ~300 ms ease-out, close ~200 ms.
+const SETTLE_MS = 310;
 const CLOSE_MS = 210;
 const TOAST_MS = 1100;
 /** Pixels a pressed card must move before it becomes a drag. */
@@ -116,7 +117,7 @@ function CheckIcon() {
 }
 
 export function ShelfApp() {
-  useSettings((s) => s.lang);
+  const lang = useSettings((s) => s.lang);
   const settings = useSettings((s) => s.settings);
   const update = useSettings((s) => s.update);
   const edge = settings?.shelfEdge ?? 'top';
@@ -165,7 +166,8 @@ export function ShelfApp() {
     if (settings) configure(settings.sounds.enabled, settings.sounds.volume);
   }, [settings]);
 
-  useEffect(() => dispatch({ type: 'setRows', rows }), [rows]);
+  // Before paint, so no frame shows the cursor on rows that are already gone.
+  useLayoutEffect(() => dispatch({ type: 'setRows', rows }), [rows]);
 
   useLayoutEffect(() => {
     if (!searchOpen) return;
@@ -288,11 +290,8 @@ export function ShelfApp() {
   };
 
   const copyAndReturn = async (ids: number[]) => {
-    // The card jiggles briefly before the board slides away and focus goes back.
-    if (await copy(ids, null)) {
-      await wait(260);
-      void closeShelf();
-    }
+    // Focus goes back at once; the card jiggles while the board slides away.
+    if (await copy(ids, null)) void closeShelf();
   };
 
   /** Shift+Enter (D-084): every paste takes the next card, in the order they were chosen. */
@@ -307,7 +306,6 @@ export function ShelfApp() {
     }
     play('copy');
     flash(ids, 'copied', 450);
-    await wait(260);
     void closeShelf();
   };
 
@@ -315,7 +313,6 @@ export function ShelfApp() {
     if (ids.length === 0) return;
     play('copy');
     flash(ids, 'copied', 450);
-    await wait(160);
     try {
       await whenSaved();
       const outcome = await pasteItems(ids);
@@ -665,7 +662,8 @@ export function ShelfApp() {
     const opened = win.listen<ShelfOpenEvent>('shelf:open', ({ payload }) => {
       window.clearTimeout(settleTimer);
       setMuted(payload.muted);
-      setNow(Date.now());
+      // Ages are counted in minutes: within the same minute the text cards need no new render.
+      setNow((before) => (Math.floor(Date.now() / 60_000) === Math.floor(before / 60_000) ? before : Date.now()));
       setMenu(null);
       setConfirm(null);
       setPicker(null);
@@ -702,7 +700,7 @@ export function ShelfApp() {
         setPhase('settled');
         if (!reducedMotion()) {
           const ids = KINDS.flatMap((kind) => latest.current.model.rows[kind].slice(0, 13));
-          flash(ids, 'settle', 800, true);
+          flash(ids, 'settle', 650, true);
         }
       }, reducedMotion() ? 0 : SETTLE_MS);
     });
@@ -721,6 +719,8 @@ export function ShelfApp() {
       // Rust hides the window only if no newer open happened in the meantime.
       window.setTimeout(() => void shelfHidden(payload.generation), reducedMotion() ? 0 : CLOSE_MS);
     });
+    // Openings asked for before this point wait in Rust; now they can come.
+    void Promise.all([opened, closed]).then(() => shelfReady());
     return () => {
       window.clearTimeout(settleTimer);
       void opened.then((unlisten) => unlisten());
@@ -751,6 +751,9 @@ export function ShelfApp() {
       const command = commandFor({ key: inlineArrow(event.key), code, ctrlKey, altKey, shiftKey, metaKey });
       if (!command) return;
       event.preventDefault();
+      // A held key moves the cursor on; it never repeats an action (a second paste, pin flips, one
+      // card after another taken down).
+      if (event.repeat && command.type !== 'model') return;
       handlers.current.run(command);
     };
     window.addEventListener('keydown', onKeyDown);
@@ -861,6 +864,7 @@ export function ShelfApp() {
                 pinnedOnly={pinnedOnly}
                 effects={effects}
                 now={now}
+                lang={lang}
                 reducedMotion={reducedMotion()}
                 onPageSize={onPageSize}
                 onCardClick={onCardClick}

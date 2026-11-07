@@ -62,9 +62,15 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['minute', 60_000],
 ];
 
+const ageFormats = new Map<string, Intl.RelativeTimeFormat>();
+
 /** "5 min. ago" style age of the last copy, in the UI language. */
 export function age(then: number, now: number, lang: string): string {
-  const format = new Intl.RelativeTimeFormat(lang, { numeric: 'auto', style: 'short' });
+  let format = ageFormats.get(lang);
+  if (!format) {
+    format = new Intl.RelativeTimeFormat(lang, { numeric: 'auto', style: 'short' });
+    ageFormats.set(lang, format);
+  }
   const elapsed = Math.max(0, now - then);
   for (const [unit, ms] of UNITS) {
     if (elapsed >= ms) return format.format(-Math.floor(elapsed / ms), unit);

@@ -154,17 +154,34 @@ export function LibraryApp() {
     (opener.current?.isConnected ? opener.current : itemsPane.current)?.focus({ preventScroll: true });
   };
 
-  const refresh = useCallback(async () => {
-    try {
-      const next = await libraryData();
-      // SQLite sorts names by ASCII case only; the sidebar and pickers follow the UI language.
-      const collator = new Intl.Collator(getLanguage(), { sensitivity: 'base', numeric: true });
-      const byName = (a: { id: number; name: string }, b: { id: number; name: string }) => collator.compare(a.name, b.name) || a.id - b.id;
-      setData({ items: next.items, folders: [...next.folders].sort(byName), tags: [...next.tags].sort(byName) });
-      setNow(Date.now());
-    } catch {
-      // The next change event tries again.
+  // One load at a time: changes during a load bring one more load after it, not one each.
+  const loading = useRef<Promise<void> | null>(null);
+  const again = useRef(false);
+  const refresh = useCallback((): Promise<void> => {
+    if (loading.current) {
+      again.current = true;
+      return loading.current;
     }
+    const load = async () => {
+      do {
+        again.current = false;
+        try {
+          const next = await libraryData();
+          // SQLite sorts names by ASCII case only; the sidebar and pickers follow the UI language.
+          const collator = new Intl.Collator(getLanguage(), { sensitivity: 'base', numeric: true });
+          const byName = (a: { id: number; name: string }, b: { id: number; name: string }) =>
+            collator.compare(a.name, b.name) || a.id - b.id;
+          setData({ items: next.items, folders: [...next.folders].sort(byName), tags: [...next.tags].sort(byName) });
+          setNow(Date.now());
+        } catch {
+          // The next change event tries again.
+        }
+      } while (again.current);
+    };
+    loading.current = load().finally(() => {
+      loading.current = null;
+    });
+    return loading.current;
   }, []);
 
   useEffect(() => {

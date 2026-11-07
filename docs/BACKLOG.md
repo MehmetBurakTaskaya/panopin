@@ -68,3 +68,20 @@ Ideas and out-of-scope items. Nothing here is planned for v1.
 - winget and Scoop manifests (planned after v1.0.0).
 - The SignPath Foundation application once v1.0.0 is published (docs/SIGNING.md).
 - An ARM64 build.
+
+## Left from the 1.6.0 review (D-085)
+
+- Showing and hiding the overlay costs about 0.8 s of CPU per opening in WebView2's processes,
+  whatever the board shows: the page is redrawn and the full-screen transparent surface rebuilt.
+  Keeping the window shown off screen, or sizing it to the board, needs its own design.
+- Copying a large picture prepares its bitmap before the clipboard gets anything; delayed rendering
+  (as the paste queue does) would hand it out at once. Shift+Enter prepares every item up front.
+- Recordings in watched folders hold the capture worker while they settle; folder events could get
+  their own thread.
+- The preview decodes the full original; decoding at the panel's size would be quicker.
+- Timed pauses and the update checks count time with `thread::sleep`, which stops while the PC
+  sleeps.
+- A retried update downloads the installer again.
+- The screen-edge dwell opens the shelf from the mouse hook's thread.
+- A text's character count and preview could be stored when it is written, so huge texts are not
+  read on every list.

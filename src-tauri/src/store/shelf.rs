@@ -14,7 +14,6 @@ use crate::{
 };
 
 /// Characters of a text sent to the shelf; the full text stays in the store.
-const PREVIEW_CHARS: usize = 400;
 /// Cards per row; the shelf shows the most recent ones.
 const ROW_LIMIT: usize = 300;
 /// Take-down steps that Backspace can undo in one session.
@@ -63,12 +62,16 @@ pub(crate) fn domain_of(url: &str) -> Option<String> {
     Some(host.strip_prefix("www.").map(str::to_owned).unwrap_or(host))
 }
 
-const COLUMNS: &str = "items.id, items.kind, items.title, items.text_body, items.url,
+// A text's first PREVIEW_CHARS characters and its length come from SQLite: a copied log of many
+// megabytes is not handed over whole on every refresh.
+const COLUMNS: &str =
+    "items.id, items.kind, items.title, substr(items.text_body, 1, 400), items.url,
     COALESCE(items.edit_width, items.width), COALESCE(items.edit_height, items.height),
     items.thumb_ext, items.pinned, items.last_copied_at, items.edit_width IS NOT NULL,
     COALESCE(items.edited_at, 0), items.link_title, items.link_site,
     items.link_image_ext IS NOT NULL, items.link_icon_ext IS NOT NULL,
-    COALESCE(items.link_checked_at, 0), items.duration_ms, items.link_description";
+    COALESCE(items.link_checked_at, 0), items.duration_ms, items.link_description,
+    length(items.text_body)";
 
 pub(crate) fn kind_of(name: &str) -> Kind {
     match name {
@@ -80,14 +83,15 @@ pub(crate) fn kind_of(name: &str) -> Kind {
 }
 
 fn shelf_item(row: &Row<'_>) -> rusqlite::Result<ShelfItem> {
-    let body: Option<String> = row.get(3)?;
     let url: Option<String> = row.get(4)?;
     Ok(ShelfItem {
         id: row.get(0)?,
         kind: kind_of(&row.get::<_, String>(1)?),
         title: row.get(2)?,
-        char_count: body.as_ref().map(|b| b.chars().count()),
-        preview: body.map(|b| b.chars().take(PREVIEW_CHARS).collect()),
+        char_count: row
+            .get::<_, Option<i64>>(19)?
+            .map(|n| usize::try_from(n).unwrap_or(0)),
+        preview: row.get(3)?,
         domain: url.as_deref().and_then(domain_of),
         url,
         width: row.get(5)?,
@@ -261,6 +265,9 @@ impl UndoStack {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The `substr(…, 1, 400)` of COLUMNS.
+    const PREVIEW_CHARS: usize = 400;
     use crate::store::{
         self,
         identity::text_identity,

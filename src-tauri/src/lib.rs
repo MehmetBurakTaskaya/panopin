@@ -215,6 +215,11 @@ fn log_failure(result: Result<()>, what: &str) {
 }
 
 pub fn run() {
+    // A panic ends Panopin at once (panic = "abort"): where it happened goes into the log first,
+    // so a crash can be told from a quit. Code places and messages only, never user data.
+    std::panic::set_hook(Box::new(|info| {
+        log::error!("Panopin stopped on an internal error: {info}");
+    }));
     // A second launch hands its right to take the foreground to the running instance, so the
     // shelf it opens there gets focus (the first launch gives this up at its first input).
     #[cfg(windows)]
@@ -280,7 +285,8 @@ pub fn run() {
                 .get("range")
                 .and_then(|value| value.to_str().ok())
                 .map(str::to_owned);
-            std::thread::spawn(move || {
+            // The blocking pool reuses its threads: a scrolled Library asks for many pictures.
+            tauri::async_runtime::spawn_blocking(move || {
                 let unavailable = || {
                     tauri::http::Response::builder()
                         .status(503)
@@ -288,16 +294,19 @@ pub fn run() {
                         .unwrap_or_default()
                 };
                 let response = match (capture::media(&app), app.try_state::<AppState>()) {
-                    (Some(store), Some(state)) => state
-                        .with_db(|db| Ok(media::serve(&store, db, &path, range.as_deref())))
-                        .unwrap_or_else(|_| unavailable()),
+                    (Some(store), Some(state)) => {
+                        match state.with_db(|db| Ok(media::locate(&store, db, &path))) {
+                            Ok(located) => media::respond(located, range.as_deref()),
+                            Err(_) => unavailable(),
+                        }
+                    }
                     _ => unavailable(),
                 };
                 responder.respond(response);
             });
         })
         .setup(|app| {
-            #[cfg(target_os = "macos")]
+            #[cfg(any(windows, target_os = "macos"))]
             shelf::prepare_overlay(app.handle());
             // updates::start reads the plugin's state, so it is registered first (D-065).
             app.handle()
@@ -388,6 +397,7 @@ pub fn run() {
             commands::open_settings,
             commands::close_shelf,
             commands::shelf_hidden,
+            commands::shelf_ready,
         ])
         .build(tauri::generate_context!());
     match app {
@@ -404,6 +414,8 @@ pub fn run() {
             app.run(|app, event| {
                 // Staged files are only for the session that handed them out.
                 if let tauri::RunEvent::Exit = event {
+                    // A start line with no quit line before it marks a session that ended otherwise.
+                    log::info!("Panopin quit");
                     transfer::finish_queue();
                     if let Some(staging) = app.try_state::<transfer::Staging>() {
                         staging.clean();

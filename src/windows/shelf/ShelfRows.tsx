@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, type MouseEvent, type PointerEvent, type Ref, type WheelEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, type MouseEvent, type PointerEvent, type Ref, type WheelEvent } from 'react';
 import { isRtl, t, type MessageKey } from '../../i18n';
 import type { Shelf, ShelfItem } from '../../ipc';
 import { KINDS, pageStart, type Kind, type ShelfModel } from '../../keyboard/shelfModel';
@@ -21,6 +21,7 @@ export interface ShelfRowsProps {
   pinnedOnly: boolean;
   effects: ReadonlyMap<number, Effect>;
   now: number;
+  lang: string;
   reducedMotion: boolean;
   onPageSize: (size: number) => void;
   onCardClick: (id: number, event: MouseEvent) => void;
@@ -58,7 +59,13 @@ export function ShelfRows(props: ShelfRowsProps) {
   }, [activeKind, model.rows, onPageSize]);
 
   // The page holding the cursor is aligned to the row's start edge, so the 1–9 badges are on screen.
+  // New items that only move the cursor's card along leave a row scrolled by hand where it is.
+  const lastScroll = useRef<{ id: number | null; rows: ShelfModel['rows'] } | null>(null);
   useLayoutEffect(() => {
+    const id = cursor ? (model.rows[cursor.kind][cursor.index] ?? null) : null;
+    const last = lastScroll.current;
+    lastScroll.current = { id, rows: model.rows };
+    if (last && last.id === id && last.rows !== model.rows) return;
     const track = cursor ? tracks.current[cursor.kind] : null;
     if (!track || !cursor) return;
     const slots = track.querySelectorAll<HTMLElement>('[data-id]');
@@ -78,7 +85,7 @@ export function ShelfRows(props: ShelfRowsProps) {
     const right = current.offsetLeft + current.offsetWidth + SCROLL_PAD - track.clientWidth;
     if (left < right) left = right;
     track.scrollTo({ left: Math.max(0, left), behavior });
-  }, [cursor, start, reducedMotion]);
+  }, [cursor, start, reducedMotion, model.rows]);
 
   const onWheel = (kind: Kind) => (event: WheelEvent) => {
     const track = tracks.current[kind];
@@ -87,7 +94,11 @@ export function ShelfRows(props: ShelfRowsProps) {
   };
 
   const activeId = cursor ? (model.rows[cursor.kind][cursor.index] ?? null) : null;
-  const selection = new Set(model.selection);
+  const selection = useMemo(() => new Set(model.selection), [model.selection]);
+  const byId = useMemo(
+    () => new Map(KINDS.flatMap((kind) => shelf[kind]).map((item) => [item.id, item] as const)),
+    [shelf],
+  );
 
   return (
     <div
@@ -100,7 +111,6 @@ export function ShelfRows(props: ShelfRowsProps) {
       tabIndex={-1}
     >
       {KINDS.filter((kind) => !hidden[kind]).map((kind) => {
-        const byId = new Map(shelf[kind].map((item) => [item.id, item] as const));
         const items = model.rows[kind].map((id) => byId.get(id)).filter((item): item is ShelfItem => !!item);
         const active = cursor?.kind === kind;
         return (
@@ -125,7 +135,9 @@ export function ShelfRows(props: ShelfRowsProps) {
                   badge={active && index >= start && index < start + model.pageSize ? index - start + 1 : null}
                   effect={effects.get(item.id) ?? null}
                   order={Math.min(index, 12)}
-                  now={now}
+                  eager={index < 9}
+                  now={item.kind === 'text' ? now : 0}
+                  lang={props.lang}
                   terms={props.terms}
                   withoutAccents={props.withoutAccents}
                   onClick={props.onCardClick}

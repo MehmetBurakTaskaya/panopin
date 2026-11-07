@@ -11,6 +11,9 @@ const MIN_GAP: Record<SoundName, number> = { copy: 70, pin: 120, unpin: 120, dro
 const GAIN: Record<SoundName, number> = { copy: 0.7, pin: 1, unpin: 1, drop: 0.8, back: 0.8, open: 0.6, close: 0.45 };
 const MAX_VOICES = 3;
 const VOICE_WINDOW_MS = 160;
+// A running AudioContext keeps rendering silence about every 10 ms, so it rests once the last
+// sound has died away; the next sound wakes it.
+const REST_AFTER_MS = 2000;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -20,6 +23,14 @@ let muted = false;
 let volume = 0.3;
 const lastPlayed: Partial<Record<SoundName, number>> = {};
 let recent: number[] = [];
+let restTimer = 0;
+
+function restLater(afterMs: number): void {
+  window.clearTimeout(restTimer);
+  restTimer = window.setTimeout(() => {
+    if (ctx?.state === 'running') void ctx.suspend();
+  }, afterMs);
+}
 
 function audio(): Out | null {
   if (!ctx) {
@@ -147,6 +158,7 @@ export function play(name: SoundName, delay = 0): void {
   out.connect(a.out);
   SOUNDS[name]({ ...a, out }, delay);
   window.setTimeout(() => out.disconnect(), (delay + 1) * 1000);
+  restLater((delay + 1) * 1000 + REST_AFTER_MS);
 }
 
 /** Settings → General: sounds on or off, level 0–100. */
@@ -154,6 +166,7 @@ export function configure(on: boolean, level: number): void {
   enabled = on;
   volume = Math.max(0, Math.min(1, level / 100));
   if (ctx && master) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.02);
+  if (!on) restLater(0);
 }
 
 /** Silences the shelf while a full-screen app, presentation or focus session is active (D-021). */

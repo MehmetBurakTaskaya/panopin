@@ -25,12 +25,20 @@ export type LanguageSetting = 'system' | Lang;
 export type MessageKey = keyof typeof en;
 type Params = Record<string, string | number>;
 
-// Every locale file comes with the window's code, so t() stays synchronous.
-const files = import.meta.glob<Record<string, string>>('../../locales/*.json', { eager: true, import: 'default' });
-const dictionaries: Record<string, Record<string, string>> = Object.fromEntries(
-  Object.entries(files).map(([path, dictionary]) => [path.slice(path.lastIndexOf('/') + 1, -'.json'.length), dictionary]),
-);
+// English comes with every window; another language is loaded once it is chosen (loadLanguage), so
+// a window carries only the language it speaks. t() stays synchronous: until a language has
+// arrived, its words come in English.
+const loaders = import.meta.glob<Record<string, string>>(['../../locales/*.json', '!../../locales/en.json'], {
+  import: 'default',
+});
+const dictionaries: Partial<Record<string, Record<string, string>>> = { en };
 let current: Lang = 'en';
+
+/** Loads a language's words; the settings do this before they switch to it. */
+export async function loadLanguage(lang: Lang): Promise<void> {
+  const load = loaders[`../../locales/${lang}.json`];
+  if (!dictionaries[lang] && load) dictionaries[lang] = await load();
+}
 const platform = detectPlatform();
 
 // The first part of a language tag, for the languages that need no more than that.

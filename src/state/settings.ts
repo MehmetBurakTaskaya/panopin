@@ -1,6 +1,6 @@
 import { listen } from '@tauri-apps/api/event';
 import { create } from 'zustand';
-import { resolveLanguage, setLanguage, type Lang } from '../i18n';
+import { loadLanguage, resolveLanguage, setLanguage, type Lang } from '../i18n';
 import { getSettings, updateSettings, type Settings, type SettingsPatch } from '../ipc';
 
 interface SettingsState {
@@ -12,8 +12,10 @@ interface SettingsState {
   update: (patch: SettingsPatch) => Promise<void>;
 }
 
-function applyLanguage(settings: Settings): Lang {
+/** The language the settings ask for, with its words loaded first. */
+async function applyLanguage(settings: Settings): Promise<Lang> {
   const lang = resolveLanguage(settings.language);
+  await loadLanguage(lang);
   setLanguage(lang);
   return lang;
 }
@@ -24,12 +26,12 @@ export const useSettings = create<SettingsState>((set) => ({
   error: null,
   load: async () => {
     const settings = await getSettings();
-    set({ settings, lang: applyLanguage(settings), error: null });
+    set({ settings, lang: await applyLanguage(settings), error: null });
   },
   update: async (patch) => {
     try {
       const settings = await updateSettings(patch);
-      set({ settings, lang: applyLanguage(settings), error: null });
+      set({ settings, lang: await applyLanguage(settings), error: null });
     } catch (err) {
       set({ error: String(err) });
     }
@@ -38,7 +40,11 @@ export const useSettings = create<SettingsState>((set) => ({
 
 /** Keeps this window in sync when settings change in another window. */
 export function followSettingsChanges(): Promise<() => void> {
-  return listen<Settings>('settings:changed', ({ payload }) => {
-    useSettings.setState({ settings: payload, lang: applyLanguage(payload), error: null });
+  let latest = 0;
+  return listen<Settings>('settings:changed', async ({ payload }) => {
+    // A language still loading must not overwrite a change that came after it.
+    const change = ++latest;
+    const lang = await applyLanguage(payload);
+    if (change === latest) useSettings.setState({ settings: payload, lang, error: null });
   });
 }

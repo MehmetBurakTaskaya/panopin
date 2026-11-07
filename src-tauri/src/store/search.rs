@@ -87,53 +87,53 @@ fn join(parts: &[Option<String>]) -> String {
 /// Extra: note, tags, a link's site and the text found in an image.
 fn document(conn: &Connection, id: i64) -> Result<Option<Document>> {
     Ok(conn
-        .query_row(
+        .prepare_cached(
             "SELECT kind, title, link_title, text_body, url, note, link_site, ocr_text,
                     (SELECT group_concat(tags.name, ' ')
                      FROM item_tags JOIN tags ON tags.id = item_tags.tag_id
                      WHERE item_tags.item_id = items.id)
              FROM items WHERE id = ?1",
-            [id],
-            |row| {
-                let kind: String = row.get(0)?;
-                let body: Option<String> = if kind == "link" {
-                    row.get(4)?
-                } else {
-                    row.get::<_, Option<String>>(3)?
-                        .map(|text| text.chars().take(BODY_CHARS).collect())
-                };
-                let url: Option<String> = row.get(4)?;
-                let domain = url.as_deref().and_then(super::shelf::domain_of);
-                Ok(Document {
-                    title: join(&[row.get(1)?, row.get(2)?]),
-                    body: body.unwrap_or_default(),
-                    extra: join(&[row.get(5)?, row.get(8)?, row.get(6)?, domain, row.get(7)?]),
-                })
-            },
-        )
+        )?
+        .query_row([id], |row| {
+            let kind: String = row.get(0)?;
+            let body: Option<String> = if kind == "link" {
+                row.get(4)?
+            } else {
+                row.get::<_, Option<String>>(3)?
+                    .map(|text| text.chars().take(BODY_CHARS).collect())
+            };
+            let url: Option<String> = row.get(4)?;
+            let domain = url.as_deref().and_then(super::shelf::domain_of);
+            Ok(Document {
+                title: join(&[row.get(1)?, row.get(2)?]),
+                body: body.unwrap_or_default(),
+                extra: join(&[row.get(5)?, row.get(8)?, row.get(6)?, domain, row.get(7)?]),
+            })
+        })
         .optional()?)
 }
 
 /// Brings one item's index row up to date (or removes it when the item is gone).
 pub fn index(conn: &Connection, id: i64) -> Result<()> {
-    conn.execute("DELETE FROM search WHERE rowid = ?1", [id])?;
+    conn.prepare_cached("DELETE FROM search WHERE rowid = ?1")?
+        .execute([id])?;
     let Some(doc) = document(conn, id)? else {
         return Ok(());
     };
     let (title, body, extra) = (fold(&doc.title), fold(&doc.body), fold(&doc.extra));
-    conn.execute(
+    conn.prepare_cached(
         "INSERT INTO search (rowid, title, body, extra, title_bare, body_bare, extra_bare)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![
-            id,
-            title,
-            body,
-            extra,
-            bare(&title),
-            bare(&body),
-            bare(&extra)
-        ],
-    )?;
+    )?
+    .execute(params![
+        id,
+        title,
+        body,
+        extra,
+        bare(&title),
+        bare(&body),
+        bare(&extra)
+    ])?;
     Ok(())
 }
 
@@ -202,7 +202,8 @@ pub fn outdated(conn: &Connection) -> Result<bool> {
 }
 
 pub fn clear(conn: &Connection) -> Result<()> {
-    conn.execute("DELETE FROM search", [])?;
+    // The index's own command: far quicker than deleting its rows one by one under the lock.
+    conn.execute("INSERT INTO search (search) VALUES ('delete-all')", [])?;
     Ok(())
 }
 

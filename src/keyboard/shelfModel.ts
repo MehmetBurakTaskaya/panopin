@@ -68,7 +68,11 @@ function moveTo(model: ShelfModel, kind: Kind, index: number): ShelfModel {
 export function reduce(model: ShelfModel, action: Action): ShelfModel {
   const { rows, cursor } = model;
   if (action.type === 'setRows') return keepCursor(model, action.rows);
-  if (action.type === 'setPageSize') return { ...model, pageSize: clampPage(action.pageSize) };
+  if (action.type === 'setPageSize') {
+    const pageSize = clampPage(action.pageSize);
+    // The same model when nothing changed, so measuring the rows never renders the board again.
+    return pageSize === model.pageSize ? model : { ...model, pageSize };
+  }
   if (action.type === 'click') return click(model, action.id, action.ctrl, action.shift);
   if (!cursor) return model;
   const length = rows[cursor.kind].length;

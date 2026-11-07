@@ -835,3 +835,52 @@ The owner chose on 2026-10-31 that each paste gives the next item ("Ctrl+V sıra
   300 ms give the same item twice.
 - The line of keys along the board ends with "Keys F1" on Windows, where F1 is the help key, and
   with "Keys ?" on a Mac, where F1 needs fn. Both keys work on both systems.
+
+## D-085 Faster and lighter (1.6.0) — Accepted
+The owner asked on 2026-11-07 for every function to be timed and for an update that removes the
+delays and fixes what turned up. Panopin 1.5.1 was measured on the dev PC (1920×1080 at 125 %,
+from the key going down to pixels on screen, read with a screen probe every 7 ms), and the backend
+and the frontend were reviewed. The figures are in MANUAL_TESTS.
+- **No waiting after Enter.** Enter, Ctrl+Enter and Shift+Enter waited 260 or 160 ms so that the
+  card could jiggle before the board went. Focus now goes back at once and the card jiggles while
+  the board slides away.
+- **Shorter opening.** The board slides in over 300 ms instead of 420 ms, and the cards settle in
+  0.4 s instead of 0.5 s. The look is the same; the mouse works from 310 ms on.
+- **Hiding never depends on the page alone.** Rust hides the overlay 700 ms after a close if the
+  page has not, so a page that hangs never leaves an invisible window over the screen. Openings
+  asked for before the page listens wait in Rust until it says it is ready (right after start).
+  Windows' fade on showing and hiding the overlay is off; it kept a closed board on screen for
+  about 150 ms.
+- **Nothing runs while idle.** The Web Audio context kept rendering silence after the first sound;
+  it now rests 2 s after the last one. Idle CPU was about 1 % of a core, all of it there.
+- **Less work per opening.** Cards render again only when their item changed: refreshes keep
+  unchanged items as the same objects, ages are counted in minutes, and the language is a prop.
+  The pin is drawn only on pinned cards. The first page of each row loads its pictures at once,
+  since lazy pictures wait for a window on screen.
+- **The database lock is held only for the database.** Media requests read their files after the
+  lock is released, on a reused thread. Reads and heavy commands (lists, searches, the Library,
+  deleting for good) run off the main thread, which also handles the shortcuts. Commands whose
+  order matters (text autosave, settings, shortcuts) stay on it.
+- **Fewer announcements.** A burst of changes (an import, link previews, typing) is announced as
+  `items:changed` once at once and once more at the end, at most every 120 ms. The Library loads
+  once at a time with one more load after it, sorts on keys worked out once, and its grid keeps
+  its tiles while rows scroll.
+- **Captures cost less.** A picture copied again comes forward without being encoded again, and
+  thumbnails shrink by averaging boxes of pixels. The picture, PNG, JPEG, hashing, markup and
+  SQLite code is built for speed (`opt-level = 3`), the rest for size. Lists take a text's first
+  400 characters and its length from SQLite instead of the whole text.
+- **Bugs.** A clipboard another program keeps open (Windows' clipboard history, the WSL bridge) is
+  read again after 100, 300 and 1000 ms instead of the copy being lost; the app in front at the
+  copy still decides the exclusions. OCR no longer marks a new picture unreadable when it reads it
+  between the row and its files. A held key no longer repeats an action. A row scrolled by hand
+  stays where it is when a new item arrives. The Library's section names follow a language change.
+  A Store app's password field is recognised on Ctrl+Enter without a 300 ms wait. A file handed
+  out again is staged once, not once per copy.
+- **Startup.** Each window loads its own code and only the language it speaks (English is built
+  in); its settings, look and code arrive together. A panic writes where it happened into the log
+  before Panopin ends, and a quit leaves a line too, so a crash can be told from a quit.
+- **Left for later (BACKLOG).** Opening and closing still costs about 0.8 s of CPU in WebView2's
+  processes, nearly all of it for showing and hiding the full-screen overlay; neither the textures
+  nor the animations matter (measured with each part switched off). Copies of large pictures,
+  Shift+Enter with many pictures, recordings in watched folders, the preview's full-size decode and
+  timers across sleep are noted there too.

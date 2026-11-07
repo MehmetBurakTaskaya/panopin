@@ -19,7 +19,12 @@ export interface CardProps {
   effect: Effect | null;
   /** Position in the row, for the staggered settle after opening (capped by the caller). */
   order: number;
+  /** The first page of a row loads its picture at once: lazy pictures wait for a window on screen. */
+  eager: boolean;
+  /** For a text card's age; the caller passes 0 to the others, so a new opening skips them. */
   now: number;
+  /** The UI language, so the card's words change with it. */
+  lang: string;
   /** Words of the shelf search to mark; null while not searching. */
   terms: string[] | null;
   withoutAccents: boolean;
@@ -45,24 +50,38 @@ function label(item: ShelfItem): string {
   return item.pinned ? `${text}, ${t('shelf.card.pinned')}` : text;
 }
 
+const numberFormats = new Map<string, Intl.NumberFormat>();
+
 function charCount(count: number): string {
-  const formatted = new Intl.NumberFormat(formatLocale()).format(count);
-  return count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: formatted });
+  const locale = formatLocale();
+  let format = numberFormats.get(locale);
+  if (!format) {
+    format = new Intl.NumberFormat(locale);
+    numberFormats.set(locale, format);
+  }
+  return count === 1 ? t('shelf.card.charsOne') : t('shelf.card.chars', { count: format.format(count) });
 }
 
 interface BodyProps {
   item: ShelfItem;
+  eager: boolean;
   now: number;
   terms: string[] | null;
   withoutAccents: boolean;
 }
 
-function Body({ item, now, terms, withoutAccents }: BodyProps) {
+function Body({ item, eager, now, terms, withoutAccents }: BodyProps) {
   if (item.kind === 'image' || item.kind === 'video') {
     return (
       <div className={styles.ph}>
         {item.hasThumb && (
-          <img src={mediaUrl('thumb', item.id, item.thumbVersion)} alt="" draggable={false} loading="lazy" decoding="async" />
+          <img
+            src={mediaUrl('thumb', item.id, item.thumbVersion)}
+            alt=""
+            draggable={false}
+            loading={eager ? 'eager' : 'lazy'}
+            decoding="async"
+          />
         )}
         {item.kind === 'video' && (
           <>
@@ -92,13 +111,26 @@ function Body({ item, now, terms, withoutAccents }: BodyProps) {
     <>
       {item.linkImage && (
         <div className={styles.lkThumb}>
-          <img src={mediaUrl('link-image', item.id, item.linkVersion)} alt="" draggable={false} loading="lazy" decoding="async" />
+          <img
+            src={mediaUrl('link-image', item.id, item.linkVersion)}
+            alt=""
+            draggable={false}
+            loading={eager ? 'eager' : 'lazy'}
+            decoding="async"
+          />
           {isVideoLink(item.url) && <span className={styles.play} aria-hidden="true" />}
         </div>
       )}
       <div className={styles.lkBody}>
         {item.linkIcon ? (
-          <img className={styles.fav} src={mediaUrl('link-icon', item.id, item.linkVersion)} alt="" draggable={false} />
+          <img
+            className={styles.fav}
+            src={mediaUrl('link-icon', item.id, item.linkVersion)}
+            alt=""
+            draggable={false}
+            loading={eager ? 'eager' : 'lazy'}
+            decoding="async"
+          />
         ) : (
           <span className={styles.fav} style={{ background: tile.colour }} aria-hidden="true">
             {tile.letter}
@@ -120,7 +152,7 @@ function Body({ item, now, terms, withoutAccents }: BodyProps) {
 }
 
 function CardView(props: CardProps) {
-  const { item, cursor, selected, badge, effect, order, now, terms, withoutAccents } = props;
+  const { item, cursor, selected, badge, effect, order, eager, now, terms, withoutAccents } = props;
   const { onClick, onContextMenu, onDoubleClick, onPointerDown } = props;
   const style = {
     '--r': `${tilt(item.id, 'r', 3).toFixed(2)}deg`,
@@ -151,8 +183,9 @@ function CardView(props: CardProps) {
           <span className={styles.tape} aria-hidden="true">
             <i />
           </span>
-          <PinIcon className={styles.pin} />
-          <Body item={item} now={now} terms={terms} withoutAccents={withoutAccents} />
+          {/* The pin is drawn only where it shows, or while it goes in or comes out. */}
+          {(item.pinned || effect === 'pinning' || effect === 'unpinning') && <PinIcon className={styles.pin} />}
+          <Body item={item} eager={eager} now={now} terms={terms} withoutAccents={withoutAccents} />
           {badge !== null && (
             <span className={styles.num} aria-hidden="true">
               {badge}

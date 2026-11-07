@@ -164,7 +164,11 @@ fn changed_names(bytes: &[u8]) -> Vec<String> {
                 .iter()
                 .map(|c| u16::from_le_bytes(*c))
                 .collect();
-            names.push(String::from_utf16_lossy(&units));
+            let name = String::from_utf16_lossy(&units);
+            // A file being written is reported again and again in one batch; once is enough.
+            if !names.contains(&name) {
+                names.push(name);
+            }
         }
         if next == 0 {
             break;

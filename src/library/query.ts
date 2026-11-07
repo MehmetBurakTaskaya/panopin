@@ -101,17 +101,21 @@ export function sortItems(
   const collator = new Intl.Collator(lang, { sensitivity: 'base', numeric: true });
   const firstTag = (item: LibraryItem) =>
     item.tags.map(tagName).sort((a, b) => collator.compare(a, b))[0] ?? null;
+  // Titles and first tags are worked out once per item, not again in every comparison.
+  const keys = new Map<number, string | null>();
+  if (sort === 'title') for (const item of items) keys.set(item.id, displayTitle(item));
+  if (sort === 'tags') for (const item of items) keys.set(item.id, firstTag(item));
   const compare = (a: LibraryItem, b: LibraryItem): number => {
     switch (sort) {
       case 'added':
         return a.createdAt - b.createdAt;
       case 'title':
-        return collator.compare(displayTitle(a), displayTitle(b));
+        return collator.compare(keys.get(a.id) ?? '', keys.get(b.id) ?? '');
       case 'kind':
         return (KIND_ORDER[a.kind] ?? 9) - (KIND_ORDER[b.kind] ?? 9);
       case 'tags': {
-        const ta = firstTag(a);
-        const tb = firstTag(b);
+        const ta = keys.get(a.id) ?? null;
+        const tb = keys.get(b.id) ?? null;
         // Untagged items always come last.
         if (ta === null || tb === null) return ta === tb ? 0 : ta === null ? (descending ? -1 : 1) : descending ? 1 : -1;
         return collator.compare(ta, tb);

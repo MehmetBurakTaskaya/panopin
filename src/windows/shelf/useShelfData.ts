@@ -1,7 +1,7 @@
 import { listen } from '@tauri-apps/api/event';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { listShelf, searchShelf, type Shelf } from '../../ipc';
-import type { Kind, Rows } from '../../keyboard/shelfModel';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { listShelf, searchShelf, type Shelf, type ShelfItem } from '../../ipc';
+import { KINDS, type Kind, type Rows } from '../../keyboard/shelfModel';
 
 /** Typing settles this long before the shelf asks Rust for matches. */
 const SEARCH_DELAY_MS = 70;
@@ -15,6 +15,25 @@ export function rowsOf(shelf: Shelf, hidden: Record<Kind, boolean>, pinnedOnly: 
   return { image: ids('image'), text: ids('text'), link: ids('link') };
 }
 
+const sameItem = (a: ShelfItem, b: ShelfItem) =>
+  (Object.keys(b) as (keyof ShelfItem)[]).every((key) => a[key] === b[key]);
+
+/** The new rows with every unchanged item kept as the same object, so its memoised card does not
+ * render again; the previous shelf itself when nothing changed (a note or a tag in the Library). */
+export function reuseItems(previous: Shelf, next: Shelf): Shelf {
+  const before = new Map(KINDS.flatMap((kind) => previous[kind]).map((item) => [item.id, item] as const));
+  let same = true;
+  const rows = { ...next };
+  for (const kind of KINDS) {
+    rows[kind] = next[kind].map((item) => {
+      const old = before.get(item.id);
+      return old && sameItem(old, item) ? old : item;
+    });
+    same &&= rows[kind].length === previous[kind].length && rows[kind].every((item, i) => item === previous[kind][i]);
+  }
+  return same ? previous : rows;
+}
+
 /** Shelf contents, kept current while the window is hidden so an opening shows them at once. */
 export function useShelfData() {
   const [shelf, setShelf] = useState<Shelf>(EMPTY_SHELF);
@@ -25,7 +44,7 @@ export function useShelfData() {
     try {
       const next = await listShelf();
       // An older answer arriving late must not overwrite a newer one.
-      if (request === latestRequest.current) setShelf(next);
+      if (request === latestRequest.current) setShelf((previous) => reuseItems(previous, next));
       return next;
     } catch {
       return null;
@@ -55,7 +74,7 @@ export function useShelfSearch(query: string, withoutAccents: boolean) {
     }
     try {
       const next = await searchShelf(text);
-      if (request === latestRequest.current) setResults(next);
+      if (request === latestRequest.current) setResults((previous) => (previous ? reuseItems(previous, next) : next));
     } catch {
       // The previous results stay until the next keystroke.
     }
@@ -67,11 +86,17 @@ export function useShelfSearch(query: string, withoutAccents: boolean) {
     return () => window.clearTimeout(timer);
   }, [query, withoutAccents, run]);
 
+  // One listener while a search is typed, not one per keystroke; it reads the newest query.
+  const latestQuery = useRef(query);
+  useLayoutEffect(() => {
+    latestQuery.current = query;
+  });
+  const searching = query.trim() !== '';
   useEffect(() => {
-    if (!query.trim()) return;
-    const unlisten = listen('items:changed', () => void run(query));
+    if (!searching) return;
+    const unlisten = listen('items:changed', () => void run(latestQuery.current));
     return () => void unlisten.then((stop) => stop());
-  }, [query, run]);
+  }, [searching, run]);
 
   return results;
 }

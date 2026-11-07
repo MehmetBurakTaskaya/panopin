@@ -94,25 +94,27 @@ pub fn load(conn: &Connection) -> Result<LibraryData> {
     let mut folders_of = memberships(conn, "SELECT item_id, folder_id FROM item_folders")?;
     let mut tags_of = memberships(conn, "SELECT item_id, tag_id FROM item_tags")?;
     let mut stmt = conn.prepare(&format!(
-        "SELECT id, kind, title, note, text_body, url, COALESCE(edit_width, width),
+        "SELECT id, kind, title, note, substr(text_body, 1, {PREVIEW_CHARS}), url, COALESCE(edit_width, width),
                 COALESCE(edit_height, height), thumb_ext, pinned, {SAVED}, edit_width IS NOT NULL,
                 COALESCE(edited_at, 0), created_at, last_copied_at, trashed_at, source, source_app,
                 source_path, byte_size, link_title, link_description, link_site,
                 link_image_ext IS NOT NULL, link_icon_ext IS NOT NULL, COALESCE(link_checked_at, 0),
-                duration_ms
+                duration_ms, length(text_body)
          FROM items ORDER BY last_copied_at DESC, id DESC"
     ))?;
     let rows = stmt.query_map([], |row| {
         let id: i64 = row.get(0)?;
-        let body: Option<String> = row.get(4)?;
         let url: Option<String> = row.get(5)?;
         Ok(LibraryItem {
             id,
             kind: row.get(1)?,
             title: row.get(2)?,
             note: row.get(3)?,
-            char_count: body.as_ref().map(|b| b.chars().count()),
-            preview: body.map(|b| b.chars().take(PREVIEW_CHARS).collect()),
+            // The first characters and the length only: a huge text is not handed over whole.
+            char_count: row
+                .get::<_, Option<i64>>(27)?
+                .map(|n| usize::try_from(n).unwrap_or(0)),
+            preview: row.get(4)?,
             domain: url.as_deref().and_then(domain_of),
             url,
             width: row.get(6)?,

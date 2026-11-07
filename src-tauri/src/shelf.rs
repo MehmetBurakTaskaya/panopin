@@ -20,6 +20,18 @@ pub const LABEL: &str = "shelf";
 /// A tray click right after a focus-loss close is the same gesture, not a request to reopen.
 const REOPEN_GUARD: Duration = Duration::from_millis(400);
 
+/// The webview hides the overlay once its slide-out is over; if it never says so (busy or gone),
+/// the overlay is hidden anyway after this, so an invisible window never covers the screen.
+const HIDE_FALLBACK: Duration = Duration::from_millis(700);
+
+/// An opening asked for before the webview could show it, made once the webview is ready.
+#[derive(Debug, Clone, Copy)]
+struct PendingOpen {
+    search: bool,
+    notice: Option<&'static str>,
+    on: Option<(i64, &'static str)>,
+}
+
 /// Every open and close bumps the generation, so a slow close animation can never hide a
 /// shelf that was reopened in the meantime.
 #[derive(Debug, Default)]
@@ -34,6 +46,9 @@ pub struct ShelfGate {
     focused: bool,
     /// Open dialogs of the shelf's own (the export folder picker) that have taken the focus.
     held: u32,
+    /// The webview listens for openings; until then the overlay stays hidden (right after start).
+    ready: bool,
+    pending: Option<PendingOpen>,
 }
 
 impl ShelfGate {
@@ -180,6 +195,18 @@ pub fn open_with_notice(app: &AppHandle, notice: &'static str) -> Result<()> {
     show(app, false, Some(notice), None)
 }
 
+/// The webview has its listeners: an opening asked for before that happens now.
+pub fn mark_ready(app: &AppHandle) -> Result<()> {
+    let pending = with_gate(app, |gate| {
+        gate.ready = true;
+        gate.pending.take()
+    });
+    match pending {
+        Some(open) => show(app, open.search, open.notice, open.on),
+        None => Ok(()),
+    }
+}
+
 fn show(
     app: &AppHandle,
     search: bool,
@@ -189,10 +216,19 @@ fn show(
     let Some(window) = app.get_webview_window(LABEL) else {
         return Ok(());
     };
+    // Shown before the page listens, the overlay would cover the screen without a board.
+    let waiting = with_gate(app, |gate| {
+        if !gate.ready {
+            gate.pending = Some(PendingOpen { search, notice, on });
+        }
+        !gate.ready
+    });
+    if waiting {
+        return Ok(());
+    }
     // Recorded before anything is shown; the shelf itself never counts as the previous window.
     let own = own_hwnd(&window);
     let previous = focus::foreground().filter(|target| Some(target.hwnd) != own);
-    let muted = system_state::wants_quiet();
     // An Alt still held from the shortcut must not open the menu bar of the app left behind.
     focus::mask_alt_release();
     let generation = with_gate(app, |gate| {
@@ -213,6 +249,8 @@ fn show(
     if window.is_focused().unwrap_or(false) {
         with_gate(app, |gate| gate.focused = true);
     }
+    // Asked after the window is up: the answer only decides the sounds.
+    let muted = system_state::wants_quiet();
     let event = OpenEvent {
         generation,
         search,
@@ -233,6 +271,35 @@ fn own_hwnd(window: &WebviewWindow) -> Option<isize> {
 #[cfg(not(windows))]
 fn own_hwnd(_window: &WebviewWindow) -> Option<isize> {
     None
+}
+
+/// The overlay on Windows: shown and hidden without the system's fade, which kept a board that had
+/// already slid away on screen for about 150 ms more. Runs once in setup.
+#[cfg(windows)]
+pub fn prepare_overlay(app: &AppHandle) {
+    use windows::{
+        core::BOOL,
+        Win32::{
+            Foundation::HWND,
+            Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_TRANSITIONS_FORCEDISABLED},
+        },
+    };
+    let Some(Ok(hwnd)) = app.get_webview_window(LABEL).map(|window| window.hwnd()) else {
+        return;
+    };
+    let off = BOOL::from(true);
+    // SAFETY: the shelf's live window, and a BOOL that outlives the call.
+    let result = unsafe {
+        DwmSetWindowAttribute(
+            HWND(hwnd.0),
+            DWMWA_TRANSITIONS_FORCEDISABLED,
+            (&raw const off).cast(),
+            size_of::<BOOL>() as u32,
+        )
+    };
+    if let Err(err) = result {
+        log::warn!("the shelf keeps the system's show and hide animation: {err}");
+    }
 }
 
 /// The overlay on macOS (D-073). Since macOS 14 an app in the background may only ask to come
@@ -312,6 +379,13 @@ pub fn request_close(app: &AppHandle, restore: bool) -> Result<()> {
             focus::restore(target);
         }
         app.emit_to(LABEL, "shelf:close", CloseEvent { generation })?;
+        let app = app.clone();
+        std::thread::spawn(move || {
+            std::thread::sleep(HIDE_FALLBACK);
+            if let Err(err) = finish_close(&app, generation) {
+                log::warn!("the shelf could not be hidden: {err}");
+            }
+        });
     }
     Ok(())
 }

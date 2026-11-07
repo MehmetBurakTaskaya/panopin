@@ -98,47 +98,47 @@ fn serve_video(file: &Path, range: Option<&str>) -> Response<Vec<u8>> {
 /// is deleted for good or the history is cleared (D-072). Reading the file again is cheap.
 const NO_STORE: &str = "no-store";
 
-pub fn serve(
-    store: &MediaStore,
-    db: &Connection,
-    path: &str,
-    range: Option<&str>,
-) -> Response<Vec<u8>> {
-    let empty = |status: u16| {
-        Response::builder()
-            .status(status)
-            .body(Vec::new())
-            .unwrap_or_default()
-    };
-    let Some((variant, id)) = path
+/// The file a media request names, or the status to answer with.
+pub type Located = std::result::Result<(PathBuf, String), u16>;
+
+/// The database part of a media request: which file it names. Only this runs under the database
+/// lock; the file is read afterwards, so captures and commands never wait for a picture to load.
+pub fn locate(store: &MediaStore, db: &Connection, path: &str) -> Located {
+    let (variant, id) = path
         .trim_start_matches('/')
         .split_once('/')
         .and_then(|(variant, id)| Some((variant, id.parse::<i64>().ok()?)))
-    else {
-        return empty(400);
-    };
+        .ok_or(400u16)?;
     // Link pictures were re-encoded by Panopin (D-057); they live next to the item's media.
     let column = match variant {
         "thumb" => "thumb_ext",
         "original" => "media_ext",
         "link-image" => "link_image_ext",
         "link-icon" => "link_icon_ext",
-        _ => return empty(404),
+        _ => return Err(404),
     };
     let ext: Option<String> = db
-        .query_row(
-            &format!("SELECT {column} FROM items WHERE id = ?1"),
-            [id],
-            |row| row.get(0),
-        )
-        .optional()
+        .prepare_cached(&format!("SELECT {column} FROM items WHERE id = ?1"))
+        .and_then(|mut statement| statement.query_row([id], |row| row.get(0)).optional())
         .ok()
         .flatten()
         .flatten();
-    let Some(ext) = ext else {
-        return empty(404);
+    let ext = ext.ok_or(404u16)?;
+    Ok((store.dir(id).join(format!("{variant}.{ext}")), ext))
+}
+
+/// Answers a located media request from its file.
+pub fn respond(located: Located, range: Option<&str>) -> Response<Vec<u8>> {
+    let empty = |status: u16| {
+        Response::builder()
+            .status(status)
+            .body(Vec::new())
+            .unwrap_or_default()
     };
-    let file = store.dir(id).join(format!("{variant}.{ext}"));
+    let (file, ext) = match located {
+        Ok(found) => found,
+        Err(status) => return empty(status),
+    };
     if ext == "mp4" {
         return serve_video(&file, range);
     }

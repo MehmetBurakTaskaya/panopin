@@ -3,6 +3,7 @@ import { inlineArrow, t, type MessageKey } from '../../i18n';
 import type { Folder, Tag } from '../../ipc';
 import { sameSection, type Counts, type Section } from '../../library/query';
 import { formatShortcut } from '../../shortcuts';
+import { useSettings } from '../../state/settings';
 import styles from './Library.module.css';
 
 /** The MIME type cards carry while they are dragged onto a folder. */
@@ -50,6 +51,8 @@ const FIXED: [Section, MessageKey, keyof Counts][] = [
  * Delete removes a folder or tag (after asking). Cards dropped on a folder join it. */
 export function Sidebar(props: SidebarProps) {
   const { section, counts, folderTotals, folders, tags, renaming, paneRef } = props;
+  // The section names are words of the UI language: they change with it.
+  const lang = useSettings((s) => s.lang);
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [dropping, setDropping] = useState<number | null>(null);
   const pane = useRef<HTMLDivElement | null>(null);
@@ -103,7 +106,8 @@ export function Sidebar(props: SidebarProps) {
     }
     list.push({ key: 'trash', section: { type: 'trash' }, label: t('library.section.trash'), count: counts.trash, depth: 0 });
     return list;
-  }, [counts, folderTotals, folders, tags, collapsed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `lang` changes what t() returns
+  }, [counts, folderTotals, folders, tags, collapsed, lang]);
 
   const current = Math.max(0, entries.findIndex((entry) => sameSection(entry.section, section)));
   const groupOf = (entry: Entry | undefined): Group | null =>

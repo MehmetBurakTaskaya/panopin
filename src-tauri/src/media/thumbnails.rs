@@ -2,9 +2,7 @@
 
 use std::io::Cursor;
 
-use image::{
-    codecs::jpeg::JpegEncoder, imageops::FilterType, DynamicImage, ImageFormat, RgbaImage,
-};
+use image::{codecs::jpeg::JpegEncoder, DynamicImage, ImageFormat, RgbaImage};
 
 use crate::error::Result;
 
@@ -21,7 +19,9 @@ pub fn make(image: &RgbaImage) -> Result<Thumbnail> {
     let small = if longest > MAX_SIDE {
         let scale =
             |side: u32| (u64::from(side) * u64::from(MAX_SIDE) / u64::from(longest)).max(1) as u32;
-        image::imageops::resize(image, scale(width), scale(height), FilterType::Triangle)
+        // Averaging boxes of pixels: several times faster than a filtered resize of a whole
+        // screenshot, and just as clean for shrinking this far.
+        image::imageops::thumbnail(image, scale(width), scale(height))
     } else {
         image.clone()
     };
