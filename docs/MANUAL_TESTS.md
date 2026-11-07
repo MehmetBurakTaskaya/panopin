@@ -669,8 +669,12 @@ Ctrl+Enter, 3 for L, 6 and 3 starts for the first opening, 20 texts), scratchpad
       stylesheet, and the one list of files to fetch first, used by all four windows, was the
       shelf's. The Library's, Settings' and the first-run window's stylesheets were never loaded.
       (2026-11-08)
-- [ ] CI: `npm run check:bundle` passes on Windows and macOS.
-- [ ] The installed 1.6.1: the Library, Settings and the shelf look as they did in 1.5.1.
+- [x] CI: `npm run check:bundle` passes on Windows and macOS: every window gets
+      `assets/style-DnKT_aal.css` with the page (run 42424043166, 7520919).
+- [x] The 1.6.1 draft (release run 42424588323) installed over 1.6.0 on the owner's PC: the
+      Library and Settings look as they did before 1.6.0 (checked by the owner). The update took
+      3 s and kept the 101 items and their search rows. (2026-11-08)
+- [ ] The first-run window in 1.6.1 (needs a new profile).
 - [ ] Opening the Library timed again with 1.6.1.
 
 ## Full round for v1.0.0
